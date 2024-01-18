@@ -1,0 +1,391 @@
+res : 0x5 [8]
+ref : 0x5 [8]
+OK
+res : k0 [8]
+ref : k0 [8]
+OK
+res : k1 & k2 & k0 [8]
+ref : k1 & k2 & k0 [8]
+OK
+res : k0 [8]
+ref : k0 [8]
+OK
+res : GMul(a, c ^ b) [8]
+ref : GMul(a, c ^ b) [8]
+OK
+res : GMul(a, 0x1 ^ b) [8]
+ref : GMul(a, 0x1 ^ b) [8]
+OK
+res : 0x6 [8]
+ref : 0x6 [8]
+OK
+res : GMul(a, c ^ d, b) [8]
+ref : GMul(a, c ^ d, b) [8]
+OK
+res : p3 + k1 [3]
+ref : p3 + k1 [3]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : 0xfb [8]
+ref : 0xfb [8]
+OK
+res : GMul(a ^ b, c ^ d) [8]
+ref : GMul(a ^ b, c ^ d) [8]
+OK
+res : GMul(a, u, v ^ w) [8]
+ref : GMul(a, u, v ^ w) [8]
+OK
+res : 0x5 [8]
+ref : 0x5 [8]
+OK
+res : GMul(b, z) ^ c [8]
+ref : GMul(b, z) ^ c [8]
+OK
+res : f [2]
+ref : f [2]
+OK
+res : GPow(a, 0x4) [8]
+ref : GPow(a, 0x4) [8]
+OK
+res : k0 [8]
+ref : k0 [8]
+OK
+res : GMul(a, 0x5) [8]
+ref : GMul(a, 0x5) [8]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : k1 & k2 & k0 [8]
+ref : k1 & k2 & k0 [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : c | a | b [8]
+ref : c | a | b [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : q & p [8]
+ref : q & p [8]
+OK
+res : 0x76 & q & p [8]
+ref : 0x76 & q & p [8]
+OK
+res : (c + a + b) | c | a | d | b | e [8]
+ref : (c + a + b) | c | a | d | b | e [8]
+OK
+res : c | f | a | d | b | e [8]
+ref : c | f | a | d | b | e [8]
+OK
+res : 0xff [8]
+ref : 0xff [8]
+OK
+Concat(~((~Extract(2, 2, a) & ~Extract(0, 0, a) & ~Extract(1, 1, a)) ^ (((Extract(0, 0, a) | ((Extract(1, 1, a) ^ Extract(0, 0, a)) & Extract(1, 1, a))) & ~(~Extract(0, 0, a) & ~Extract(1, 1, a))) | (~((~Extract(0, 0, a) & ~Extract(1, 1, a)) ^ Extract(2, 2, a)) & Extract(2, 2, a)))), ~((~Extract(0, 0, a) & ~Extract(1, 1, a)) ^ (Extract(0, 0, a) | ((Extract(1, 1, a) ^ Extract(0, 0, a)) & Extract(1, 1, a)))), 0x0, 0x0)
+res : c | a [8]
+ref : c | a [8]
+OK
+res : Concat(Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), k & m & p) [32]
+ref : Concat(Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), Extract(7, 7, m) & Extract(7, 7, p) & Extract(7, 7, k), k & m & p) [32]
+OK
+res : Concat(0x0, k & m & p) [32]
+ref : Concat(0x0, k & m & p) [32]
+OK
+res : a[p2 ^ p1] [3]
+ref : a[p2 ^ p1] [3]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : p [8]
+ref : p [8]
+OK
+res : 0x12345678 [32]
+ref : 0x12345678 [32]
+OK
+res : k ^ p [32]
+ref : k ^ p [32]
+OK
+res : Concat(0x123456, a, 0x563412, a, 0x123456) [88]
+ref : Concat(0x123456, a, 0x563412, a, 0x123456) [88]
+OK
+res : Concat(a, b, c, d) [32]
+ref : Concat(a, b, c, d) [32]
+OK
+res : Concat(a, d, b, c, a, b, b, c, d, d, a, d) [96]
+ref : Concat(a, d, b, c, a, b, b, c, d, d, a, d) [96]
+OK
+OK
+res : 0x56 [8]
+ref : 0x56 [8]
+OK
+res : (c + b) * a [8]
+ref : (c + b) * a [8]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : Extract(7, 7, k) [1]
+ref : Extract(7, 7, k) [1]
+OK
+res : Extract(7, 7, k) [1]
+ref : Extract(7, 7, k) [1]
+OK
+KO (nbBits on res: 16 -- expected 32)
+res : Concat(0x0, k) [32]
+ref : Concat(0x0, k) [32]
+KO (nbBits after simplify: res: 16 - ref: 32 - expected: 32)
+OK
+res : Concat(Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), k) [16]
+ref : Concat(Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), Extract(7, 7, k), k) [16]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : a * (0x1 + b) [8]
+ref : a * (0x1 + b) [8]
+OK
+res : (c + d) * a * b [8]
+ref : (c + d) * a * b [8]
+OK
+res : k0 [8]
+ref : k0 [8]
+OK
+res : (c + d) * (a + b) [8]
+ref : (c + d) * (a + b) [8]
+OK
+res : a * (d + d + (u * (v + z + z + w))) [8]
+ref : a * (d + d + (u * (v + z + z + w))) [8]
+OK
+res : c + ((a + a + b) * z) [8]
+ref : c + ((a + a + b) * z) [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : m0 [8]
+ref : m0 [8]
+OK
+res : m2 ^ m0 ^ k0 [8]
+ref : m2 ^ m0 ^ k0 [8]
+OK
+res : k1 | k2 | k0 [8]
+ref : k1 | k2 | k0 [8]
+OK
+res : m2 ^ m0 ^ k0 [8]
+ref : m2 ^ m0 ^ k0 [8]
+OK
+res : ~(k1 ^ k0) & k0 [8]
+ref : ~(k1 ^ k0) & k0 [8]
+OK
+res : k1 | k2 | k0 [8]
+ref : k1 | k2 | k0 [8]
+OK
+res : ~(k1 ^ k0) [8]
+ref : ~(k1 ^ k0) [8]
+OK
+res : ~k0 & k1 [8]
+ref : ~k0 & k1 [8]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : 0xff [8]
+ref : 0xff [8]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : 0xff [8]
+ref : 0xff [8]
+OK
+res : Concat(b, a) [16]
+ref : Concat(b, a) [16]
+OK
+res : Concat(c, b) [19]
+ref : Concat(c, b) [19]
+OK
+res : Concat(Extract(8, 0, c), Extract(8, 3, b)) [15]
+ref : Concat(Extract(8, 0, c), Extract(8, 3, b)) [15]
+OK
+res : Concat(Extract(0, 0, d), c, b) [20]
+ref : Concat(Extract(0, 0, d), c, b) [20]
+OK
+res : Concat(Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p)) [8]
+ref : Concat(Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p), Extract(7, 7, p)) [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : Concat(p, p, p, p, p, p, p, p) [8]
+ref : Concat(p, p, p, p, p, p, p, p) [8]
+OK
+res : Concat(p, p, p, p, p, p, p, p) [8]
+ref : Concat(p, p, p, p, p, p, p, p) [8]
+OK
+res : Extract(7, 7, k) [1]
+ref : Extract(7, 7, k) [1]
+OK
+res : Concat(Extract(6, 0, c), Extract(8, 3, b)) [13]
+ref : Concat(Extract(6, 0, c), Extract(8, 3, b)) [13]
+OK
+res : Concat(Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p)) [7]
+ref : Concat(Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p), Extract(0, 0, p)) [7]
+OK
+res : k [8]
+ref : k [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : (p << 6) + (p << 5) [8]
+ref : (p << 6) + (p << 5) [8]
+OK
+res : Extract(10, 9, p) [2]
+ref : Extract(10, 9, p) [2]
+OK
+res : q | p [8]
+ref : q | p [8]
+OK
+res : a & (c | b) [8]
+ref : a & (c | b) [8]
+OK
+res : a [8]
+ref : a [8]
+OK
+res : a & b & (c | d) [8]
+ref : a & b & (c | d) [8]
+OK
+res : (c | d) & (a | b) [8]
+ref : (c | d) & (a | b) [8]
+OK
+res : a & ((u & (v | z | w)) | d) [8]
+ref : a & ((u & (v | z | w)) | d) [8]
+OK
+res : c | (z & (a | b)) [8]
+ref : c | (z & (a | b)) [8]
+OK
+res : c | a | b [8]
+ref : c | a | b [8]
+OK
+res : 0x89 | q | p [8]
+ref : 0x89 | q | p [8]
+OK
+res : Concat(Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), k | m | p) [32]
+ref : Concat(Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), Extract(7, 7, m) | Extract(7, 7, p) | Extract(7, 7, k), k | m | p) [32]
+OK
+res : Concat(0x0, k | m | p) [32]
+ref : Concat(0x0, k | m | p) [32]
+OK
+res : 0x78123456 [32]
+ref : 0x78123456 [32]
+OK
+res : 0x7ffffffffffffffe [63]
+ref : 0x7ffffffffffffffe [63]
+OK
+res : 0xfffffffffffffffe [64]
+ref : 0xfffffffffffffffe [64]
+OK
+res : 0x7fffffffffffffff [63]
+ref : 0x7fffffffffffffff [63]
+OK
+res : LShR(p, 6) + LShR(p, 5) [8]
+ref : LShR(p, 6) + LShR(p, 5) [8]
+OK
+res : (p >> 5) + (p >> 6) [8]
+ref : (p >> 5) + (p >> 6) [8]
+OK
+res : k [3]
+ref : k [3]
+OK
+res : 0x0 [2]
+ref : 0x0 [2]
+OK
+res : 0x5 [8]
+ref : 0x5 [8]
+OK
+res : 0x5 [8]
+ref : 0x5 [8]
+OK
+res : k0 [8]
+ref : k0 [8]
+OK
+res : -p + q [2]
+ref : -p + q [2]
+OK
+res : 0x0 [2]
+ref : 0x0 [2]
+OK
+res : -q [2]
+ref : -q [2]
+OK
+res : k1 [8]
+ref : k1 [8]
+OK
+res : k1 [8]
+ref : k1 [8]
+OK
+res : ~k0 [8]
+ref : ~k0 [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : 0xff [8]
+ref : 0xff [8]
+OK
+res : k & p [8]
+ref : k & p [8]
+OK
+res : 0x3 [4]
+ref : 0x3 [4]
+OK
+res : k1 & k2 [8]
+ref : k1 & k2 [8]
+OK
+res : k1 [8]
+ref : k1 [8]
+OK
+res : k1 [8]
+ref : k1 [8]
+OK
+res : Concat(a ^ e, f ^ b, c ^ g, d ^ h) [26]
+ref : Concat(a ^ e, f ^ b, c ^ g, d ^ h) [26]
+OK
+res : Concat(c ^ a ^ g ^ e, f ^ d ^ b ^ h) [10]
+ref : Concat(c ^ a ^ g ^ e, f ^ d ^ b ^ h) [10]
+OK
+res : 0x93 ^ u ^ v ^ Concat(c ^ a ^ g ^ e, f ^ d ^ b ^ h) [10]
+ref : 0x93 ^ u ^ v ^ Concat(c ^ a ^ g ^ e, f ^ d ^ b ^ h) [10]
+OK
+res : q ^ p [8]
+ref : q ^ p [8]
+OK
+res : 0x0 [8]
+ref : 0x0 [8]
+OK
+res : (0xaf ^ q ^ p) & (0x50 ^ q ^ p) [8]
+ref : (0xaf ^ q ^ p) & (0x50 ^ q ^ p) [8]
+OK
+res : Concat(Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), k ^ m ^ p) [32]
+ref : Concat(Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), Extract(7, 7, m) ^ Extract(7, 7, p) ^ Extract(7, 7, k), k ^ m ^ p) [32]
+OK
+res : Concat(0x0, k ^ m ^ p) [32]
+ref : Concat(0x0, k ^ m ^ p) [32]
+OK
+res : 0xc [32]
+ref : 0xc [32]
+OK
+res : 0xffffffffffffffff [64]
+ref : 0xffffffffffffffff [64]
+OK

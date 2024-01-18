@@ -1,0 +1,23 @@
+
+SRC_FILES = $(wildcard *.cpp)
+OBJ_FILES := $(patsubst %.cpp,%.o,$(SRC_FILES))
+EXEC := $(patsubst %.cpp,%,$(SRC_FILES))
+
+VMSI_HOME ?= ../../
+
+all: $(EXEC)
+
+
+$(EXEC): %: %.o $(VMSI_HOME)/libverif_msi_pp.a
+	g++ -o $@ $< -L$(VMSI_HOME) -lverif_msi_pp -Wl,-rpath,$(VMSI_HOME)
+
+$(OBJ_FILES): %.o: %.cpp
+	g++ -g -c -std=c++20 -o $@ -I$(VMSI_HOME) $<
+
+clean:
+	rm -f *.o
+
+realclean: clean
+	rm -f $(EXEC)
+
+
