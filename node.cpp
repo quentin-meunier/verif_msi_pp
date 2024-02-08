@@ -234,7 +234,7 @@ Node & Node::ConstNode(uint64_t cst, int32_t width) {
     n->width = width;
     n->simpEq = n;
     SHA256 sha;
-    sha.update(std::to_string(cst));
+    sha.update(std::to_string(cst) + std::to_string(width));
     n->h = sha.digest();
     return *n;
 }
