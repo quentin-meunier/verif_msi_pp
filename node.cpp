@@ -770,7 +770,7 @@ Node & Node::makeBitwiseNode(NodeOp op, Node * child0, Node * child1) {
     int32_t width = child0->width;
     assert(child1 == NULL || child0->width == child1->width);
 
-    if (propagateCstOnBuild() && child0->nature == CONST && child1->nature == CONST) {
+    if (propagateCstOnBuild() && child0->nature == CONST && (child1 == NULL || child1->nature == CONST)) {
         uint64_t res;
         if (op == BXOR) {
             res = child0->cst ^ child1->cst;
