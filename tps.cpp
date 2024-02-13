@@ -140,7 +140,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             bool isRNI = true;
             for (const auto & [s, shares] : *node->shareOcc) {
                 // share is node->shareOcc->at(s)
-                int nbShares;
+                int nbShares = -1;
                 for (const auto & [anyOcc, val] : *shares) {
                     nbShares = anyOcc->nbShares;
                     break;

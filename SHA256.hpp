@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef _sha256_h_
 #define _sha256_h_
 
-
+#include <cstdint>
 #include <string>
 #include <array>
 
