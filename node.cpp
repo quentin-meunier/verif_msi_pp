@@ -270,7 +270,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                 while (i < 4 && a->h[i] == b->h[i]) {
                     i += 1;
                 }
-                return a->h[i] > b->h[i];
+                return i < 4 && a->h[i] > b->h[i];
                 });
     }
     std::string s = std::to_string(op);
