@@ -280,6 +280,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     SHA256 sha;
     sha.update(s);
     uint64_t * h = sha.digest();
+    Node * n;
     #if MEMORY_STRATEGY == KEEP_NODES
         std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
         if (cache.contains(t)) {
@@ -287,6 +288,8 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
             delete orderedChildren;
             return *cache[t];
         }
+        n = new Node();
+        cache[t] = n;
     #else
         if (!modeTempNode) {
             std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
@@ -295,20 +298,17 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                 delete orderedChildren;
                 return *cache[t];
             }
-        }
-    #endif
-    Node * n = new Node();
-    allNodes.insert(n);
-    n->h = h;
-    n->children = orderedChildren;
-    #if MEMORY_STRATEGY == KEEP_NODES
-        cache[t] = n;
-    #else
-        if (!modeTempNode) {
+            n = new Node();
             cache[t] = n;
+        }
+        else {
+            n = new Node();
         }
     #endif
 
+    allNodes.insert(n);
+    n->h = h;
+    n->children = orderedChildren;
     n->nature = OP;
     n->op = op;
     n->hasWordOp = (op == IMUL or op == IPOW or op == GMUL or op == GPOW or op == GLOG or op == GEXP);
