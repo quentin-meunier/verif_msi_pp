@@ -15,6 +15,36 @@ Author(s): Quentin L. Meunier
 #include "arrayexp.hpp"
 
 
+/*
+ * To trace calls, uncomment this code and replace calls to simplifyCore with calls to simplifyCoreWrapper
+ *
+
+#define DEBUG
+#ifdef DEBUG
+static int offset = 0;
+#endif
+
+static Node & simplifyCoreWrapper(Node & node, bool pei, bool usbv) {
+    #ifdef DEBUG
+        for (int i = 0; i < offset; i += 1) {
+            std::cout << "   ";
+        }
+        offset += 1;
+        std::cout << "Simplifying node: " << node.verbatimPrint() << std::endl;
+    #endif
+    Node & res = simplifyCore(node, pei, usbv);
+    #ifdef DEBUG
+        offset -= 1;
+        for (int i = 0; i < offset; i += 1) {
+            std::cout << "   ";
+        }
+        std::cout << "Result: " << res.verbatimPrint() << std::endl;
+    #endif
+    return res;
+}
+*/
+
+
 // Trying to merge current node with its children if associative and children have the same op 
 static bool mergeWithChildrenIfPossible(NodeOp op, std::vector<Node *> & children) {
     assert(children.size() != 0);
@@ -1203,12 +1233,22 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         //print('simp & [ ' + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
         op1 = BOR;
         cst0 = &Const(0, width);
-        cst1 = &Const(((1 << width) - 1), width);
+        if (width == 64) {
+            cst1 = &Const(0xFFFFFFFFFFFFFFFF, 64);
+        }
+        else {
+            cst1 = &Const(((1ULL << width) - 1), width);
+        }
     }
     else if (op == BOR) {
         //print('simp | [ ' + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
         op1 = BAND;
-        cst0 = &Const(((1 << width) - 1), width);
+        if (width == 64) {
+            cst0 = &Const(0xFFFFFFFFFFFFFFFF, 64);
+        }
+        else {
+            cst0 = &Const(((1ULL << width) - 1), width);
+        }
         cst1 = &Const(0, width);
     }
 
