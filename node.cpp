@@ -15,7 +15,7 @@ Author(s): Quentin L. Meunier
 #include <vector>
 #include <bit>
 #include <cassert>
-
+#include <iomanip>
 
 
 #include "node.hpp"
@@ -37,7 +37,8 @@ Node::Node() {
     op = NOP;
     hasWordOp = false;
     wordAnalysisHasFailedOnSubExp = false;
-    cst = 0;
+    nlimbs = 0;
+    cst = NULL;
     strn = NULL;
 
     concatExtEq = NULL;
@@ -184,6 +185,9 @@ Node::~Node() {
     if (children != NULL) {
         delete children;
     }
+    if (cst != NULL) {
+        delete cst;
+    }
 }
 
 
@@ -228,20 +232,86 @@ Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, in
 
 
 Node & Node::ConstNode(uint64_t cst, int32_t width) {
+    if (width <= 64) {
+        Node * n = new Node();
+        n->nature = CONST;
+        n->nlimbs = 1;
+        n->cst = new uint64_t[1];
+        n->cst[0] = cst;
+        n->width = width;
+        n->simpEq = n;
+        SHA256 sha;
+        sha.update(std::to_string(width) + std::to_string(cst));
+        n->h = sha.digest();
+        return *n;
+    }
+    else {
+        int32_t nlimbs = width / 64;
+        std::string s = std::to_string(width);
+        s += std::to_string(cst);
+        for (int32_t i = 1; i < nlimbs; i += 1) {
+            s += std::to_string(0);
+        }
+
+        SHA256 sha;
+        sha.update(s);
+        uint64_t * h = sha.digest();
+        std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
+        if (cache.contains(t)) {
+            delete [] h;
+            return *cache[t];
+        }
+        Node * n = new Node();
+        cache[t] = n;
+
+        n->nature = CONST;
+        n->nlimbs = nlimbs;
+        n->cst = new uint64_t[nlimbs];
+        n->cst[0] = cst;
+        for (int32_t i = 1; i < nlimbs; i += 1) {
+            n->cst[i] = 0;
+        }
+        n->width = width;
+        n->simpEq = n;
+        n->h = h;
+        return *n;
+    }
+}
+
+
+Node & Node::ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width) {
+    assert(nlimbs > 1);
+    std::string s = std::to_string(width);
+    for (int32_t i = 0; i < nlimbs; i += 1) {
+        s += std::to_string(cst[i]);
+    }
+
+    SHA256 sha;
+    sha.update(s);
+    uint64_t * h = sha.digest();
+    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
+    if (cache.contains(t)) {
+        delete [] h;
+        return *cache[t];
+    }
     Node * n = new Node();
+    cache[t] = n;
+
     n->nature = CONST;
-    n->cst = cst;
+    n->nlimbs = nlimbs;
+    n->cst = new uint64_t[nlimbs];
+    for (int32_t i = 0; i < nlimbs; i += 1) {
+        n->cst[i] = cst[i];
+    }
     n->width = width;
     n->simpEq = n;
-    SHA256 sha;
-    sha.update(std::to_string(cst) + std::to_string(width));
-    n->h = sha.digest();
+    n->h = h;
     return *n;
 }
 
 
 Node & Node::ConstNodeAuto(uint64_t cst) {
-    return ConstNode(cst, bit_width(cst));
+    return Const(cst, bit_width(cst));
 }
 
 
@@ -331,7 +401,8 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         n->width = children[0]->width;
     }
     else if (op == ZEXT or op == SEXT) {
-        n->width = children[0]->cst + children[1]->width;
+        assert(children[0]->nlimbs == 1);
+        n->width = children[0]->cst[0] + children[1]->width;
     }
     else if (op == CONCAT) {
         int32_t width = 0;
@@ -341,7 +412,8 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         n->width = width;
     }
     else if (op == EXTRACT) {
-        n->width = children[0]->cst - children[1]->cst + 1;
+        assert(children[0]->nlimbs == 1 && children[1]->nlimbs == 1);
+        n->width = children[0]->cst[0] - children[1]->cst[0] + 1;
     }
     else if (op == ARRAY) {
         n->width = ArrayExp::allArrays[*children[0]->strn]->outWidth;
@@ -743,7 +815,7 @@ void Node::dumpNodes(const char * filename, std::set<Node *> & nodes) {
             }
         }
         else if (n->nature == CONST) {
-            s = std::string("Const: ") + std::to_string(n->cst);
+            s = std::string("Const: ") + n->printCst();
         }
         else if (n->nature == STR) {
             s = std::string("Str: ") + *n->strn;
@@ -771,37 +843,51 @@ Node & Node::makeBitwiseNode(NodeOp op, Node * child0, Node * child1) {
     assert(child1 == NULL || child0->width == child1->width);
 
     if (propagateCstOnBuild() && child0->nature == CONST && (child1 == NULL || child1->nature == CONST)) {
-        uint64_t res;
+        int32_t nlimbs = child0->nlimbs;
+        uint64_t res[nlimbs];
         if (op == BXOR) {
-            res = child0->cst ^ child1->cst;
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                res[i] = child0->cst[i] ^ child1->cst[i];
+            }
         }
         else if (op == BAND) {
-            res = child0->cst & child1->cst;
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                res[i] = child0->cst[i] & child1->cst[i];
+            }
         }
         else if (op == BOR) {
-            res = child0->cst | child1->cst;
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                res[i] = child0->cst[i] | child1->cst[i];
+            }
         }
         else if (op == BNOT) {
-            if (width == 64) {
-                res = ~child0->cst;
+            for (int32_t i = 0; i < nlimbs - 1; i += 1) {
+                res[i] = ~child0->cst[i];
+            }
+            if (width % 64 == 0) {
+                res[nlimbs - 1] = ~child0->cst[nlimbs - 1];
             }
             else {
-                res = (1ULL << width) - 1 - child0->cst;
+                res[nlimbs - 1] = ((1ULL << (width % 64)) - 1) ^ child0->cst[nlimbs - 1];
             }
         }
         else if (op == PLUS) {
-            if (width == 64) {
-                res = child0->cst + child1->cst;
+            int32_t carry = 0;
+            for (int32_t i = 0; i < nlimbs - 1; i += 1) {
+                res[i] = child0->cst[i] + child1->cst[i] + carry;
+                carry = res[i] < child0->cst[i] ? 1 : 0;
+            }
+            if (width % 64 == 0) {
+                res[nlimbs - 1] = child0->cst[nlimbs - 1] + child1->cst[nlimbs - 1] + carry;
             }
             else {
-                res = (child0->cst + child1->cst) % (1ULL << width);
+                res[nlimbs - 1] = (child0->cst[nlimbs - 1] + child1->cst[nlimbs - 1] + carry) % (1ULL << (width % 64));
             }
         }
         else {
             assert(false);
         }
-
-        return Const(res, width);
+        return Const(res, nlimbs, width);
     }
     if (child1 != NULL) {
         return Node::OpNode(op, {child0, child1});
@@ -842,12 +928,16 @@ Node & Node::operator+(Node & other) {
 
 Node & Node::operator-(Node & other) {
     if (propagateCstOnBuild() && nature == CONST && other.nature == CONST) {
-        if (width == 64) {
-            return Const(cst - other.cst, width);
+        uint64_t res[nlimbs];
+        int32_t carry = 1;
+        for (int32_t i = 0; i < nlimbs; i += 1) {
+            res[i] = cst[i] + ~other.cst[i] + carry;
+            carry = res[i] < ~other.cst[i] ? 1 : 0;
         }
-        else {
-            return Const((cst - other.cst) % (1ULL << width), width);
+        if (width % 64 != 0) {
+            res[nlimbs - 1] = res[nlimbs - 1] % (1ULL << (width % 64));
         }
+        return Const(res, nlimbs, width);
     }
     return *this + (-other);
 }
@@ -855,12 +945,16 @@ Node & Node::operator-(Node & other) {
 
 Node & Node::operator-() {
     if (propagateCstOnBuild() && nature == CONST) {
-        if (width == 64) {
-            return Const(-cst, width);
+        uint64_t res[nlimbs];
+        int32_t carry = 1;
+        for (int32_t i = 0; i < nlimbs; i += 1) {
+            res[i] = ~cst[i] + carry;
+            carry = res[i] < ~cst[i] ? 1 : 0;
         }
-        else {
-            return Const(-cst % (1ULL << width), width);
+        if (width % 64 != 0) {
+            res[nlimbs - 1] = res[nlimbs - 1] % (1ULL << (width % 64));
         }
+        return Const(res, nlimbs, width);
     }
     std::vector<Node *> args(1, this);
     return Node::OpNode(UMINUS, args);
@@ -873,7 +967,8 @@ Node & Node::operator<<(Node & other) {
         std::cerr << "***Error: Second operand of a Shift operation can only be a constant" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return *this << other.cst;
+    assert(other.nlimbs == 1);
+    return *this << other.cst[0];
 }
 
 
@@ -883,12 +978,37 @@ Node & Node::operator<<(int32_t shval) {
     }
 
     if (propagateCstOnBuild() && nature == CONST) {
-        if (width == 64) {
-            return Const(cst << shval, width);
+        uint64_t res[nlimbs];
+        int32_t limb_shift = shval / 64;
+        int32_t limb_rem = shval % 64;
+        if (limb_rem == 0) {
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i - limb_shift < 0) {
+                    res[i] = 0ULL;
+                }
+                else {
+                    res[i] = cst[i - limb_shift];
+                }
+            }
         }
         else {
-            return Const((cst << shval) % (1ULL << width), width);
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i - limb_shift < 0) {
+                    res[i] = 0ULL;
+                }
+                else if (i - limb_shift == 0) {
+                    res[i] = cst[0] << limb_rem;
+                }
+                else {
+                    res[i] = (cst[i - limb_shift] << limb_rem) | (cst[i - limb_shift - 1] >> (64 - limb_rem));
+                }
+            }
         }
+        if (width % 64 != 0) {
+            res[nlimbs - 1] = res[nlimbs - 1] % (1ULL << (width % 64));
+        }
+
+        return Const(res, nlimbs, width);
     }
 
     Node & sh = Const((uint64_t) shval, bit_width((uint64_t) shval));
@@ -901,7 +1021,8 @@ Node & Node::operator>>(Node & other) {
         std::cerr << "***Error: Second operand of a Shift operation can only be a constant" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return *this >> other.cst;
+    assert(other.nlimbs == 1);
+    return *this >> other.cst[0];
 }
 
 
@@ -912,18 +1033,46 @@ Node & Node::operator>>(int32_t shval) {
     }
 
     if (propagateCstOnBuild() && nature == CONST) {
-        if (cst >> (width - 1) == 1) { // MSB == 1
-            if (width == 64) {
-                return Const(~((~cst) >> shval), width);
-            }
-            else {
-                uint64_t mod = 1ULL << width;
-                return Const(~((~cst % mod) >> shval) % mod, width);
+        uint64_t res[nlimbs];
+        int32_t limb_shift = shval / 64;
+        int32_t limb_rem = shval % 64;
+        int32_t mslWidth = width % 64; // Width of Most Significant Limb
+        if (limb_rem == 0) {
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i + limb_shift >= nlimbs) {
+                    uint64_t w = (int64_t) (cst[nlimbs - 1] << (64 - limb_rem)) >> 63;
+                    res[i] = w;
+                }
+                else {
+                    res[i] = cst[i + limb_shift];
+                }
             }
         }
         else {
-            return Const(cst >> shval, width);
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i + limb_shift >= nlimbs) {
+                    uint64_t w;
+                    if (mslWidth == 0) {
+                        w = ((int64_t) cst[nlimbs - 1]) >> 63;
+                    }
+                    else {
+                        w = ((int64_t) (cst[nlimbs - 1] << (64 - mslWidth))) >> 63;
+                    }
+                    res[i] = w;
+                }
+                else if (i + limb_shift == nlimbs - 1) {
+                    res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> limb_rem;
+                }
+                else {
+                    res[i] = cst[i + limb_shift] >> limb_rem | cst[i + limb_shift + 1] << (64 - limb_rem);
+                }
+            }
         }
+        if (width % 64 != 0) {
+            res[nlimbs - 1] = res[nlimbs - 1] & ((1ULL << mslWidth) - 1);
+        }
+
+        return Const(res, nlimbs, width);
     }
 
     Node & sh = Const((uint64_t) shval, bit_width((uint64_t) shval));
@@ -944,8 +1093,43 @@ std::string Node::toString() const {
     return expPrint(false, false);
 }
 
+
 std::string Node::verbatimPrint() const {
     return expPrint(false, true);
+}
+
+
+std::string Node::printCst() const {
+    if (nlimbs == 0) {
+        return "";
+    }
+
+    std::string s = std::string("0x");
+    {
+        int32_t limbWidth;
+        if (width % 64 == 0) {
+            limbWidth = 16;
+        }
+        else {
+            limbWidth = (width - (width / 64) * 64);
+            if (limbWidth % 4 == 0) {
+                limbWidth = limbWidth / 4;
+            }
+            else {
+                limbWidth = limbWidth / 4 + 1;
+            }
+        }
+        std::stringstream stream;
+        stream << std::setfill('0') << std::setw(limbWidth) << std::hex << cst[nlimbs - 1];
+        s += stream.str();
+    }
+
+    for (int32_t i = nlimbs - 2; i >= 0; i -= 1) {
+        std::stringstream stream;
+        stream << std::setfill('0') << std::setw(16) << std::hex << cst[i];
+        s += stream.str();
+    }
+    return s;
 }
 
 
@@ -954,13 +1138,12 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
         return *symb;
     }
     else if (nature == CONST) {
+
         if (verbatim) {
-            return std::string("Const(") + std::to_string(cst) + ", " + std::to_string(width) + ")";
+            return std::string("Const(") + printCst() + ", " + std::to_string(width) + ")";
         }
         else {
-            std::ostringstream ss;
-            ss << "0x" << std::hex << cst;
-            return ss.str();
+            return printCst();
         }
     }
     else if (nature == STR) {
@@ -976,10 +1159,10 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
         return std::string("-") + children->at(0)->expPrint(true, verbatim);
     }
     else if (op == ZEXT) {
-        return std::string("ZeroExt(") + std::to_string(children->at(0)->cst) + ", " + children->at(1)->expPrint(false, verbatim) + ")";
+        return std::string("ZeroExt(") + children->at(0)->printCst() + ", " + children->at(1)->expPrint(false, verbatim) + ")";
     }
     else if (op == SEXT) {
-        return std::string("SignExt(") + std::to_string(children->at(0)->cst) + ", " + children->at(1)->expPrint(false, verbatim) + ")";
+        return std::string("SignExt(") + children->at(0)->printCst() + ", " + children->at(1)->expPrint(false, verbatim) + ")";
     }
     else if (op == CONCAT) {
         std::string res = "Concat(";
@@ -990,23 +1173,23 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
         return res;
     }
     else if (op == EXTRACT) {
-        return std::string("Extract(") + std::to_string(children->at(0)->cst) + ", " + std::to_string(children->at(1)->cst) + ", " + children->at(2)->expPrint(false, verbatim) + ")";
+        return std::string("Extract(") + children->at(0)->printCst() + ", " + children->at(1)->printCst() + ", " + children->at(2)->expPrint(false, verbatim) + ")";
     }
     else if (op == ARRAY) {
         return *children->at(0)->strn + "[" + children->at(1)->expPrint(false, verbatim) + "]";
     }
     else if (op == LSHR) {
-        return std::string("LShR(") + children->at(0)->expPrint(false, verbatim) + ", " + std::to_string(children->at(1)->cst) + ")";
+        return std::string("LShR(") + children->at(0)->expPrint(false, verbatim) + ", " + children->at(1)->printCst() + ")";
     }
     else if (op == ASHR) {
-        std::string res = children->at(0)->expPrint(false, verbatim) + " >> " + std::to_string(children->at(1)->cst);
+        std::string res = children->at(0)->expPrint(false, verbatim) + " >> " + children->at(1)->printCst();
         if (parNeeded) {
             res = std::string("(") + res + ")";
         }
         return res;
     }
     else if (op == LSHL) {
-        std::string res = children->at(0)->expPrint(false, verbatim) + " << " + std::to_string(children->at(1)->cst);
+        std::string res = children->at(0)->expPrint(false, verbatim) + " << " + children->at(1)->printCst();
         if (parNeeded) {
             res = std::string("(") + res + ")";
         }
@@ -1086,6 +1269,14 @@ Node & SymbInternal(std::string symb, char symbType, int32_t width) {
 }
 
 
+Node & Const(uint64_t * cst, int32_t nlimbs, int32_t width) {
+    if (nlimbs == 1) {
+        return Const(cst[0], width);
+    }
+    return Node::ConstNode(cst, nlimbs, width);
+} 
+
+
 Node & Const(uint64_t cst, int32_t width) {
     auto makeConstNode = [](uint64_t cst, int32_t nbBits) -> Node & {
         if (Node::cst2node.contains(nbBits)) {
@@ -1114,10 +1305,14 @@ Node & Const(uint64_t cst, int32_t width) {
     // In that case, we check that this negative value can be represented on width bits, and compute the associated positive value
     // Note: value -4 on 8 bits is encoded as 0xFC (= 252) in the cst field, similarly to the python implementation,
     //       whereas the value passed as parameter is 0xFFFFFFFFFFFFFFFC
-    if (width == 64) {
+    if (width > 64) {
+        return Node::ConstNode(cst, width);
+    }
+    else if (width == 64) {
         return makeConstNode(cst, width);
     }
     else if ((cst & 0x8000000000000000) == 0) {
+        // width < 64 and positive
         if (bit_width(cst) > width) {
             std::cerr << "*** Error: constant " << cst << " cannot be coded on " << width << " bits" << std::endl;
             std::cerr << "bit_width(" << cst << ") = " << bit_width(cst) << std::endl;
@@ -1126,6 +1321,7 @@ Node & Const(uint64_t cst, int32_t width) {
         return makeConstNode(cst, width);
     }
     else {
+        // width < 64 and negative
         if ((int64_t) cst < -(1LL << (width - 1))) {
             std::cerr << "*** Error: constant " << cst << " cannot be coded on " << width << " bits" << std::endl;
             assert(false);
@@ -1154,7 +1350,7 @@ Node & LShR(Node & child, Node & shval) {
         std::cerr << "***Error: Second operand of a Shift operation can only be a constant" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return LShR(child, shval.cst);
+    return LShR(child, shval.cst[0]);
 }
 
 
@@ -1165,7 +1361,37 @@ Node & LShR(Node & child, int32_t shval) {
     }
 
     if (propagateCstOnBuild() && child.nature == CONST) {
-        return Const(child.cst >> shval, width);
+        int32_t nlimbs = child.nlimbs;
+        uint64_t res[nlimbs];
+        int32_t limb_shift = shval / 64;
+        int32_t limb_rem = shval % 64;
+        if (limb_rem == 0) {
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i + limb_shift >= nlimbs) {
+                    res[i] = 0ULL;
+                }
+                else {
+                    res[i] = child.cst[i + limb_shift];
+                }
+            }
+        }
+        else {
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i + limb_shift >= nlimbs) {
+                    res[i] = 0ULL;
+                }
+                else if (i + limb_shift == nlimbs - 1) {
+                    res[i] = child.cst[nlimbs - 1] >> limb_rem;
+                }
+                else {
+                    res[i] = child.cst[i + limb_shift] >> limb_rem | child.cst[i + limb_shift + 1] << (64 - limb_rem);
+                }
+            }
+        }
+        if (width % 64 != 0) {
+            res[nlimbs - 1] = res[nlimbs - 1] & ((1ULL << (width % 64)) - 1);
+        }
+        return Const(res, nlimbs, width);
     }
 
     Node & sh = Const((uint64_t) shval, bit_width((uint64_t) shval));
@@ -1179,7 +1405,7 @@ Node & RotateRight(Node & child, Node & shval) {
         std::cerr << "***Error: Second operand of a RotateRight operation can only be a constant" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return RotateRight(child, shval.cst);
+    return RotateRight(child, shval.cst[0]);
 }
 
 
@@ -1193,6 +1419,63 @@ Node & RotateRight(Node & child, int32_t shval) {
 }
 
 
+
+Node & ConstNodeFromConcat(const std::vector<Node *> & children) {
+    int32_t width = 0;
+    for (int32_t i = 0; i < (int32_t) children.size(); i += 1) {
+        assert(children[i]->nature == CONST);
+        width += children[i]->width;
+    }
+    int32_t nbLimbs = width / 64;
+    if (nbLimbs * 64 != width) {
+        nbLimbs += 1;
+    }
+
+    uint64_t res[nbLimbs] = {0};
+    int32_t limbIdx = 0;
+    int32_t bitIdx = 0;
+    for (int32_t i = 0; i < (int32_t) children.size(); i += 1) {
+        Node * child = children[i];
+        int32_t remBits = child->width;
+        for (int32_t j = 0; j < child->nlimbs; j += 1) {
+            if (remBits >= 64) {
+                if (bitIdx == 0) {
+                    res[limbIdx] = child->cst[j];
+                    limbIdx += 1;
+                }
+                else {
+                    res[limbIdx] |= child->cst[j] << bitIdx;
+                    res[limbIdx + 1] = child->cst[j] >> (64 - bitIdx);
+                    limbIdx += 1;
+                }
+                remBits -= 64;
+            }
+            else {
+                if (bitIdx + remBits > 64) {
+                    res[limbIdx] |= child->cst[j] << bitIdx;
+                    remBits -= 64 - bitIdx;
+                    res[limbIdx + 1] = child->cst[j] >> (64 - bitIdx);
+                    bitIdx = remBits;
+                    limbIdx += 1;
+                    remBits = 0;
+                }
+                else {
+                    res[limbIdx] |= child->cst[j] << bitIdx;
+                    if (bitIdx + remBits == 64) {
+                        limbIdx += 1;
+                        bitIdx = 0;
+                    }
+                    else {
+                        bitIdx += remBits;
+                    }
+                    remBits = 0;
+                }
+            }
+        }
+        assert(remBits == 0);
+    }
+    return Const(res, nbLimbs, width);
+}
 
 
 Node & Concat(const std::vector<Node *> & children) {
@@ -1209,20 +1492,10 @@ Node & Concat(const std::vector<Node *> & children) {
             }
         }
         if (allChildrenCst) {
-            uint64_t cstRes = 0;
-            int32_t currNbBits = 0;
-            //for (int32_t i = children.size() - 1; i >= 0; i -= 1) {
-            for (int32_t i = 0; i < (int32_t) children.size(); i += 1) {
-                Node * child = children[i];
-                cstRes += child->cst << currNbBits;
-                currNbBits += child->width;
-            }
-            return Const(cstRes, currNbBits);
+            return ConstNodeFromConcat(children);
         }
     }
 
-    // Inverting list so that child 0 of node has weight 0
-    //std::vector<Node *> nodeChildren(children.rbegin(), children.rend());
     std::vector<Node *> nodeChildren(children.begin(), children.end());
     return Node::OpNode(CONCAT, nodeChildren);
 }
@@ -1309,6 +1582,59 @@ Node & Concat(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, 
 }
 
 
+/* Used also by simplify */
+/* FIXME: how to limit to the scope to internal uses? */
+Node & ConstNodeFromExtract(int32_t msb, int32_t lsb, const Node & n) {
+    assert(n.nature == CONST);
+    if (n.nlimbs == 1) {
+        return Const((n.cst[0] >> lsb) & ((1ULL << (msb - lsb + 1)) - 1), msb - lsb + 1);
+    }
+    else {
+        int32_t width = msb - lsb + 1;
+        int32_t nbLimbs = width / 64;
+        if (nbLimbs * 64 != width) {
+            nbLimbs += 1;
+        }
+
+        uint64_t res[nbLimbs];
+        int32_t limbIdx = lsb / 64;
+        int32_t bitIdx = lsb % 64;
+        int32_t remBits = width;
+        for (int32_t i = 0; i < nbLimbs; i += 1) {
+            if (bitIdx == 0) {
+                res[i] = n.cst[limbIdx];
+                limbIdx += 1;
+                if (remBits < 64) {
+                    res[i] &= ((1ULL << remBits) - 1);
+                    remBits = 0;
+                }
+                else {
+                    remBits -= 64;
+                }
+            }
+            else {
+                if (remBits + bitIdx > 64) {
+                    res[i] = n.cst[limbIdx] >> bitIdx;
+                    res[i] |= n.cst[limbIdx + 1] << (64 - bitIdx);
+                    limbIdx += 1;
+                    if (remBits < 64) {
+                        res[i] &= ((1ULL << remBits) - 1);
+                        remBits = 0;
+                    }
+                    else {
+                        remBits -= 64;
+                    }
+                }
+                else {
+                    res[i] = (n.cst[limbIdx] >> bitIdx) & ((1ULL << remBits) - 1);
+                }
+            }
+        }
+        return Const(res, nbLimbs, width);
+    }
+}
+
+
 
 Node & Extract(Node & msbNode, Node & lsbNode, Node & child) {
     if (msbNode.nature != CONST || lsbNode.nature != CONST) {
@@ -1316,31 +1642,21 @@ Node & Extract(Node & msbNode, Node & lsbNode, Node & child) {
         exit(EXIT_FAILURE);
     }
 
-    int32_t msb = msbNode.cst;
-    int32_t lsb = lsbNode.cst;
+    int32_t msb = msbNode.cst[0];
+    int32_t lsb = lsbNode.cst[0];
 
     if (msb < lsb) {
         std::cerr << "*** Error: msb must be greater than or equal to lsb" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    int32_t width = child.width;
-    if (msb < 0 or msb >= width or lsb < 0 or lsb >= width) {
-        std::cerr << "*** Error: msb and lsb parameters must be comprised between 0 and " << (width - 1) << std::endl;
+    if (msb < 0 or msb >= child.width or lsb < 0 or lsb >= child.width) {
+        std::cerr << "*** Error: msb and lsb parameters must be comprised between 0 and " << (child.width - 1) << std::endl;
         exit(EXIT_FAILURE);
     }
 
     if (propagateCstOnBuild() and child.nature == CONST) {
-        // Directly create a const node
-        uint64_t cst = child.cst;
-        uint64_t newCst;
-        if (msb - lsb + 1 == 64) {
-            newCst = (cst >> lsb);
-        }
-        else {
-            newCst = (cst >> lsb) & ((1ULL << (msb - lsb + 1)) - 1);
-        }
-        return Const(newCst, msb - lsb + 1);
+        return ConstNodeFromExtract(msb, lsb, child);
     }
 
     if (msb == lsb and child.extractBit[lsb] != NULL) {
@@ -1363,12 +1679,54 @@ Node & Extract(int32_t msb, int32_t lsb, Node & child) {
 }
 
 
+Node & ConstNodeFromZeroExt(int32_t numZeros, Node & n) {
+    assert(n.nature == CONST);
+    int32_t width = n.width + numZeros;
+    int32_t nbLimbs = width / 64;
+    if (nbLimbs * 64 != width) {
+        nbLimbs += 1;
+    }
+
+    uint64_t res[nbLimbs];
+    int32_t remBits = numZeros;
+    int32_t bitIdx = n.width % 64;
+
+    for (int32_t i = 0; i < n.nlimbs - 1; i += 1) {
+        res[i] = n.cst[i];
+    }
+    if (bitIdx == 0) {
+        res[n.nlimbs - 1] = n.cst[n.nlimbs - 1];
+    }
+    else if (bitIdx + remBits < 64) {
+        res[n.nlimbs - 1] = n.cst[n.nlimbs - 1];
+        remBits = 0;
+    }
+    else {
+        res[n.nlimbs - 1] = n.cst[n.nlimbs - 1];
+        remBits -= (64 - bitIdx);
+    }
+
+    int32_t limbIdx = n.nlimbs;
+    while (remBits >= 64) {
+        res[limbIdx] = 0ULL;
+        limbIdx += 1;
+        remBits -= 64;
+    }
+
+    if (remBits > 0) {
+        res[limbIdx] = 0ULL;
+    }
+
+    return Const(res, nbLimbs, width);
+}
+
+
 Node & ZeroExt(Node & numZeros, Node & child) {
     if (numZeros.nature != CONST) {
         std::cerr << "*** Error: numZeros parameter of ZeroExt must be an integer constant" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return ZeroExt(numZeros.cst, child);
+    return ZeroExt(numZeros.cst[0], child);
 }
 
 
@@ -1384,7 +1742,7 @@ Node & ZeroExt(int32_t numZeros, Node & child) {
     }
 
     if (propagateCstOnBuild() and child.nature == CONST) {
-        return Const(child.cst, width + numZeros);
+        return ConstNodeFromZeroExt(numZeros, child);
     }
 
     return Node::OpNode(CONCAT, {&child, &Const(0ULL, numZeros)});
@@ -1396,7 +1754,7 @@ Node & SignExt(Node & numSignBits, Node & child) {
         std::cerr << "*** Error: numSignBits parameter of SignExt must be an integer constant" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return SignExt(numSignBits.cst, child);
+    return SignExt(numSignBits.cst[0], child);
 }
 
 
@@ -1412,16 +1770,47 @@ Node & SignExt(int32_t numSignBits, Node & child) {
     }
 
     if (propagateCstOnBuild() and child.nature == CONST) {
-        uint64_t cst = child.cst;
-        if (cst >> (width - 1) == 1) { // MSB == 1
-            if (numSignBits + width == 64) {
-                cst = (cst - (1ULL << width));
-            }
-            else {
-                cst = (1ULL << (width + numSignBits)) + (cst - (1ULL << width));
-            }
+        int32_t width = child.width + numSignBits;
+        int32_t nbLimbs = width / 64;
+        if (nbLimbs * 64 != width) {
+            nbLimbs += 1;
         }
-        return Const(cst, width + numSignBits);
+
+        uint64_t res[nbLimbs];
+        int32_t li = (child.width - 1) / 64;
+        int32_t bi = (child.width - 1) % 64;
+        uint64_t v = child.cst[li] >> bi;
+        int64_t m = (int64_t) v << 63;
+        int32_t remBits = numSignBits;
+        int32_t bitIdx = child.width % 64;
+
+        for (int32_t i = 0; i < child.nlimbs - 1; i += 1) {
+            res[i] = child.cst[i];
+        }
+        if (bitIdx == 0) {
+            res[child.nlimbs - 1] = child.cst[child.nlimbs - 1];
+        }
+        else if (bitIdx + remBits < 64) {
+            res[child.nlimbs - 1] = child.cst[child.nlimbs - 1] | (uint64_t) (m >> (remBits)) >> (64 - bitIdx - remBits);
+            remBits = 0;
+        }
+        else {
+            res[child.nlimbs - 1] = child.cst[child.nlimbs - 1] | (m >> (64 - bitIdx));
+            remBits -= (64 - bitIdx);
+        }
+
+        int32_t limbIdx = child.nlimbs;
+        while (remBits >= 64) {
+            res[limbIdx] = (uint64_t) (m >> 63);
+            limbIdx += 1;
+            remBits -= 64;
+        }
+
+        if (remBits > 0) {
+            res[limbIdx] = (m >> 63) & ((1ULL << remBits) - 1);
+        }
+
+        return Const(res, nbLimbs, width);
     }
 
     std::vector<Node *> childrenList;
@@ -1532,22 +1921,24 @@ Node & GExp(Node & child) {
 
 Node & imul(Node & n0, Node & n1) {
     assert(n0.width == n1.width);
-    return Const(imulInt(n0.cst, n1.cst, n0.width), n0.width);
+    return Const(imulInt(n0.cst[0], n1.cst[0], n0.width), n0.width);
 }
 
 
 uint64_t imulInt(uint64_t a, uint64_t b, int32_t w) {
+    assert(w <= 64);
     return w == 64 ? (a * b) : (a * b) % (1ULL << w);
 }
 
 
 Node & ipow(Node & n0, Node & n1) {
     assert(n0.width == n1.width);
-    return Const(ipowInt(n0.cst, n1.cst, n0.width), n0.width);
+    return Const(ipowInt(n0.cst[0], n1.cst[0], n0.width), n0.width);
 }
 
 
 uint64_t ipowInt(uint64_t a, uint64_t b, int32_t w) {
+    assert(w <= 64);
     return w == 64 ? (a * b) : (a * b) % (1ULL << w); // FIXME a ** b and not a * b
 }
 
@@ -1555,7 +1946,7 @@ uint64_t ipowInt(uint64_t a, uint64_t b, int32_t w) {
 
 Node & gmul(Node & n0, Node & n1) {
     assert(n0.width == 8 and n1.width == 8);
-    return Const(gmulInt(n0.cst, n1.cst), 8);
+    return Const(gmulInt(n0.cst[0], n1.cst[0]), 8);
 }
 
 
@@ -1575,7 +1966,7 @@ uint64_t gmulInt(uint64_t a, uint64_t b) {
 
 Node & gpow(Node & n0, Node & n1) {
     assert(n0.width == 8 and n1.width == 8);
-    return Const(gpowInt(n0.cst, n1.cst), 8);
+    return Const(gpowInt(n0.cst[0], n1.cst[0]), 8);
 }
 
 
@@ -1593,7 +1984,7 @@ uint64_t gpowInt(uint64_t a, uint64_t b) {
 
 Node & gexp(Node & n) {
     assert(n.width == 8);
-    return Const(gexpInt(n.cst), 8);
+    return Const(gexpInt(n.cst[0]), 8);
 }
 
 
@@ -1605,7 +1996,7 @@ uint64_t gexpInt(uint64_t a) {
 
 Node & glog(Node & n) {
     assert(n.width == 8);
-    return Const(glogInt(n.cst), 8);
+    return Const(glogInt(n.cst[0]), 8);
 }
 
 
@@ -1626,6 +2017,40 @@ uint64_t glogInt(uint64_t a) {
         v = e;
     }
 }
+
+
+bool isZero(uint64_t * v, int32_t width) {
+    int32_t nbLimbs = width / 64;
+    if (nbLimbs * 64 != width) {
+        nbLimbs += 1;
+    }
+    for (int32_t i = 0; i < nbLimbs; i += 64) {
+        if (v[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+bool isAllOne(uint64_t * v, int32_t width) {
+    int32_t nbLimbs = width / 64;
+    if (nbLimbs * 64 != width) {
+        nbLimbs += 1;
+    }
+    for (int32_t i = 0; i < nbLimbs - 1; i += 64) {
+        if (v[i] != 0xFFFFFFFFFFFFFFFFULL) {
+            return false;
+        }
+    }
+    if (width % 64 != 0) {
+        return (v[nbLimbs - 1] == ((1ULL << (width % 64)) - 1));
+    }
+    else {
+        return v[nbLimbs - 1] == 0xFFFFFFFFFFFFFFFFULL;
+    }
+}
+
 
 
 /*

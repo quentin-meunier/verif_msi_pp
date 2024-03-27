@@ -109,7 +109,8 @@ class Node {
     NodeOp op;
     bool hasWordOp;
     bool wordAnalysisHasFailedOnSubExp;
-    uint64_t cst;
+    int32_t nlimbs;
+    uint64_t * cst;
     std::string * strn;
 
     // Cache to Extract node for each bit
@@ -140,6 +141,7 @@ class Node {
 
     static Node & SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
     static Node & ConstNode(uint64_t cst, int32_t width);
+    static Node & ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width);
     static Node & ConstNodeAuto(uint64_t cst);
     static Node & StrNode(const std::string & s);
     static Node & OpNode(NodeOp op, const std::vector<Node *> & children);
@@ -176,7 +178,8 @@ class Node {
     friend std::ostream& operator<<(std::ostream &, const Node &);
 
     std::string toString() const;
-    std::string verbatimPrint() const ;
+    std::string verbatimPrint() const;
+    std::string printCst() const;
     std::string expPrint(bool parNeeded, bool verbatim) const;
 
 };
@@ -185,12 +188,14 @@ class Node {
 Node & Symb(const char * symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
 Node & SymbInternal(std::string symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
 Node & SymbInternal(std::string symb, char symbType, int32_t width);
+Node & Const(uint64_t * cst, int32_t nlimbs, int32_t width);
 Node & Const(uint64_t cst, int32_t width);
 Node & Str(const std::string & s);
 Node & LShR(Node & child, Node & shval);
 Node & LShR(Node & child, int32_t shval);
 Node & RotateRight(Node & child, Node & shval);
 Node & RotateRight(Node & child, int32_t shval);
+Node & ConstNodeFromConcat(const std::vector<Node *> & children);
 Node & Concat(const std::vector<Node *> & children);
 Node & Concat(Node & n0, Node & n1);
 Node & Concat(Node & n0, Node & n1, Node & n2);
@@ -209,8 +214,10 @@ Node & Concat(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, 
 Node & Concat(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, Node & n6, Node & n7, Node & n8, Node & n9, Node & n10, Node & n11, Node & n12, Node & n13, Node & n14, Node & n15);
 //template <typename T> Node & Concat(T t);
 //template<typename T, typename... Args> Node & Concat(T t, Args... args);
+Node & ConstNodeFromExtract(int32_t msb, int32_t lsb, const Node & n);
 Node & Extract(Node & msb, Node & lsb, Node & child);
 Node & Extract(int32_t msb, int32_t lsb, Node & child);
+Node & ConstNodeFromZeroExt(int32_t numZeros, Node & n);
 Node & ZeroExt(Node & numZeros, Node & child);
 Node & ZeroExt(int32_t numZeros, Node & child);
 Node & SignExt(Node & numSignBits, Node & child);
@@ -241,6 +248,8 @@ uint64_t gexpInt(uint64_t a);
 Node & glog(Node & n);
 uint64_t glogInt(uint64_t a);
 
+bool isZero(uint64_t * cst, int32_t width);
+bool isAllOne(uint64_t * cst, int32_t width);
 
 
 #endif

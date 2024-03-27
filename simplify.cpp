@@ -145,19 +145,13 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
 }
 
 
-static Node & ConstNodeFromExtract(int32_t msb, int32_t lsb, const Node & n) {
-    assert(n.nature == CONST);
-    return Const((n.cst >> lsb) & ((1 << (msb - lsb + 1)) - 1), msb - lsb + 1);
-}
-
-
 static Node & simplifyExtract(Node & node) {
     // No recursion in this function
     Node & child = *node.children->at(2);
     Node & msbNode = *node.children->at(0);
     Node & lsbNode = *node.children->at(1);
-    int32_t msb = msbNode.cst;
-    int32_t lsb = lsbNode.cst;
+    int32_t msb = msbNode.cst[0];
+    int32_t lsb = lsbNode.cst[0];
     
     if (child.nature == CONST) {
         return ConstNodeFromExtract(msb, lsb, child);
@@ -273,7 +267,7 @@ static Node & simplifyExtract(Node & node) {
     else if (child.op == EXTRACT) {
         // Extract(m, l, Extract(v, u, e)) -> Extract(m + u, l + u, e)
         Node & gLsbNode = *child.children->at(1);
-        int32_t gLsb = (int32_t) gLsbNode.cst;
+        int32_t gLsb = (int32_t) gLsbNode.cst[0];
         Node & gchild = *child.children->at(2);
         return Extract(msb + gLsb, lsb + gLsb, gchild);
     }
@@ -617,8 +611,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             //   msbNode and lsbNode must also have the correct value
             // We do not look at child, msbNode and lsbNode in newChildren0
             // since it is not defined in 1st iteration and is used to detect a change later
-            int32_t msb = (int32_t) msbNode->cst;
-            int32_t lsb = (int32_t) lsbNode->cst;
+            int32_t msb = (int32_t) msbNode->cst[0];
+            int32_t lsb = (int32_t) lsbNode->cst[0];
             
             // QM FIXME: removed 'op == EXTRACT' here, propagate in verif_msi
             if (lsb == 0 && msb == child->width - 1) {
@@ -640,8 +634,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     child = newChildren0[2];
                     msbNode = newChildren0[0];
                     lsbNode = newChildren0[1];
-                    msb = msbNode->cst;
-                    lsb = lsbNode->cst;
+                    msb = msbNode->cst[0];
+                    lsb = lsbNode->cst[0];
                     continue;
                 }
                 else {
@@ -673,7 +667,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 // Extract(m, l, Extract(v, u, e)) -> Extract(m + u, l + u, e)
                 // Case is possible even if SimplifyExtract has been called (three or more nested Extract)
                 Node & gLsbNode = *child->children->at(1);
-                int32_t gLsb = (int32_t) gLsbNode.cst;
+                int32_t gLsb = (int32_t) gLsbNode.cst[0];
                 msbNode = &Node::ConstNodeAuto(msb + gLsb);
                 lsbNode = &Node::ConstNodeAuto(lsb + gLsb);
                 child = child->children->at(2);
@@ -770,128 +764,13 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             }
 
             else if (child->op == ZEXT || child->op == SEXT) {
-                // FIXME: still exist?
                 assert(false);
-                Node & extendNode = *child;
-                Node & exp = *extendNode.children->at(1);
-                if (msb <= exp.width - 1) {
-                    // Remove ZE or SE
-                    if (lsb == 0 && msb == exp.width - 1) {
-                        // +---------+-------------+
-                        // | Extend  |     exp     |
-                        // +---------+-------------+
-                        //           \-- Extract --/
-                        if (exp.nature == CONST) {
-                            return setSimpEqAndReturn(node, exp);
-                        }
-                        if (exp.nature == SYMB) {
-                            if (useSingleBitVariables) {
-                                Node & s = getBitDecompositionVar(exp);
-                                return setSimpEqAndReturn(node, s);
-                            }
-                            else {
-                                return setSimpEqAndReturn(node, exp);
-                            }
-                        }
-                        newChildren0 = *exp.children;
-                        op = exp.op;
-                        if (op == EXTRACT) {
-                            msbNode = newChildren0[0];
-                            lsbNode = newChildren0[1];
-                            child = newChildren0[2];
-                            continue;
-                        }
-                        else {
-                            break;
-                        }
-                    }
-                    else {
-                        // +------+----------------+
-                        // | Ext  |      exp       |
-                        // +------+----------------+
-                        //           \- Extract -/
-                        // msbNode and lsbNode unchanged
-                        child = &exp;
-                        newChildren0 = {msbNode, lsbNode, &exp};
-                        op = EXTRACT;
-                        continue;
-                    }
-                }
-                else if (lsb == 0) {
-                    // We also have msb > exp.width - 1
-                    // We can remove the Extract if we modify the Extension length
-                    // +---------------+-------+
-                    // | Extend        |  exp  |
-                    // +---------------+-------+
-                    //           \-- Extract --/
-                    int32_t extendWidth = node.width - exp.width;
-                    if (extendNode.op == ZEXT) {
-                        newChildren0 = {&exp, &Const(0, extendWidth)};
-                        op = CONCAT;
-                        break;
-                    }
-                    else {
-                        // SEXT
-                        Node & expMsb = Extract(exp.width - 1, exp.width - 1, exp);
-                        newChildren0.assign(extendWidth, &expMsb);
-                        op = CONCAT;
-                        break;
-                    }
-                }
-                else if (lsb > exp.width - 1 && extendNode.op == ZEXT) {
-                    // +-----------------+-------+
-                    // | ZExt            |  exp  |
-                    // +-----------------+-------+
-                    //   \-- Extract --/
-                    return setSimpEqAndReturn(node, Const(0, msb - lsb + 1));
-                }
-                else if (lsb >= exp.width - 1 && extendNode.op == SEXT) {
-                    // Propagate Extract inwards
-                    int32_t concatSize = msb - lsb + 1;
-                    // +-----------------+-------+
-                    // | SExt            |  exp  |
-                    // +-----------------+-------+
-                    //   \-- Extract --/
-                    if (concatSize == 1) {
-                        msbNode = &Node::ConstNodeAuto(exp.width - 1);
-                        lsbNode = msbNode;
-                        child = &exp;
-                        newChildren0 = {msbNode, lsbNode, child};
-                        op = EXTRACT;
-                        continue;
-                    }
-                    else {
-                        Node & expMsb = Extract(exp.width - 1, exp.width - 1, exp);
-                        newChildren0.assign(concatSize, &expMsb);
-                        op = CONCAT;
-                        break;
-                    }
-                }
-                else {
-                    // Propagate Extract inwards
-                    // +-----------------+-------+
-                    // | SExt            |  exp  |
-                    // +-----------------+-------+
-                    //       \--- Extract ---/
-                    int32_t newExtSize = node.width - (exp.width - lsb);
-                    Node & newExtractNode = Extract(exp.width - 1, lsb, exp);
-                    if (extendNode.op == ZEXT) {
-                        newChildren0 = {&newExtractNode, &Const(0, newExtSize)};
-                    }
-                    else {
-                        Node & expMsb = Extract(exp.width - 1, exp.width - 1, exp);
-                        newChildren0.assign(1, &newExtractNode);
-                        newChildren0.insert(newChildren0.end(), newExtSize, &expMsb);
-                    }
-                    op = CONCAT;
-                    break;
-                }
             }
 
             else if (child->op == LSHL) {
                 Node & gchild = *child->children->at(0);
                 Node & shNode = *child->children->at(1);
-                int32_t sh = (int32_t) shNode.cst;
+                int32_t sh = (int32_t) shNode.cst[0];
                 if (msb < sh) {
                     return setSimpEqAndReturn(node, Const(0, msb - lsb + 1));
                 }
@@ -920,7 +799,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             else if (child->op == LSHR) {
                 Node & gchild = *child->children->at(0);
                 Node & shNode = *child->children->at(1);
-                int32_t sh = (int32_t) shNode.cst;
+                int32_t sh = (int32_t) shNode.cst[0];
                 if (lsb >= gchild.width - sh) {
                     return setSimpEqAndReturn(node, Const(0, msb - lsb + 1));
                 }
@@ -950,7 +829,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             else if (child->op == ASHR) {
                 Node & gchild = *child->children->at(0);
                 Node & shNode = *child->children->at(1);
-                int32_t sh = (int32_t) shNode.cst;
+                int32_t sh = (int32_t) shNode.cst[0];
                 Node & gchildMsb = Extract(gchild.width - 1, gchild.width - 1, gchild);
                 if (lsb >= gchild.width - sh - 1) {
                     if (msb == lsb) {
@@ -1176,13 +1055,13 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 allChildrenSignExt = false;
                 break;
             }
-            if (child->op != ZEXT || child->children->at(0)->cst != newChildren[0]->children->at(0)->cst) {
+            if (child->op != ZEXT || child->children->at(0)->cst[0] != newChildren[0]->children->at(0)->cst[0]) {
                 allChildrenZeroExt = false;
                 if (!allChildrenSignExt) {
                     break;
                 }
             }
-            if (child->op != SEXT || child->children->at(0)->cst != newChildren[0]->children->at(0)->cst) {
+            if (child->op != SEXT || child->children->at(0)->cst[0] != newChildren[0]->children->at(0)->cst[0]) {
                 allChildrenSignExt = false;
                 if (!allChildrenZeroExt) {
                     break;
@@ -1233,22 +1112,12 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         //print('simp & [ ' + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
         op1 = BOR;
         cst0 = &Const(0, width);
-        if (width == 64) {
-            cst1 = &Const(0xFFFFFFFFFFFFFFFF, 64);
-        }
-        else {
-            cst1 = &Const(((1ULL << width) - 1), width);
-        }
+        cst1 = &Const(-1, width);
     }
     else if (op == BOR) {
         //print('simp | [ ' + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
         op1 = BAND;
-        if (width == 64) {
-            cst0 = &Const(0xFFFFFFFFFFFFFFFF, 64);
-        }
-        else {
-            cst0 = &Const(((1ULL << width) - 1), width);
-        }
+        cst0 = &Const(-1, width);
         cst1 = &Const(0, width);
     }
 
@@ -1300,31 +1169,81 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         }
 
         // Constant propagation
-        // FIXME: modified is set to true in case there is only one constant and the expression does not change
+        // The node is modified if:
+        // - Two or more children are constant
+        // OR
+        // - One children is a constant and it is equal to 0 or -1
         {
             int32_t i = 0;
-            uint64_t constVal = 0;
+            int32_t nlimbs = width / 64;
+            if (nlimbs * 64 != width) {
+                nlimbs += 1;
+            }
+            uint64_t constVal[nlimbs] = {0};
+            int32_t previousConstIdx = -1;
             while (i < (int32_t) newChildren.size()) {
                 Node & child = *newChildren[i];
                 if (child.nature == CONST) {
-                    constVal = constVal ^ child.cst;
-                    newChildren.erase(newChildren.begin() + i);
-                    modified = true;
-                    continue;
+                    if (previousConstIdx == -2) {
+                        // Two or more previous constants
+                        for (int32_t j = 0; j < nlimbs; j += 1) {
+                            constVal[j] = constVal[j] ^ child.cst[j];
+                        }
+                        newChildren.erase(newChildren.begin() + i);
+                        continue;
+                    }
+                    else if (previousConstIdx != -1) {
+                        // 2nd encountered constant
+                        // We remove the previous constant
+                        for (int32_t j = 0; j < nlimbs; j += 1) {
+                            constVal[j] = newChildren[previousConstIdx]->cst[j] ^ child.cst[j];
+                        }
+                        newChildren.erase(newChildren.begin() + previousConstIdx);
+                        i -= 1;
+                        newChildren.erase(newChildren.begin() + i);
+                        modified = true;
+                        previousConstIdx = -2;
+                        continue;
+                    }
+                    else if (equivalence(child, Const(0, width))) {
+                        newChildren.erase(newChildren.begin() + i);
+                        modified = true;
+                        continue;
+                    }
+                    else if (equivalence(child, Const(-1, width))) {
+                        for (int32_t j = 0; j < nlimbs; j += 1) {
+                            constVal[j] = child.cst[j];
+                        }
+                        newChildren.erase(newChildren.begin() + i);
+                        modified = true;
+                        previousConstIdx = -2;
+                        continue;
+                    }
+                    else {
+                        previousConstIdx = i;
+                    }
+
                 }
                 i += 1;
             }
-            if (constVal != 0) {
-                if (constVal == (1ULL << width) - 1) {
-                    addNotNode = !addNotNode;
-                }
-                else {
-                    if (addNotNode) {
-                        newChildren.push_back(&Const(constVal ^ ((1 << width) - 1), width));
-                            addNotNode = false;
+            if (previousConstIdx == -2) {
+                // Two or more constants, add node with value constVal if not 0
+                if (!isZero(constVal, width)) {
+                    if (isAllOne(constVal, width)) {
+                        addNotNode = !addNotNode;
                     }
                     else {
-                        newChildren.push_back(&Const(constVal, width));
+                        if (addNotNode) {
+                            // Propagate not node on constant
+                            for (int32_t j = 0; j < nlimbs; j += 1) {
+                                constVal[j] ^= 0xFFFFFFFFFFFFFFFFULL;
+                            }
+                            if (width % 64 != 0) {
+                                constVal[nlimbs - 1] &= (1ULL << (width % 64)) - 1;
+                            }
+                            addNotNode = false;
+                        }
+                        newChildren.push_back(&Const(constVal, nlimbs, width));
                     }
                 }
             }
@@ -1356,7 +1275,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 Node & child = *newChildren[i];
                 if (child.op == GPOW) {
                     Node * gchild = child.children->at(1);
-                    if (gchild->nature == CONST && Node::powersTwo.contains(gchild->cst)) {
+                    if (gchild->nature == CONST && Node::powersTwo.contains(gchild->cst[0])) {
                         if (nbPowChildren.contains(gchild)) {
                             nbPowChildren[gchild] += 1;
                         }
@@ -1393,7 +1312,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         // Final considerations
         if (newChildren.size() == 0) {
             if (addNotNode) {
-                return setSimpEqAndReturn(node, Const((1 << width) - 1, width));
+                return setSimpEqAndReturn(node, Const(-1, width));
             }
             else {
                 return setSimpEqAndReturn(node, Const(0, width));
@@ -1428,11 +1347,26 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         // Constant propagation
         {
             int32_t i = 0;
-            uint64_t constVal = 0;
+            int32_t nlimbs = width / 64;
+            if (nlimbs * 64 != width) {
+                nlimbs += 1;
+            }
+            uint64_t res[nlimbs] = {0};
             while (i < (int32_t) newChildren.size()) {
                 Node & child = *newChildren[i];
                 if (child.nature == CONST) {
-                    constVal = (constVal + child.cst) % (1 << width);
+                    int32_t carry = 0;
+                    for (int32_t j = 0; j < nlimbs - 1; j += 1) {
+                        res[j] += child.cst[j] + carry;
+                        carry = res[j] < child.cst[j] ? 1 : 0;
+                    }
+                    if (width % 64 == 0) {
+                        res[nlimbs - 1] += child.cst[nlimbs - 1] + carry;
+                    }
+                    else {
+                        res[nlimbs - 1] = (res[nlimbs - 1] + child.cst[nlimbs - 1] + carry) & ((1ULL << (width % 64)) - 1);
+
+                    }
                     newChildren.erase(newChildren.begin() + i);
                     modified = true;
                     continue;
@@ -1440,8 +1374,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 i += 1;
             }
 
-            if (constVal != 0) {
-                newChildren.push_back(&Const(constVal, width));
+            if (!isZero(res, width)) {
+                newChildren.push_back(&Const(res, nlimbs, width));
             }
         }
 
@@ -1520,6 +1454,20 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         Node & child = *newChildren[0];
         if (child.op == UMINUS) {
             return setSimpEqAndReturn(node, *child.children->at(0));
+        }
+        else if (child.nature == CONST) {
+            int32_t nlimbs = child.nlimbs;
+            uint64_t res[nlimbs];
+            int32_t carry = 1;
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                res[i] = ~child.cst[i] + carry;
+                carry = res[i] < ~child.cst[i] ? 1 : 0;
+            }
+            if (width % 64 != 0) {
+                res[nlimbs - 1] = res[nlimbs - 1] % (1ULL << (width % 64));
+            }
+            return setSimpEqAndReturn(node, Const(res, nlimbs, width));
+
         }
         else {
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
@@ -1632,15 +1580,26 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         // + Factorization
         {
             int32_t i = 0;
-            uint64_t constVal = cst1->cst;
+            int32_t nlimbs = width / 64;
+            if (nlimbs * 64 != width) {
+                nlimbs += 1;
+            }
+            uint64_t constVal[nlimbs];
+            for (int32_t j = 0; j < nlimbs; j += 1) {
+                constVal[j] = cst1->cst[j];
+            }
             while (i < (int32_t) newChildren.size()) {
                 Node & child = *newChildren[i];
                 if (child.nature == CONST) {
                     if (op == BAND) {
-                        constVal = constVal & child.cst;
+                        for (int32_t j = 0; j < nlimbs; j += 1) {
+                            constVal[j] &= child.cst[j];
+                        }
                     }
                     else {
-                        constVal = constVal | child.cst;
+                        for (int32_t j = 0; j < nlimbs; j += 1) {
+                            constVal[j] |= child.cst[j];
+                        }
                     }
                     newChildren.erase(newChildren.begin() + i);
                     modified = true;
@@ -1655,12 +1614,12 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             modified = modified || m;
             //print('children apres factorize (%s): [ ' % op + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
 
-            if (constVal == cst0->cst) {
+            if ((op == BAND && isZero(constVal, width)) || (op == BOR && isAllOne(constVal, width))) {
                 return setSimpEqAndReturn(node, *cst0);
             }
-            if (constVal != cst1->cst) {
+            if ((op == BAND && !isAllOne(constVal, width)) || (op == BOR && !isZero(constVal, width))) {
                 // modified already set to True in while loop
-                newChildren.push_back(&Const(constVal, width));
+                newChildren.push_back(&Const(constVal, nlimbs, width));
             }
         }
 
@@ -1684,11 +1643,19 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         if (child.op == BNOT) {
             return setSimpEqAndReturn(node, *child.children->at(0));
         }
-        else if (child.nature == CONST && child.cst == 0) {
-            return setSimpEqAndReturn(node, Const((1 << width) - 1, width));
-        }
-        else if (child.nature == CONST && child.cst == (1ULL << width) - 1) {
-            return setSimpEqAndReturn(node, Const(0, width));
+        else if (child.nature == CONST) {
+            int32_t nlimbs = child.nlimbs;
+            uint64_t res[nlimbs];
+            for (int32_t i = 0; i < nlimbs - 1; i += 1) {
+                res[i] = ~child.cst[i];
+            }
+            if (width % 64 == 0) {
+                res[nlimbs - 1] = ~child.cst[nlimbs - 1];
+            }
+            else {
+                res[nlimbs - 1] = ((1ULL << (width % 64)) - 1) ^ child.cst[nlimbs - 1];
+            }
+            return setSimpEqAndReturn(node, Const(res, nlimbs, width));
         }
         else {
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
@@ -1699,14 +1666,14 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
     else if (op == LSHL) {
         Node & exp = *newChildren[0];
         Node & sh0 = *newChildren[1];
-        if (sh0.cst == 0) {
+        if (sh0.cst[0] == 0) {
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
             if (exp.op == LSHL) {
                 Node & gChild = *exp.children->at(0);
                 Node & sh1 = *exp.children->at(1);
-                return setSimpEqAndReturn(node, gChild << (sh0.cst + sh1.cst));
+                return setSimpEqAndReturn(node, gChild << (sh0.cst[0] + sh1.cst[0]));
             }
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
         }
@@ -1716,14 +1683,14 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
     else if (op == ASHR) {
         Node & exp = *newChildren[0];
         Node & sh0 = *newChildren[1];
-        if (sh0.cst == 0) {
+        if (sh0.cst[0] == 0) {
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
             if (exp.op == ASHR) {
                 Node & gChild = *exp.children->at(0);
                 Node & sh1 = *exp.children->at(1);
-                return setSimpEqAndReturn(node, gChild >> (sh0.cst + sh1.cst));
+                return setSimpEqAndReturn(node, gChild >> (sh0.cst[0] + sh1.cst[0]));
             }
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
         }
@@ -1733,14 +1700,14 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
     else if (op == LSHR) {
         Node & exp = *newChildren[0];
         Node & sh0 = *newChildren[1];
-        if (sh0.cst == 0) {
+        if (sh0.cst[0] == 0) {
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
             if (exp.op == LSHR) {
                 Node & gChild = *exp.children->at(0);
                 Node & sh1 = *exp.children->at(1);
-                return setSimpEqAndReturn(node, LShR(gChild, sh0.cst + sh1.cst));
+                return setSimpEqAndReturn(node, LShR(gChild, sh0.cst[0] + sh1.cst[0]));
             }
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
         }
@@ -1768,15 +1735,9 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             }
             else {
                 if (currentConstantChildren.size() > 0) {
-                    modified = true;
                     if (currentConstantChildren.size() > 1) {
-                        int32_t cstRes = 0;
-                        int32_t currNbBits = 0;
-                        for (auto const & c : currentConstantChildren) {
-                            cstRes += c->cst << currNbBits;
-                            currNbBits += c->width;
-                        }
-                        newChildrenMerged.push_back(&Const(cstRes, currNbBits));
+                        modified = true;
+                        newChildrenMerged.push_back(&ConstNodeFromConcat(currentConstantChildren));
                     }
                     else {
                         newChildrenMerged.push_back(currentConstantChildren[0]);
@@ -1788,15 +1749,9 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         }
         // Case when last children of Concat are constants
         if (currentConstantChildren.size() > 0) {
-            modified = true;
             if (currentConstantChildren.size() > 1) {
-                int32_t cstRes = 0;
-                int32_t currNbBits = 0;
-                for (const auto & c : currentConstantChildren) {
-                    cstRes += c->cst << currNbBits;
-                    currNbBits += c->width;
-                }
-                newChildrenMerged.push_back(&Const(cstRes, currNbBits));
+                modified = true;
+                newChildrenMerged.push_back(&ConstNodeFromConcat(currentConstantChildren));
             }
             else {
                 newChildrenMerged.push_back(currentConstantChildren[0]);
@@ -1838,13 +1793,13 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         // Case all children are Extract nodes with corresponding bit indexes
         // Checking first child in advance in order to get its indexes
         if (newChildren[0]->op == EXTRACT) {
-            uint64_t firstBit = newChildren[0]->children->at(1)->cst;
-            uint64_t currentBit = newChildren[0]->children->at(0)->cst + 1;
+            uint64_t firstBit = newChildren[0]->children->at(1)->cst[0];
+            uint64_t currentBit = newChildren[0]->children->at(0)->cst[0] + 1;
 
             for (int32_t childNum = 1; childNum < (int32_t) newChildren.size(); childNum += 1) {
                 Node & child = *newChildren[childNum];
-                if (child.op == EXTRACT && child.children->at(1)->cst == currentBit) {
-                    currentBit = child.children->at(0)->cst + 1;
+                if (child.op == EXTRACT && child.children->at(1)->cst[0] == currentBit) {
+                    currentBit = child.children->at(0)->cst[0] + 1;
                 }
                 else {
                     return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
@@ -1869,16 +1824,11 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
 
 
     else if (op == ZEXT) {
+        assert(false);
         if (newChildren[1]->nature == CONST) {
             Node & numZeros = *newChildren[0];
             Node & child = *newChildren[1];
-            uint64_t cst = child.cst;
-            int32_t childNbBits = child.width;
-            if ((cst & 0x8000000000000000) != 0) {
-                cst = cst % (1 << childNbBits);
-            }
-            assert(width == childNbBits + (int32_t) numZeros.cst);
-            return setSimpEqAndReturn(node, Const(cst, width));
+            return setSimpEqAndReturn(node, ConstNodeFromZeroExt(numZeros.cst[0], child));
         }
         else {
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
@@ -1896,7 +1846,9 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         while (i < (int32_t) newChildren.size()) {
             Node & child = *newChildren[i];
             if (child.nature == CONST) {
-                constVal = gmulInt(constVal, child.cst);
+                assert(newChildren[0]->nlimbs == 1);
+                // QM: FIXME: normal que ce soit gmulInt alors que IMUL aussi dans le test au-dessus ?
+                constVal = gmulInt(constVal, child.cst[0]);
                 newChildren.erase(newChildren.begin() + i);
                 modified = true;
                 continue;
@@ -1923,32 +1875,30 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 if (child.op == GEXP) {
                     nbExpChildren += 1;
                 }
-                else {
-                    if (child.op == GPOW) {
-                        bool exists = false;
-                        for (const auto & [exp, val] : nbPowChildren) {
-                            if (equivalence(*exp, *child.children->at(0))) {
-                                nbPowChildren[exp] += 1;
-                                exists = true;
-                                break;
-                            }
-                        }
-                        if (!exists) {
-                            nbPowChildren[child.children->at(0)] = 1;
+                else if (child.op == GPOW) {
+                    bool exists = false;
+                    for (const auto & [exp, val] : nbPowChildren) {
+                        if (equivalence(*exp, *child.children->at(0))) {
+                            nbPowChildren[exp] += 1;
+                            exists = true;
+                            break;
                         }
                     }
-                    else {
-                        bool exists = false;
-                        for (const auto & [exp, val] : nbPowChildren) {
-                            if (equivalence(*exp, child)) {
-                                nbPowChildren[exp] += 1;
-                                exists = true;
-                                break;
-                            }
+                    if (!exists) {
+                        nbPowChildren[child.children->at(0)] = 1;
+                    }
+                }
+                else {
+                    bool exists = false;
+                    for (const auto & [exp, val] : nbPowChildren) {
+                        if (equivalence(*exp, child)) {
+                            nbPowChildren[exp] += 1;
+                            exists = true;
+                            break;
                         }
-                        if (!exists) {
-                            nbPowChildren[&child] = 1;
-                        }
+                    }
+                    if (!exists) {
+                        nbPowChildren[&child] = 1;
                     }
                 }
             }
@@ -2074,7 +2024,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             if (c0.nature == CONST) {
                 return gpow(c0, c1);
             }
-            else if (c1.cst == 1) {
+            else if (c1.cst[0] == 1) {
                 return setSimpEqAndReturn(node, c0);
             }
         }

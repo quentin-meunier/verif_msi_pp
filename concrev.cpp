@@ -20,7 +20,7 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 #include "utils.hpp"
 #include "arrayexp.hpp"
-
+#include "simplify.hpp"
 
 
 static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVarsVec, std::map<Node *, Node *> & sharesSubst) {
@@ -171,43 +171,75 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
             std::cerr  << "*** Error: concrete evaluation of an array access is only possible with an initialized content" << std::endl;
             exit(EXIT_FAILURE);
         }
-        res = &Const(ArrayExp::allArrays[*newChildren[0]->strn]->getContent(newChildren[1]->cst), ArrayExp::allArrays[*newChildren[0]->strn]->outWidth);
+        res = &Const(ArrayExp::allArrays[*newChildren[0]->strn]->getContent(newChildren[1]->cst[0]), ArrayExp::allArrays[*newChildren[0]->strn]->outWidth);
     }
     else {
-        uint64_t intRes;
+        int32_t width = node.width;
+        int32_t nlimbs = node.nlimbs;
+        uint64_t intRes[nlimbs] = {0};
         if (op == BAND) {
-            intRes = ~0;
+            for (int32_t i = 0; i < nlimbs - 1; i += 1) {
+                intRes[i] = 0xFFFFFFFFFFFFFFFFULL;
+            }
+            if (width % 64 == 0) {
+                intRes[nlimbs - 1] = 0xFFFFFFFFFFFFFFFFULL;
+            }
+            else {
+                intRes[nlimbs - 1] = (1ULL << (width % 64)) - 1;
+            }
         }
         else if (op == IMUL) {
-            intRes = 1;
+            intRes[0] = 1;
         }
         else {
-            intRes = 0;
+            intRes[0] = 0;
         }
         for (const auto & child : newChildren) {
             if (op == BXOR) {
-                intRes = intRes ^ child->cst;
+                for (int32_t i = 0; i < nlimbs; i += 1) {
+                    intRes[i] ^= child->cst[i];
+                }
             }
             else if (op == BAND) {
-                intRes = intRes & child->cst;
+                for (int32_t i = 0; i < nlimbs; i += 1) {
+                    intRes[i] &= child->cst[i];
+                }
             }
             else if (op == BOR) {
-                intRes = intRes | child->cst;
+                for (int32_t i = 0; i < nlimbs; i += 1) {
+                    intRes[i] |= child->cst[i];
+                }
             }
             else if (op == BNOT) {
-                intRes = (1ULL << node.width) - 1 - child->cst;
+                for (int32_t i = 0; i < nlimbs - 1; i += 1) {
+                    intRes[i] = ~child->cst[i];
+                }
+                if (width % 64 == 0) {
+                    intRes[nlimbs - 1] = ~child->cst[nlimbs - 1];
+                }
+                else {
+                    intRes[nlimbs - 1] = ((1ULL << (width % 64)) - 1) ^ child->cst[nlimbs - 1];
+                }
             }
             else if (op == PLUS) {
-                intRes = node.width == 64 ? (intRes + child->cst) : (intRes + child->cst) % (1ULL << node.width);
+                int carry = 0;
+                for (int32_t i = 0; i < nlimbs; i += 1) {
+                    intRes[i] += child->cst[i] + carry;
+                    carry = intRes[i] < child->cst[i] ? 1 : 0;
+                }
+                if (width % 64 != 0) {
+                    intRes[nlimbs - 1] = intRes[nlimbs - 1] & ((1ULL << (width % 64)) - 1);
+                }
             }
             else if (op == IMUL) {
-                intRes = node.width == 64 ? (intRes * child->cst) : (intRes * child->cst) % (1ULL << node.width);
+                assert(nlimbs == 1);
+                intRes[0] = width == 64 ? (intRes[0] * child->cst[0]) : (intRes[0] * child->cst[0]) & ((1ULL << width) - 1);
             }
             else {
                 assert(false);
             }
         }
-        res = &Const(intRes, node.width);
+        res = &Const(intRes, nlimbs, width);
     }
 
     expCache[&node] = res;
@@ -246,13 +278,15 @@ static bool compareExpsWithExevRec(Node & e0, Node & e1, std::vector<Node *> & a
         //std::cout << "n0 : " << n0 << std::endl;
         Node & n1 = getExpValue(e1, m);
         //std::cout << "n1 : " << n1 << std::endl;
-        if (n0.cst == n1.cst && n0.width == n1.width) {
+        if (equivalence(n0, n1)) {
             return true;
         }
         else {
             res = m;
-            *v0 = n0.cst;
-            *v1 = n1.cst;
+            for (int32_t i = 0; i < n0.nlimbs; i += 1) {
+                v0[i] = n0.cst[i];
+                v1[i] = n1.cst[i];
+            }
             return false;
         }
     }
@@ -261,14 +295,26 @@ static bool compareExpsWithExevRec(Node & e0, Node & e1, std::vector<Node *> & a
  
 
 bool compareExpsWithExev(Node & e0, Node & e1) {
+    if (e0.width != e1.width) {
+        return false;
+    }
+    assert(e0.width <= 64);
+    int32_t nlimbs = e0.width / 64;
+    if (nlimbs * 64 != e0.width) {
+        nlimbs += 1;
+    }
     std::map<Node *, Node *> res;
-    uint64_t v0;
-    uint64_t v1;
-    return compareExpsWithExev(e0, e1, res, &v0, &v1);
+    uint64_t v0[nlimbs];
+    uint64_t v1[nlimbs];
+    return compareExpsWithExev(e0, e1, res, v0, v1);
 }
 
 
 bool compareExpsWithExev(Node & e0, Node & e1, std::map<Node *, Node *> & res, uint64_t * v0, uint64_t * v1) {
+    if (e0.width != e1.width) {
+        return false;
+    }
+    assert(e0.width <= 64);
     std::vector<Node *> exps {&e0, &e1};
     std::vector<Node *> allVarsVec;
     std::map<Node *, Node *> sharesSubst;
@@ -280,10 +326,17 @@ bool compareExpsWithExev(Node & e0, Node & e1, std::map<Node *, Node *> & res, u
 
 
 bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval) {
+    if (e0.width != e1.width) {
+        return false;
+    }
     std::map<Node *, Node *> res;
-    uint64_t v0;
-    uint64_t v1;
-    return compareExpsWithRandev(e0, e1, nbEval, res, &v0, &v1);
+    int32_t nlimbs = e0.width / 64;
+    if (nlimbs * 64 != e0.width) {
+        nlimbs += 1;
+    }
+    uint64_t v0[nlimbs];
+    uint64_t v1[nlimbs];
+    return compareExpsWithRandev(e0, e1, nbEval, res, v0, v1);
 }
 
 
@@ -317,10 +370,12 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
         //std::cout << "n0 : " << n0 << " (width = " << n0.width << ")" << std::endl;
         Node & n1 = getExpValue(e1, m);
         //std::cout << "n1 : " << n1 << " (width = " << n1.width << ")" << std::endl;
-        if (n0.cst != n1.cst || n0.width != n1.width) {
+        if (!equivalence(n0, n1)) {
             res = m;
-            *v0 = n0.cst;
-            *v1 = n1.cst;
+            for (int32_t i = 0; i < n0.nlimbs; i += 1) {
+                v0[i] = n0.cst[i];
+                v1[i] = n1.cst[i];
+            }
             return false;
         }
     }
@@ -337,7 +392,7 @@ static void getDistribRefBis(Node & e0, std::map<uint64_t, uint64_t> & distribRe
         }
     }
     else {
-        uint64_t v = getExpValue(e0, m).cst;
+        uint64_t v = getExpValue(e0, m).cst[0];
         distribRef[v] += 1;
     }
 }
@@ -365,7 +420,7 @@ static void getDistribWithExevRecBis(Node & e0, std::map<uint64_t, uint64_t> & d
         }
     }
     else {
-        uint64_t v = getExpValue(e0, m).cst;
+        uint64_t v = getExpValue(e0, m).cst[0];
         distrib[v] += 1;
     }
 }
@@ -405,6 +460,7 @@ static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & dist
 
 
 bool getDistribWithExev(Node & e, bool * rud) {
+    assert(e.width <= 64);
     Node & e0 = replaceSharesWithSecretsAndMasks(e);
     std::vector<Node *> allVarsVec;
     std::map<Node *, Node *> sharesSubst;
