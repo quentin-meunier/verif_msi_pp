@@ -57,7 +57,8 @@ Node & ArrayExp::operator[](Node & child) {
         exit(EXIT_FAILURE);
     }
     if (propagateCstOnBuild() and child.nature == CONST and content != NULL) {
-        return Const(getContent(child.cst), outWidth);
+        assert(child.nlimbs == 1);
+        return Const(getContent(child.cst[0]), outWidth);
     }
     if (func != NULL) {
         return func(NULL, child);
@@ -68,7 +69,7 @@ Node & ArrayExp::operator[](Node & child) {
 
 
 uint64_t ArrayExp::getContent(uint64_t idx) {
-    // FIXME: check that elemSize has a value that it is compatible with outWidth
+    // FIXME: check that elemSize has a value that is compatible with outWidth
 
     uint64_t val;
     if (elemSize == 1) {

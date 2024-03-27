@@ -46,13 +46,13 @@ void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t
         exit(EXIT_FAILURE);
     }
 
-    if (inWidth != 8 && inWidth != 16 && inWidth != 32) {
-        std::cerr << "*** Error: Only supported values for inWidth are 8, 16 and 32" << std::endl;
+    if (inWidth != 8 && inWidth != 16 && inWidth != 32 && inWidth != 64) {
+        std::cerr << "*** Error: Only supported values for inWidth are 8, 16, 32 and 64" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    if (outWidth != 8 && outWidth != 16 && outWidth != 32) {
-        std::cerr << "*** Error: Only supported values for outWidth are 8, 16 and 32" << std::endl;
+    if (outWidth != 8 && outWidth != 16 && outWidth != 32 && inWidth != 64) {
+        std::cerr << "*** Error: Only supported values for outWidth are 8, 16, 32 and 64" << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -104,7 +104,8 @@ ArrayExp & getArrayAndOffset(Node & addr, Node ** offset) {
     if (addr.nature == OP && addr.op == PLUS) {
         for (const auto & child : *addr.children) {
             if (child->nature == CONST) {
-                arr = &getArrayByAddr(child->cst);
+                assert(child->nlimbs == 1);
+                arr = &getArrayByAddr(child->cst[0]);
             }
             else {
                 newChildren.push_back(child);
@@ -176,8 +177,8 @@ void checkResults(Node & res, Node & ref, bool pei, bool usbv) {
     Node & res_s = simplifyCore(res, pei, usbv);
     Node & ref_s = simplifyCore(ref, pei, usbv);
 
-    std::cout << "res : " << res_s << " [" << res_s.width << "]" << std::endl;
-    std::cout << "ref : " << ref_s << " [" << ref_s.width << "]" << std::endl;
+    std::cout << "res : " << res_s << " [" << std::dec << res_s.width << "]" << std::endl;
+    std::cout << "ref : " << ref_s << " [" << std::dec << ref_s.width << "]" << std::endl;
 
     if (nbBits != res.width || nbBits != ref.width) {
         std::cout << "KO (nbBits after simplify: res: " << res.width << " - ref: " << ref.width << " - expected: " << nbBits << ")" << std::endl;
@@ -203,14 +204,14 @@ Node & constant(int64_t val, int32_t width) {
 
 
 bool litteralInteger(Node & e, uint64_t * val) {
-    if (e.nature == CONST) {
-        *val = e.cst;
+    if (e.nature == CONST && e.nlimbs == 1) {
+        *val = e.cst[0];
         return true;
     }
     else {
         Node & s = simplify(e);
-        if (s.nature == CONST) {
-            *val = s.cst;
+        if (s.nature == CONST && e.nlimbs == 1) {
+            *val = s.cst[0];
             return true;
         }
         else {

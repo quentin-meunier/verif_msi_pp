@@ -57,7 +57,7 @@ static void dumpCircuitGates(const char * filename, std::set<HWElement *> & hwEl
                     s = std::string("Symbol: ") + *n.symb + " [" + n.symbType + "]" + " (" + std::to_string(hwe->num) + ")\n/" + std::to_string(n.width) + "/";
                 }
                 else if (n.nature == CONST) {
-                    s = std::string("Const: ") + std::to_string(n.cst) + "  (" + std::to_string(hwe->num) + ")\n/" + std::to_string(n.width) + "/";
+                    s = std::string("Const: ") + n.printCst() + "  (" + std::to_string(hwe->num) + ")\n/" + std::to_string(n.width) + "/";
                 }
                 else {
                     s = std::string("Exp: ") + n.toString() + " (" + std::to_string(hwe->num) + ")\n/" + std::to_string(n.width) + "/";
