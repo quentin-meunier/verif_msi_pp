@@ -1587,7 +1587,12 @@ Node & Concat(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, 
 Node & ConstNodeFromExtract(int32_t msb, int32_t lsb, const Node & n) {
     assert(n.nature == CONST);
     if (n.nlimbs == 1) {
-        return Const((n.cst[0] >> lsb) & ((1ULL << (msb - lsb + 1)) - 1), msb - lsb + 1);
+        if (msb - lsb + 1 == 64) {
+            return Const(n.cst[0], 64);
+        }
+        else {
+            return Const((n.cst[0] >> lsb) & ((1ULL << (msb - lsb + 1)) - 1), msb - lsb + 1);
+        }
     }
     else {
         int32_t width = msb - lsb + 1;
