@@ -247,6 +247,9 @@ Node & Node::ConstNode(uint64_t cst, int32_t width) {
     }
     else {
         int32_t nlimbs = width / 64;
+        if (nlimbs * 64 != width) {
+            nlimbs += 1;
+        }
         std::string s = std::to_string(width);
         s += std::to_string(cst);
         for (int32_t i = 1; i < nlimbs; i += 1) {
