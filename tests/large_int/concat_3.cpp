@@ -5,18 +5,15 @@
 
 int main() {
 
-    Node & c0 = constant(0x0, 992);
-    Node & c1 = constant(0x0, 32);
+    Node & c0 = constant(0xAA, 992);
+    Node & c1 = constant(0x12345678, 32);
     Node & n = Concat(c0, c1);
+    Node & ref = constant(0xAA12345678, 1024);
 
     std::cout << "res: " << n << std::endl;
-    std::cout << "ref: 0x0" << std::endl;
-    if (n.nlimbs == 16 && n.cst[1] == 0x0) {
-        std::cout << "OK" << std::endl;
-    }
-    else {
-        std::cout << "KO" << std::endl;
-    }
+    std::cout << "ref: " << ref << std::endl;
+
+    checkResults(n, ref);
 
     return 0;
 }
