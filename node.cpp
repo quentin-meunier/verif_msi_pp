@@ -260,12 +260,12 @@ Node & Node::ConstNode(uint64_t cst, int32_t width) {
         sha.update(s);
         uint64_t * h = sha.digest();
         std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
-        if (cache.contains(t)) {
+        if (bigCst2node.contains(t)) {
             delete [] h;
-            return *cache[t];
+            return *bigCst2node[t];
         }
         Node * n = new Node();
-        cache[t] = n;
+        bigCst2node[t] = n;
 
         n->nature = CONST;
         n->nlimbs = nlimbs;
@@ -293,12 +293,12 @@ Node & Node::ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width) {
     sha.update(s);
     uint64_t * h = sha.digest();
     std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
-    if (cache.contains(t)) {
+    if (bigCst2node.contains(t)) {
         delete [] h;
-        return *cache[t];
+        return *bigCst2node[t];
     }
     Node * n = new Node();
-    cache[t] = n;
+    bigCst2node[t] = n;
 
     n->nature = CONST;
     n->nlimbs = nlimbs;
@@ -379,7 +379,6 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         }
     #endif
 
-    allNodes.insert(n);
     n->h = h;
     n->children = orderedChildren;
     n->nature = OP;
@@ -605,7 +604,12 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     if (modeTempNode) {
         #if MEMORY_STRATEGY == DELETE_NODES
             toDelete.insert(n);
+        #else
+            opNodes.insert(n);
         #endif
+    }
+    else {
+        opNodes.insert(n);
     }
 
     return *n;
@@ -1743,11 +1747,6 @@ Node & ZeroExt(int32_t numZeros, Node & child) {
         std::cerr << "*** Error: numZeros parameter of ZeroExt must be greater than 0" << std::endl;
         exit(EXIT_FAILURE);
     }
-    int32_t width = child.width;
-    if (numZeros + width > 64) {
-        std::cerr << "*** Error: Width of expression > 64 in ZeroExt" << std::endl;
-        exit(EXIT_FAILURE);
-    }
 
     if (propagateCstOnBuild() and child.nature == CONST) {
         return ConstNodeFromZeroExt(numZeros, child);
@@ -1769,11 +1768,6 @@ Node & SignExt(Node & numSignBits, Node & child) {
 Node & SignExt(int32_t numSignBits, Node & child) {
     if (numSignBits <= 0) {
         std::cerr << "*** Error: numSignBits parameter of SignExt must be greater than 0" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    int32_t width = child.width;
-    if (numSignBits + width > 64) {
-        std::cerr << "*** Error: Width of expression > 64 in SignExt" << std::endl;
         exit(EXIT_FAILURE);
     }
 

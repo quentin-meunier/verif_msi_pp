@@ -96,11 +96,8 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         outputIndexes = params.outputIndexes;
     }
 
-    Node * node = &simplify(nodeIn);
-
-    // Set temporary mode here because up to the first simplify,
-    // links can be made from user nodes to nodes created in simplify
-    Node::setModeTemporaryNodes();
+    Node * node = &nodeIn;
+    // Simplify made in wrapper
 
     std::set<Node *> masksTaken;
     int cpt = 0;
@@ -116,7 +113,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 if (verbose) {
                     std::cout << "# No more secret" << std::endl;
                 }
-                Node::setModePermanentNodes();
                 return true;
             }
         }
@@ -132,7 +128,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 }
             }
             if (isNI) {
-                Node::setModePermanentNodes();
                 return true;
             }
         }
@@ -151,7 +146,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 }
             }
             if (isRNI) {
-                Node::setModePermanentNodes();
                 return true;
             }
         }
@@ -172,7 +166,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 }
             }
             if (isPINI) {
-                Node::setModePermanentNodes();
                 return true;
             }
         }
@@ -182,7 +175,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             if (verbose) {
                 std::cout << "# At least one node is currently masking" << std::endl;
             }
-            Node::setModePermanentNodes();
             return true;
         }
  
@@ -231,7 +223,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             if (verbose) {
                 std::cout << "# No mask can be taken" << std::endl;
             }
-            Node::setModePermanentNodes();
             return false;
         }
 
@@ -287,47 +278,140 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 }
 
 
-bool tps(Node & nodeIn, bool verbose) {
-    if (nodeIn.shareOcc->size() != 0) {
+static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool verbose) {
+    Node * n = &simplify(nodeIn);
+    if (bitDecompose) {
+        n = &getBitDecomposition(*n);
+    }
+    Node::setModeTemporaryNodes();
+    bool res = checkProperty(*n, secProp, params, verbose);
+    Node::setModePermanentNodes();
+    return res;
+}
+
+
+static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool verbose) {
+    std::vector<Node *> nodes;
+    for (const auto & n : nodesIn) {
+        nodes.push_back(&simplify(*n));
+    }
+    if (bitDecompose) {
+        std::vector<Node *> nodesBE;
+        for (const auto & n : nodes) {
+            nodesBE.push_back(&getBitDecomposition(*n));
+        }
+        nodes = nodesBE;
+    }
+
+    Node::setModeTemporaryNodes();
+    Node & c = simplify(Concat(nodes));
+    bool res = checkProperty(c, secProp, params, verbose);
+    Node::setModePermanentNodes();
+    return res;
+}
+
+
+static void tpsValidity(Node & n) {
+    if (n.shareOcc->size() != 0) {
         std::cerr << "*** Error: Threshold Probing verification should not use a share representation but explicit secret variables and masks" << std::endl;
         exit(EXIT_FAILURE);
     }
-    PropParams dummy;
-    return checkProperty(nodeIn, TPS, dummy, verbose);
 }
 
 
-bool ni(Node & nodeIn, int maxShareOcc, bool verbose) {
-    if (nodeIn.secretVarOcc->size() != 0) {
+static void niValidity(Node & n) {
+    if (n.secretVarOcc->size() != 0) {
         std::cerr << "*** Error: NI verification should use a share representation and not explicit secret variables" << std::endl;
         exit(EXIT_FAILURE);
     }
-    PropParams pp;
-    pp.maxShareOcc = maxShareOcc;
-    return checkProperty(nodeIn, NI, pp, verbose);
 }
 
 
-bool rni(Node & nodeIn, int diff, bool verbose) {
-    if (nodeIn.secretVarOcc->size() != 0) {
+static void rniValidity(Node & n) {
+    if (n.secretVarOcc->size() != 0) {
         std::cerr << "*** Error: RNI verification should use a share representation and not explicit secret variables" << std::endl;
         exit(EXIT_FAILURE);
     }
-    PropParams pp;
-    pp.diff = diff;
-    return checkProperty(nodeIn, RNI, pp, verbose);
 }
 
 
-bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool verbose) {
-    if (nodeIn.secretVarOcc->size() != 0) {
+static void piniValidity(Node & n) {
+    if (n.secretVarOcc->size() != 0) {
         std::cerr << "*** Error: PINI verification should use a share representation and not explicit secret variables" << std::endl;
         exit(EXIT_FAILURE);
+    }
+}
+
+
+bool tps(Node & nodeIn, bool bitDecompose, bool verbose) {
+    tpsValidity(nodeIn);
+    PropParams dummy;
+    return checkPropertyWrapper(nodeIn, TPS, dummy, bitDecompose, verbose);
+}
+
+
+bool tps(std::vector<Node *> & nodes, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        tpsValidity(*n);
+    }
+    PropParams dummy;
+    return checkPropertyWrapper(nodes, TPS, dummy, bitDecompose, verbose);
+}
+
+
+bool ni(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool verbose) {
+    niValidity(nodeIn);
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    return checkPropertyWrapper(nodeIn, NI, pp, bitDecompose, verbose);
+}
+
+
+bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        niValidity(*n);
+    }
+    PropParams pp;
+    return checkPropertyWrapper(nodes, NI, pp, bitDecompose, verbose);
+}
+
+
+
+bool rni(Node & nodeIn, int diff, bool bitDecompose, bool verbose) {
+    rniValidity(nodeIn);
+    PropParams pp;
+    pp.diff = diff;
+    return checkPropertyWrapper(nodeIn, RNI, pp, bitDecompose, verbose);
+}
+
+
+bool rni(std::vector<Node *> & nodes, int diff, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        rniValidity(*n);
+    }
+    PropParams pp;
+    pp.diff = diff;
+    return checkPropertyWrapper(nodes, RNI, pp, bitDecompose, verbose);
+}
+
+
+bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
+    piniValidity(nodeIn);
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes; 
+    return checkPropertyWrapper(nodeIn, PINI, pp, bitDecompose, verbose);
+}
+
+
+bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        piniValidity(*n);
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes; 
-    return checkProperty(nodeIn, PINI, pp, verbose);
+    return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, verbose);
 }
 
 
