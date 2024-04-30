@@ -18,7 +18,7 @@ Author(s): Quentin L. Meunier
 
 
 
-#define CHECK_VAL_BODY(check_call) ({                   \
+#define CHECK_VAL_BODY(check_call, check_call_bd) ({    \
     uint64_t timerStart;                                \
     uint64_t timerEnd;                                  \
     bool res;                                           \
@@ -32,7 +32,6 @@ Author(s): Quentin L. Meunier
         res = false;                                    \
         usedBitExp = false;                             \
         if (!e.wordAnalysisHasFailedOnSubExp) {         \
-            Node & be = e;                              \
             res = check_call;                           \
             if (!res) {                                 \
                 e.wordAnalysisHasFailedOnSubExp = true; \
@@ -40,19 +39,16 @@ Author(s): Quentin L. Meunier
         }                                               \
                                                         \
         if (!res && bitExpEnable()) {                   \
-            Node & be = getBitDecomposition(e);         \
             usedBitExp = true;                          \
-            res = check_call;                           \
+            res = check_call_bd;                        \
         }                                               \
     }                                                   \
     else {                                              \
         if (bitExpEnable()) {                           \
-            Node & be = getBitDecomposition(e);         \
             usedBitExp = true;                          \
-            res = check_call;                           \
+            res = check_call_bd;                        \
         }                                               \
         else {                                          \
-            Node & be = e;                              \
             usedBitExp = false;                         \
             res = check_call;                           \
         }                                               \
@@ -70,26 +66,26 @@ Author(s): Quentin L. Meunier
 
 
 bool checkTpsVal(Node & e, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_VAL_BODY(tps(be));
+    CHECK_VAL_BODY(tps(e), tps(e, true));
 }
 
 bool checkNIVal(Node & e, int maxShareOcc, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_VAL_BODY(ni(be, maxShareOcc));
+    CHECK_VAL_BODY(ni(e, maxShareOcc), ni(e, maxShareOcc, true));
 }
 
 bool checkRNIVal(Node & e, int diff, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_VAL_BODY(rni(be, diff));
+    CHECK_VAL_BODY(rni(e, diff), rni(e, diff, true));
 }
 
 bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_VAL_BODY(pini(be, maxShareOcc, outputIndexes));
+    CHECK_VAL_BODY(pini(e, maxShareOcc, outputIndexes), pini(e, maxShareOcc, outputIndexes, true));
 }
 
 #undef CHECK_VAL_BODY
 
 
 
-#define CHECK_TRANS_BODY(check_call) ({                                                \
+#define CHECK_TRANS_BODY(check_call, check_call_bd) ({                                 \
     uint64_t timerStart;                                                               \
     uint64_t timerEnd;                                                                 \
     bool res;                                                                          \
@@ -99,14 +95,12 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
         timerStart =  getTime();                                                       \
     }                                                                                  \
                                                                                        \
-    /* set mode to delete nodes? */                                                    \
-    Node & e = Concat(e0, e1);                                                         \
+    std::vector<Node *> n = {&e0, &e1};                                                \
                                                                                        \
-    if (e.hasWordOp) {                                                                 \
+    if (e0.hasWordOp || e1.hasWordOp) {                                                \
         res = false;                                                                   \
         usedBitExp = false;                                                            \
         if (!(e0.wordAnalysisHasFailedOnSubExp || e1.wordAnalysisHasFailedOnSubExp)) { \
-            Node & be = e;                                                             \
             res = check_call;                                                          \
             /* FIXME: if only transition and no value, how to make the flag            \
                become true? check each exp independently?                              \
@@ -118,20 +112,17 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
         }                                                                              \
                                                                                        \
         if (!res && bitExpEnable()) {                                                  \
-            Node & be = getBitDecomposition(e);                                        \
             usedBitExp = true;                                                         \
-            res = check_call;                                                          \
+            res = check_call_bd;                                                       \
         }                                                                              \
     }                                                                                  \
                                                                                        \
     else {                                                                             \
         if (bitExpEnable()) {                                                          \
-            Node & be = getBitDecomposition(e);                                        \
             usedBitExp = true;                                                         \
-            res = check_call;                                                          \
+            res = check_call_bd;                                                       \
         }                                                                              \
         else {                                                                         \
-            Node & be = e;                                                             \
             usedBitExp = false;                                                        \
             res = check_call;                                                          \
         }                                                                              \
@@ -149,38 +140,21 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
 
 
 bool checkTpsTrans(Node & e0, Node & e1, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_TRANS_BODY(tps(be));
+    CHECK_TRANS_BODY(tps(n), tps(n, true));
 }
 
 bool checkNITrans(Node & e0, Node & e1, int maxShareOcc, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_TRANS_BODY(ni(be, maxShareOcc));
+    CHECK_TRANS_BODY(ni(n, maxShareOcc), ni(n, maxShareOcc, true));
 }
 
 bool checkRNITrans(Node & e0, Node & e1, int diff, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_TRANS_BODY(rni(be, diff));
+    CHECK_TRANS_BODY(rni(n, diff), rni(n, diff, true));
 }
 
 bool checkPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet, uint64_t * timeRet) {
-    CHECK_TRANS_BODY(pini(be, maxShareOcc, outputIndexes));
+    CHECK_TRANS_BODY(pini(n, maxShareOcc, outputIndexes), pini(n, maxShareOcc, outputIndexes, true));
 }
 
-/*
-bool checkTpsTrans(Node & e0, Node & e1) {
-    return checkTpsTrans(e0, e1, NULL, NULL);
-}
-
-bool checkNITrans(Node & e0, Node & e1, int maxShareOcc) {
-    return checkNITrans(e0, e1, maxShareOcc, NULL, NULL);
-}
-
-bool checkRNITrans(Node & e0, Node & e1, int diff) {
-    return checkRNITrans(e0, e1, diff, NULL, NULL);
-}
-
-bool checkPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes) {
-    return checkPINITrans(e0, e1, maxShareOcc, outputIndexes, NULL, NULL);
-}
-*/
 
 #undef CHECK_TRANS_BODY
 

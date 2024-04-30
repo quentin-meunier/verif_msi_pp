@@ -357,10 +357,10 @@ void verifMSICleanup() {
     registeredArraysByName.clear();
     registeredArraysByAddr.clear();
 
-    for (const auto & n : Node::allNodes) {
+    for (const auto & n : Node::opNodes) {
         delete n;
     }
-    Node::allNodes.clear();
+    Node::opNodes.clear();
     Node::cache.clear();
     for (const auto & [s, symbNode] : Node::symb2node) {
         delete symbNode;
@@ -372,6 +372,10 @@ void verifMSICleanup() {
         }
     }
     Node::cst2node.clear();
+    for (const auto & [h, cstNode] : Node::bigCst2node) {
+        delete cstNode;
+    }
+    Node::bigCst2node.clear();
     for (const auto & [s, strNode] : Node::str2node) {
         delete strNode;
     }

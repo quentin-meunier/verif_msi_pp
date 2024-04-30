@@ -86,6 +86,7 @@ class Node {
     
     inline static std::map<std::string, Node *> symb2node;
     inline static std::map<int32_t, std::map<uint64_t, Node *>> cst2node;
+    inline static std::map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, Node *> bigCst2node;
     inline static std::map<std::string, Node *> str2node;
    
     inline static int32_t nodeNum = 0;
@@ -96,7 +97,7 @@ class Node {
     inline static bool modeTempNode = false;
     inline static std::set<Node *> toDelete;
     inline static std::map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, Node *> cache;
-    inline static std::set<Node *> allNodes;
+    inline static std::set<Node *> opNodes;
 
     int32_t num;
     int32_t width;

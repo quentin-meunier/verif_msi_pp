@@ -400,9 +400,9 @@ PYBIND11_MODULE(verif_msi_pp, m) {
     m.def("simplifyCore", &simplifyCore, "Desc.", py::return_value_policy::reference);
     m.def("equivalence", &equivalence, "Desc.");
 
-    m.def("tps", &tps, "Desc.", py::arg("nodeIn"), py::arg("verbose") = false);
-    m.def("ni", &ni, "Desc.", py::arg("nodeIn"), py::arg("maxShareOcc"), py::arg("verbose") = false);
-    m.def("rni", &rni, "Desc.", py::arg("nodeIn"), py::arg("diff"), py::arg("verbose") = false);
+    m.def("tps", py::overload_cast<Node &, bool, bool>(&tps), "Desc.", py::arg("nodeIn"), py::arg("bitDecompose") = false, py::arg("verbose") = false);
+    m.def("ni", py::overload_cast<Node &, int, bool, bool>(&ni), "Desc.", py::arg("nodeIn"), py::arg("maxShareOcc"), py::arg("bitDecompose") = false, py::arg("verbose") = false);
+    m.def("rni", py::overload_cast<Node &, int, bool, bool>(&rni), "Desc.", py::arg("nodeIn"), py::arg("diff"), py::arg("bitDecompose") = false, py::arg("verbose") = false);
     m.def("pini", &bindPini, "Desc.");
 
     m.def("symbol", &symbol, "Desc.", py::return_value_policy::reference);
