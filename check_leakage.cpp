@@ -83,6 +83,49 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
 
 #undef CHECK_VAL_BODY
 
+#define CHECK_VAL_BODY_BIT(check_call) ({                      \
+    uint64_t timerStart;                                       \
+    uint64_t timerEnd;                                         \
+    bool res;                                                  \
+                                                               \
+    if (timeRet != NULL) {                                     \
+        timerStart = getTime();                                \
+    }                                                          \
+                                                               \
+    for (int32_t i = 0; i < e.width; i += 1) {                 \
+        Node & b = simplifyCore(Extract(i, i, e), true, true); \
+        res = check_call;                                      \
+        if (res) {                                             \
+            break;                                             \
+        }                                                      \
+    }                                                          \
+                                                               \
+    if (timeRet != NULL) {                                     \
+        timerEnd = getTime();                                  \
+        *timeRet = timerEnd - timerStart;                      \
+    }                                                          \
+    return res;                                                \
+})
+
+
+bool checkTpsValBit(Node & e, uint64_t * timeRet) {
+    CHECK_VAL_BODY_BIT(tps(b));
+}
+
+bool checkNIValBit(Node & e, int maxShareOcc, uint64_t * timeRet) {
+    CHECK_VAL_BODY_BIT(ni(b, maxShareOcc));
+}
+
+bool checkRNIValBit(Node & e, int diff, uint64_t * timeRet) {
+    CHECK_VAL_BODY_BIT(rni(b, diff));
+}
+
+bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes, uint64_t * timeRet) {
+    CHECK_VAL_BODY_BIT(pini(b, maxShareOcc, outputIndexes));
+}
+
+#undef CHECK_VAL_BODY_BIT
+
 
 
 #define CHECK_TRANS_BODY(check_call, check_call_bd) ({                                 \
