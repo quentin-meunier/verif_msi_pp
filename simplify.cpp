@@ -1842,13 +1842,17 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
 
         // Constant propagation
         int32_t i = 0;
-        int32_t constVal = 1;
+        uint64_t constVal = 1;
         while (i < (int32_t) newChildren.size()) {
             Node & child = *newChildren[i];
             if (child.nature == CONST) {
-                assert(newChildren[0]->nlimbs == 1);
-                // QM: FIXME: normal que ce soit gmulInt alors que IMUL aussi dans le test au-dessus ?
-                constVal = gmulInt(constVal, child.cst[0]);
+                assert(child.nlimbs == 1);
+                if (op == IMUL) {
+                    constVal = imulInt(constVal, child.cst[0], child.width);
+                }
+                else {
+                    constVal = gmulInt(constVal, child.cst[0]);
+                }
                 newChildren.erase(newChildren.begin() + i);
                 modified = true;
                 continue;
