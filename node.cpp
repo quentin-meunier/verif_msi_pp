@@ -399,7 +399,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         }
     }
 
-    if (op == PLUS or op == MINUS or op == UMINUS or op == BAND or op == BOR or op == BXOR or op == BNOT or op == LSHL or op == ASHR or op == LSHR or op == IMUL or op == IPOW or op == GMUL or op == GPOW or op == GLOG or op == GEXP) {
+    if (op == PLUS or op == MINUS or op == UMINUS or op == BAND or op == BOR or op == BXOR or op == BNOT or op == LSHL or op == ASHR or op == LSHR or op == SLSHL or op == SASHR or op == SLSHR or op == IMUL or op == IPOW or op == GMUL or op == GPOW or op == GLOG or op == GEXP) {
         n->width = children[0]->width;
     }
     else if (op == ZEXT or op == SEXT) {
@@ -634,6 +634,12 @@ const char * Node::op2strOp(NodeOp op) {
             return "<<";
         case ASHR:
             return ">>";
+        case SLSHR:
+            return "SLShR";
+        case SLSHL:
+            return "s<<";
+        case SASHR:
+            return "s>>";
         case PLUS:
             return "+";
         case MINUS:
@@ -817,6 +823,16 @@ void Node::dumpNodes(const char * filename, std::set<Node *> & nodes) {
             else if (n->op == ASHR) {
                 s = std::string("Op: \\>\\> (num ") + std::to_string(n->num) + ")";
             }
+            else if (n->op == SLSHL) {
+                s = std::string("Op: s\\<\\< (num ") + std::to_string(n->num) + ")";
+            }
+            else if (n->op == SLSHR) {
+                s = std::string("Op: SLShR (num ") + std::to_string(n->num) + ")";
+            }
+            else if (n->op == SASHR) {
+                s = std::string("Op: s\\>\\> (num ") + std::to_string(n->num) + ")";
+            }
+
             else {
                 s = std::string("Op: ") + Node::op2strOp(n->op) + " (num " + std::to_string(n->num) + ")";
             }
@@ -968,11 +984,11 @@ Node & Node::operator-() {
 }
 
 
-// FIXME: invert top function and sub function, to avoid creating Const nodes if they already exist
+// We guaranty that the node used for the shift value is always identical for a given amount
+// In particular, it does not depend on the width of this value (which can be non-existant)
 Node & Node::operator<<(Node & other) {
     if (other.nature != CONST) {
-        std::cerr << "***Error: Second operand of a Shift operation can only be a constant" << std::endl;
-        exit(EXIT_FAILURE);
+        return Node::OpNode(SLSHL, {this, &other});
     }
     assert(other.nlimbs == 1);
     return *this << other.cst[0];
@@ -1025,8 +1041,7 @@ Node & Node::operator<<(int32_t shval) {
 
 Node & Node::operator>>(Node & other) {
     if (other.nature != CONST) {
-        std::cerr << "***Error: Second operand of a Shift operation can only be a constant" << std::endl;
-        exit(EXIT_FAILURE);
+        return Node::OpNode(SASHR, {this, &other});
     }
     assert(other.nlimbs == 1);
     return *this >> other.cst[0];
@@ -1202,6 +1217,24 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
         }
         return res;
     }
+    else if (op == SLSHR) {
+        return std::string("SLShR(") + children->at(0)->expPrint(false, verbatim) + ", " + children->at(1)->expPrint(false, verbatim) + ")";
+    }
+    else if (op == SASHR) {
+        std::string res = children->at(0)->expPrint(false, verbatim) + " s>> " + children->at(1)->expPrint(false, verbatim);
+        if (parNeeded) {
+            res = std::string("(") + res + ")";
+        }
+        return res;
+    }
+    else if (op == SLSHL) {
+        std::string res = children->at(0)->expPrint(false, verbatim) + " s<< " + children->at(1)->expPrint(false, verbatim);
+        if (parNeeded) {
+            res = std::string("(") + res + ")";
+        }
+        return res;
+    }
+
     else if (op == GMUL) {
         std::string res = "GMul(";
         for (int32_t i = 0; i < (int32_t) children->size() - 1; i += 1) {
@@ -1354,8 +1387,7 @@ Node & Str(const std::string & s) {
 
 Node & LShR(Node & child, Node & shval) {
     if (shval.nature != CONST) {
-        std::cerr << "***Error: Second operand of a Shift operation can only be a constant" << std::endl;
-        exit(EXIT_FAILURE);
+        return Node::OpNode(SLSHR, {&child, &shval});
     }
     return LShR(child, shval.cst[0]);
 }

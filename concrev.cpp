@@ -154,13 +154,13 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
     else if (op == CONCAT) {
         res = &Concat(newChildren);
     }
-    else if (op == LSHR) {
+    else if (op == LSHR or op == SLSHR) {
         res = &LShR(*newChildren[0], *newChildren[1]);
     }
-    else if (op == ASHR) {
+    else if (op == ASHR or op == SASHR) {
         res = &(*newChildren[0] >> *newChildren[1]);
     }
-    else if (op == LSHL) {
+    else if (op == LSHL or op == SLSHL) {
         res = &(*newChildren[0] << *newChildren[1]);
     }
     else if (op == UMINUS) {

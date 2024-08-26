@@ -1662,6 +1662,34 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         }
     }
 
+    #if 0
+    // Uncomment and do the copy/paste if necessary
+    else if (op == SLSHL) {
+        Node & shval = *newChildren[1];
+        if (shval.nature == CONST) {
+            op = LSHL;
+            // Copiy/paste, I don't know how to do this in a cleaner way
+        }
+    }
+
+
+    else if (op == SASHR) {
+        Node & shval = *newChildren[1];
+        if (shval.nature == CONST) {
+            op = ASHR;
+            // Copy/paste, I don't know how to do this in a cleaner way
+        }
+    }
+
+
+    else if (op == SLSHR) {
+        Node & shval = *newChildren[1];
+        if (shval.nature == CONST) {
+            op = LSHR;
+            // Copy/paste, I don't know how to do this in a cleaner way
+        }
+    }
+    #endif
 
     else if (op == LSHL) {
         Node & exp = *newChildren[0];
@@ -1820,19 +1848,6 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             }
         }
         return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
-    }
-
-
-    else if (op == ZEXT) {
-        assert(false);
-        if (newChildren[1]->nature == CONST) {
-            Node & numZeros = *newChildren[0];
-            Node & child = *newChildren[1];
-            return setSimpEqAndReturn(node, ConstNodeFromZeroExt(numZeros.cst[0], child));
-        }
-        else {
-            return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
-        }
     }
 
 
