@@ -1000,9 +1000,10 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 break;
             }
 
-            else if (propagateExtractInwards && (child->op == ARRAY || child->op == IMUL || child->op == GMUL || child->op == GLOG || child->op == GEXP || child->op == GPOW)) {
+            else if (propagateExtractInwards && (child->op == ARRAY || child->op == IMUL || child->op == GMUL || child->op == GLOG || child->op == GEXP || child->op == GPOW || child->op == SLSHR || child->op == SLSHL || child->op == SASHR)) {
                 // Particular case: we cannot propagate extract inwards but we need to remove the occurrences of multiple-bit variables
                 // (otherwise the TPS algorithm can conclude no leakage and be wrong)
+                /*
                 if (useSingleBitVariables) {
                     Node & decompNode = getBitDecomposition(*child);
                     Node & simplifiedNode = Extract(*msbNode, *lsbNode, decompNode);
@@ -1010,7 +1011,9 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 }
                 else {
                     return setSimpEqAndReturn(node, defaultNode(node, op, newChildren0, newChildren0.size() != 0));
-                }
+                }*/
+                // FIXME: propagate in verif_msi
+                break;
             }
 
             else {
@@ -1743,9 +1746,15 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
 
 
     else if (op == EXTRACT) {
+        // FIXME: propagate in verif_msi
         if (modified) {
             Node & newNode = Extract(*newChildren[0], *newChildren[1], *newChildren[2]);
-            return setSimpEqAndReturn(node, simplifyExtract(newNode));
+            if (newNode.nature == CONST) {
+                return setSimpEqAndReturn(node, newNode);
+            }
+            else {
+                return setSimpEqAndReturn(node, simplifyExtract(newNode));
+            }
         }
         else {
             return setSimpEqAndReturn(node, simplifyExtract(node));
