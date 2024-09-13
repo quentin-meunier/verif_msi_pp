@@ -23,6 +23,8 @@ Author(s): Quentin L. Meunier
 #include "simplify.hpp"
 
 
+// FIXME: propagate in verif_msi (single bit variables for enumeration)
+// All variables in exps must be single bit
 static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVarsVec, std::map<Node *, Node *> & sharesSubst) {
     std::set<Node *> allVars;
     for (const auto & e : exps) {
@@ -32,12 +34,24 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
         for (const auto & [k, v] : *e->otherMaskOcc) {
             allVars.insert(k);
         }
-        for (const auto & [k, v] : *e->secretVarOcc) {
-            allVars.insert(k);
-        }
-        for (const auto & [k, v] : *e->publicVarOcc) {
-            allVars.insert(k);
-        }
+        #if KEEP_SECRET_VAR_OCC
+            for (const auto & [k, v] : *e->secretVarOcc) {
+                allVars.insert(k);
+            }
+        #else
+            for (const auto & k : *e->secretVarOcc) {
+                allVars.insert(k);
+            }
+        #endif
+        #if KEEP_SECRET_VAR_OCC
+            for (const auto & [k, v] : *e->publicVarOcc) {
+                allVars.insert(k);
+            }
+        #else
+            for (const auto & k : *e->publicVarOcc) {
+                allVars.insert(k);
+            }
+        #endif
         for (const auto & [k, v] : *e->shareOcc) {
             for (const auto & [l, w] : *v) {
                 allVars.insert(l);
@@ -46,23 +60,18 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
     }
 
 
-    std::set<Node *> allVarsNoBits;
     for (const auto & n : allVars) {
-        std::string::size_type pos = n->symb->find('#');
-        if (pos != std::string::npos) {
-            std::string varName = n->symb->substr(0, pos);
-            allVarsNoBits.insert(Node::symb2node[varName]);
-        }
-        else {
-            allVarsNoBits.insert(n);
+        if (n->width != 1) {
+            std::cerr << "*** Internal Error: variables found for exhaustive evaluation should all be 1-bit wide" << std::endl;
+            assert(false);
         }
     }
 
 
     std::set<Node *> secretsToRemove; // contains secrets to remove because there are occurrences of shares of this secret in one of the expressions, and the value of the secret must thus be determined by the shares
     std::map<Node *, int32_t> secretNbShares;
-    for (const auto & v : allVarsNoBits) {
-        if (v->symbType == 'A' && allVarsNoBits.contains(v->origSecret) && !secretsToRemove.contains(v->origSecret)) {
+    for (const auto & v : allVars) {
+        if (v->symbType == 'A' && allVars.contains(v->origSecret) && !secretsToRemove.contains(v->origSecret)) {
             secretsToRemove.insert(v->origSecret);
             secretNbShares[v->origSecret] = v->nbShares;
         }
@@ -70,9 +79,9 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
 
 
     for (const auto & s : secretsToRemove) {
-        assert(allVarsNoBits.contains(s));
+        assert(allVars.contains(s));
         // process only once each secret if several shares of it are in secretsToRemove
-        allVarsNoBits.erase(s);
+        allVars.erase(s);
         std::vector<Node *> shares;
         for (int32_t i = 0; i < secretNbShares[s]; i += 1) {
             // No need to specify the 3 last parameters as this call is expected to return an already existing share node
@@ -87,7 +96,7 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
     }
 
 
-    std::copy(allVarsNoBits.begin(), allVarsNoBits.end(), std::back_inserter(allVarsVec));
+    std::copy(allVars.begin(), allVars.end(), std::back_inserter(allVarsVec));
     std::sort(allVarsVec.begin(), allVarsVec.end(), [](Node * a, Node * b) {
             return a->symb->compare(*b->symb);
     });
@@ -175,7 +184,10 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
     }
     else {
         int32_t width = node.width;
-        int32_t nlimbs = node.nlimbs;
+        int32_t nlimbs = width / 64;
+        if (nlimbs * 64 != width) {
+            nlimbs += 1;
+        }
         uint64_t intRes[nlimbs] = {0};
         if (op == BAND) {
             for (int32_t i = 0; i < nlimbs - 1; i += 1) {
@@ -315,12 +327,16 @@ bool compareExpsWithExev(Node & e0, Node & e1, std::map<Node *, Node *> & res, u
         return false;
     }
     assert(e0.width <= 64);
-    std::vector<Node *> exps {&e0, &e1};
+    
+    Node & e0b = getBitDecomposition(e0);
+    Node & e1b = getBitDecomposition(e1);
+
+    std::vector<Node *> exps {&e0b, &e1b};
     std::vector<Node *> allVarsVec;
     std::map<Node *, Node *> sharesSubst;
     getVarsList(exps, allVarsVec, sharesSubst);
     std::map<Node *, Node *> m;
-    compareExpsWithExevRec(e0, e1, allVarsVec, sharesSubst, 0, m, res, v0, v1);
+    compareExpsWithExevRec(e0b, e1b, allVarsVec, sharesSubst, 0, m, res, v0, v1);
     return res.size() == 0;
 }
 
@@ -461,7 +477,10 @@ static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & dist
 
 bool getDistribWithExev(Node & e, bool * rud) {
     assert(e.width <= 64);
-    Node & e0 = replaceSharesWithSecretsAndMasks(e);
+    Node & e1 = replaceSharesWithSecretsAndMasks(e);
+
+    Node & e0 = getBitDecomposition(e1);
+    
     std::vector<Node *> allVarsVec;
     std::map<Node *, Node *> sharesSubst;
     std::vector<Node *> exp {&e0};
@@ -471,7 +490,7 @@ bool getDistribWithExev(Node & e, bool * rud) {
     std::vector<Node *> nonSecretVars;
 
     for (const auto & v : allVarsVec) {
-        if (v->symbType == 'S') {
+        if (v->symbType == 'S' or v->symbType == 'P') {
             secretVars.push_back(v);
         }
         else {

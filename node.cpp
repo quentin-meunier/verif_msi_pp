@@ -47,8 +47,16 @@ Node::Node() {
     origSecret = NULL;
     pseudoShareEq = NULL;
 
-    secretVarOcc = new std::map<Node *, int32_t>();
-    publicVarOcc = new std::map<Node *, int32_t>();
+    #if KEEP_SECRET_VAR_OCC
+        secretVarOcc = new std::map<Node *, int32_t>();
+    #else
+        secretVarOcc = new std::set<Node *>();
+    #endif
+    #if KEEP_PUBLIC_VAR_OCC
+        publicVarOcc = new std::map<Node *, int32_t>();
+    #else
+        publicVarOcc = new std::set<Node *>();
+    #endif
     currentlyMasking = new std::map<Node *, Node *>();
     maskingMaskOcc = new std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * >();
     otherMaskOcc = new std::map<Node *, std::map<Node *, int32_t> * >();
@@ -589,7 +597,6 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
             }
         }
 
-        // FIXME: verify map copy
         *n->currentlyMasking = *child->currentlyMasking;
         // Creating new masking occurrences for masks masking current node
         for (const auto & [m, val] : *n->currentlyMasking) {
@@ -680,14 +687,26 @@ const char * Node::op2strOp(NodeOp op) {
 
 void Node::printVarOcc() {
     std::cout << "Secrets: {";
-    for (const auto & [m, val] : *secretVarOcc) {
-        std::cout << m->symb << ": " << secretVarOcc->at(m) << "; ";
-    }
+    #if KEEP_SECRET_VAR_OCC
+        for (const auto & [m, val] : *secretVarOcc) {
+            std::cout << m->symb << ": " << secretVarOcc->at(m) << "; ";
+        }
+    #else
+        for (const auto & m : *secretVarOcc) {
+            std::cout << m->symb << "; ";
+        }
+    #endif
     std::cout << "}" << std::endl;
     std::cout << "Public: {";
-    for (const auto & [m, val] : *publicVarOcc) {
-        std::cout << m->symb << ": " << publicVarOcc->at(m) << "; ";
-    }
+    #if KEEP_PUBLIC_VAR_OCC
+        for (const auto & [m, val] : *publicVarOcc) {
+            std::cout << m->symb << ": " << publicVarOcc->at(m) << "; ";
+        }
+    #else
+        for (const auto & m : *publicVarOcc) {
+            std::cout << m->symb << "; ";
+        }
+    #endif
     std::cout << "}" << std::endl;
 }
 
@@ -745,12 +764,24 @@ void Node::setVarsOccurrences() {
             preservedMask = { this, NULL }; // (mask, parent)
             otherMaskOcc->insert({this, NULL});
         }
+        #if KEEP_PUBLIC_VAR_OCC
         else if (symbType == 'P') {
             publicVarOcc->emplace(this, 1);
         }
+        #else
+        else if (symbType == 'P') {
+            publicVarOcc->insert(this);
+        }
+        #endif
+        #if KEEP_SECRET_VAR_OCC
         else if (symbType == 'S') {
             secretVarOcc->emplace(this, 1);
         }
+        #else
+        else if (symbType == 'S') {
+            secretVarOcc->insert(this);
+        }
+        #endif
         else if (symbType == 'A') {
             shareOcc->emplace(origSecret, new std::map<Node *, int32_t>());
             shareOcc->at(origSecret)->emplace(this, 1);
@@ -758,22 +789,34 @@ void Node::setVarsOccurrences() {
         return;
     }
     for (const auto & child: *children) {
-        for (const auto & [p, val] : *child->publicVarOcc) {
-            if (publicVarOcc->contains(p)) {
-                publicVarOcc->at(p) += child->publicVarOcc->at(p);
+        #if KEEP_PUBLIC_VAR_OCC
+            for (const auto & [p, val] : *child->publicVarOcc) {
+                if (publicVarOcc->contains(p)) {
+                    publicVarOcc->at(p) += child->publicVarOcc->at(p);
+                }
+                else {
+                    publicVarOcc->emplace(p, child->publicVarOcc->at(p));
+                }
             }
-            else {
-                publicVarOcc->emplace(p, child->publicVarOcc->at(p));
+        #else
+            for (const auto & p : *child->publicVarOcc) {
+                publicVarOcc->insert(p);
             }
-        }
-        for (const auto & [k, val] : *child->secretVarOcc) {
-            if (secretVarOcc->contains(k)) {
-                secretVarOcc->at(k) += child->secretVarOcc->at(k);
+        #endif
+        #if KEEP_SECRET_VAR_OCC
+            for (const auto & [k, val] : *child->secretVarOcc) {
+                if (secretVarOcc->contains(k)) {
+                    secretVarOcc->at(k) += child->secretVarOcc->at(k);
+                }
+                else {
+                    secretVarOcc->emplace(k, child->secretVarOcc->at(k));
+                }
             }
-            else {
-                secretVarOcc->emplace(k, child->secretVarOcc->at(k));
+        #else
+            for (const auto & k : *child->secretVarOcc) {
+                secretVarOcc->insert(k);
             }
-        }
+        #endif
         for (const auto & [s, val0] : *child->shareOcc) {
             if (not shareOcc->contains(s)) {
                 shareOcc->emplace(s, new std::map<Node *, int32_t>());
