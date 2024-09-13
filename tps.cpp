@@ -182,8 +182,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // - Choose mask m which minimizes the number of nodes with occurrence of m (CTR Bases + other Occ)
         // - For this m, choose CTR Base with the highest count
         // - For this CTR Base, choose the CTR with the max height for the same count
-        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > maskingMaskOcc = *node->maskingMaskOcc;
-        std::map<Node *, std::map<Node *, int32_t> * > otherMaskOcc = *node->otherMaskOcc;
+        // FIXME: change map copies to an alias, check that this is ok
+        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > & maskingMaskOcc = *node->maskingMaskOcc;
+        std::map<Node *, std::map<Node *, int32_t> * > & otherMaskOcc = *node->otherMaskOcc;
         int32_t minOtherOcc = 1000000;
         int32_t minMaskingOcc = 1000000;
         bool minRootMask = false;
