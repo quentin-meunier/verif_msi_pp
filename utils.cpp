@@ -254,7 +254,16 @@ uint64_t getTime() {
 static std::vector<Node *> getPseudoSharesInternal(Node & s, int nbShares) {
     std::vector<Node *> res;
     for (int32_t i = 0; i < nbShares - 1; i += 1) {
-        Node & a = SymbInternal(*s.symb + "@" + std::to_string(i), 'M', s.width);
+        std::string str(*s.symb);
+        std::string ht_char("#");
+        if (str.find('#') != std::string::npos) {
+            str.replace(str.find(ht_char), ht_char.length(), "@" + std::to_string(i) + ht_char);
+        }
+        else {
+            str = str + "@" + std::to_string(i);
+        }
+
+        Node & a = SymbInternal(str, 'M', s.width);
         res.push_back(&a);
     }
     res.push_back(&s);
@@ -278,7 +287,16 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
     std::vector<Node *> pseudoShares = getPseudoSharesInternal(s, nbShares);
     std::vector<Node *> res;
     for (int32_t i = 0; i < nbShares; i += 1) {
-        Node & a = SymbInternal(*s.symb + "[" + std::to_string(i) + "]", 'A', s.width, nbShares, i, &s, pseudoShares[i]);
+        std::string str(*s.symb);
+        std::string ht_char("#");
+        if (str.find('#') != std::string::npos) {
+            str.replace(str.find(ht_char), ht_char.length(), "[" + std::to_string(i) + "]" + ht_char);
+        }
+        else {
+            str = str + "[" + std::to_string(i) + "]";
+        }
+
+        Node & a = SymbInternal(str, 'A', s.width, nbShares, i, &s, pseudoShares[i]);
         res.push_back(&a);
     }
     return res;

@@ -81,9 +81,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
     if (verbose) {
         std::cout << "# Call func checkProperty on exp " << nodeIn << std::endl;
     }
-    int maxShareOcc;
+    int maxShareOcc = 0;
     int diff;
-    std::set<int> * outputIndexes;
+    std::set<int> * outputIndexes = NULL;
 
     if (secProp == NI) {
         maxShareOcc = params.maxShareOcc;
