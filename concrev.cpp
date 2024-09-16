@@ -60,7 +60,7 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
     }
 
     for (const auto & n : allVars) {
-        std::cout << "# Var : " << *n->symb << std::endl;
+        //std::cout << "# Var : " << *n->symb << std::endl;
         if (n->width != 1) {
             std::cerr << "*** Internal Error: variables found for exhaustive evaluation should all be 1-bit wide" << std::endl;
             assert(false);
