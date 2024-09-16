@@ -379,7 +379,6 @@ Node & getBitDecomposition(Node & node) {
     }
 
     std::vector<Node *> l;
-    //for (int32_t b = node.width - 1; b > -1; b -= 1) {
     for (int32_t b = 0; b < node.width; b += 1) {
         l.push_back(&simplifyCore(Extract(b, b, node), true, true));
     }

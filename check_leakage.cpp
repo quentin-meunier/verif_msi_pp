@@ -84,7 +84,7 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
 #undef CHECK_VAL_BODY
 
 #define CHECK_VAL_BODY_BIT(check_call) ({                      \
-    uint64_t timerStart;                                       \
+    uint64_t timerStart = 0;                                   \
     uint64_t timerEnd;                                         \
     bool res;                                                  \
                                                                \
