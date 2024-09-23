@@ -1664,39 +1664,10 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         }
     }
 
-    #if 0
-    // Uncomment and do the copy/paste if necessary
-    else if (op == SLSHL) {
-        Node & shval = *newChildren[1];
-        if (shval.nature == CONST) {
-            op = LSHL;
-            // Copiy/paste, I don't know how to do this in a cleaner way
-        }
-    }
-
-
-    else if (op == SASHR) {
-        Node & shval = *newChildren[1];
-        if (shval.nature == CONST) {
-            op = ASHR;
-            // Copy/paste, I don't know how to do this in a cleaner way
-        }
-    }
-
-
-    else if (op == SLSHR) {
-        Node & shval = *newChildren[1];
-        if (shval.nature == CONST) {
-            op = LSHR;
-            // Copy/paste, I don't know how to do this in a cleaner way
-        }
-    }
-    #endif
-
     else if (op == LSHL) {
         Node & exp = *newChildren[0];
         Node & sh0 = *newChildren[1];
-        if (sh0.cst[0] == 0) {
+        if (isZero(sh0.cst, sh0.width)) {
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
@@ -1713,7 +1684,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
     else if (op == ASHR) {
         Node & exp = *newChildren[0];
         Node & sh0 = *newChildren[1];
-        if (sh0.cst[0] == 0) {
+        if (isZero(sh0.cst, sh0.width)) {
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
@@ -1730,7 +1701,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
     else if (op == LSHR) {
         Node & exp = *newChildren[0];
         Node & sh0 = *newChildren[1];
-        if (sh0.cst[0] == 0) {
+        if (isZero(sh0.cst, sh0.width)) {
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
@@ -1853,6 +1824,84 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             }
             else {
                 return setSimpEqAndReturn(node, Extract(currentBit - 1, firstBit, *newChildren[0]->children->at(2)));
+            }
+        }
+        return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+    }
+
+
+    else if (op == SASHR) {
+        Node & val = *newChildren[0];
+        Node & shval = *newChildren[1];
+        if (val.nature == CONST) {
+            if (isZero(val.cst, val.width) or isAllOne(val.cst, val.width)) {
+                return setSimpEqAndReturn(node, val);
+            }
+        }
+        if (shval.nature == CONST) {
+            if (isZero(shval.cst, shval.width)) {
+                return setSimpEqAndReturn(node, val);
+            }
+            else {
+                if (val.op == ASHR) {
+                    Node & gChild = *val.children->at(0);
+                    Node & sh1 = *val.children->at(1);
+                    return setSimpEqAndReturn(node, gChild >> (shval.cst[0] + sh1.cst[0]));
+                }
+                // Note: not calling defaultNode because it would keep the width of the shifted value instead of taking the default (min) one
+                return setSimpEqAndReturn(node, val >> shval);
+            }
+        }
+        return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+    }
+
+
+    else if (op == SLSHL) {
+        Node & val = *newChildren[0];
+        Node & shval = *newChildren[1];
+        if (val.nature == CONST) {
+            if (isZero(val.cst, val.width)) {
+                return setSimpEqAndReturn(node, val);
+            }
+        }
+        if (shval.nature == CONST) {
+            if (isZero(shval.cst, shval.width)) {
+                return setSimpEqAndReturn(node, val);
+            }
+            else {
+                if (val.op == LSHL) {
+                    Node & gChild = *val.children->at(0);
+                    Node & sh1 = *val.children->at(1);
+                    return setSimpEqAndReturn(node, gChild << (shval.cst[0] + sh1.cst[0]));
+                }
+                // Note: not calling defaultNode because it would keep the width of the shifted value instead of taking the default (min) one
+                return setSimpEqAndReturn(node, val << shval);
+            }
+        }
+        return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+    }
+
+
+    else if (op == SLSHR) {
+        Node & val = *newChildren[0];
+        Node & shval = *newChildren[1];
+        if (val.nature == CONST) {
+            if (isZero(val.cst, val.width)) {
+                return setSimpEqAndReturn(node, val);
+            }
+        }
+        if (shval.nature == CONST) {
+            if (isZero(shval.cst, shval.width)) {
+                return setSimpEqAndReturn(node, val);
+            }
+            else {
+                if (val.op == LSHR) {
+                    Node & gChild = *val.children->at(0);
+                    Node & sh1 = *val.children->at(1);
+                    return setSimpEqAndReturn(node, LShR(gChild, (shval.cst[0] + sh1.cst[0])));
+                }
+                // Note: not calling defaultNode because it would keep the width of the shifted value instead of taking the default (min) one
+                return setSimpEqAndReturn(node, LShR(val, shval));
             }
         }
         return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
