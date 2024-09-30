@@ -152,7 +152,7 @@ class Node {
     ~Node();
 
     static Node & SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
-    static Node & ConstNode(uint64_t cst, int32_t width);
+    static Node & ConstNode(uint64_t cst, int32_t width, bool extendMSB = false);
     static Node & ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width);
     static Node & ConstNodeAuto(uint64_t cst);
     static Node & StrNode(const std::string & s);
@@ -201,7 +201,7 @@ Node & Symb(const char * symb, char symbType, int32_t width, int32_t nbShares, i
 Node & SymbInternal(std::string symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
 Node & SymbInternal(std::string symb, char symbType, int32_t width);
 Node & Const(uint64_t * cst, int32_t nlimbs, int32_t width);
-Node & Const(uint64_t cst, int32_t width);
+Node & Const(uint64_t cst, int32_t width, bool extendMSB = false);
 Node & Str(const std::string & s);
 Node & LShR(Node & child, Node & shval);
 Node & LShR(Node & child, int32_t shval);

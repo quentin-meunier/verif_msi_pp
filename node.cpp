@@ -239,7 +239,7 @@ Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, in
 }
 
 
-Node & Node::ConstNode(uint64_t cst, int32_t width) {
+Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
     if (width <= 64) {
         Node * n = new Node();
         n->nature = CONST;
@@ -279,8 +279,18 @@ Node & Node::ConstNode(uint64_t cst, int32_t width) {
         n->nlimbs = nlimbs;
         n->cst = new uint64_t[nlimbs];
         n->cst[0] = cst;
-        for (int32_t i = 1; i < nlimbs; i += 1) {
-            n->cst[i] = 0;
+        if (extendMSB && (cst >> 63 == 1)) {
+            for (int32_t i = 1; i < nlimbs; i += 1) {
+                n->cst[i] = 0xffffffffffffffffULL;
+            }
+            if (width % 64 != 0) {
+                n->cst[nlimbs - 1] >>= (64 - (width % 64));
+            }
+        }
+        else {
+            for (int32_t i = 1; i < nlimbs; i += 1) {
+                n->cst[i] = 0;
+            }
         }
         n->width = width;
         n->simpEq = n;
@@ -1360,7 +1370,7 @@ Node & Const(uint64_t * cst, int32_t nlimbs, int32_t width) {
 } 
 
 
-Node & Const(uint64_t cst, int32_t width) {
+Node & Const(uint64_t cst, int32_t width, bool extendMSB) {
     auto makeConstNode = [](uint64_t cst, int32_t nbBits) -> Node & {
         if (Node::cst2node.contains(nbBits)) {
             if (Node::cst2node[nbBits].contains(cst)) {
@@ -1389,7 +1399,7 @@ Node & Const(uint64_t cst, int32_t width) {
     // Note: value -4 on 8 bits is encoded as 0xFC (= 252) in the cst field, similarly to the python implementation,
     //       whereas the value passed as parameter is 0xFFFFFFFFFFFFFFFC
     if (width > 64) {
-        return Node::ConstNode(cst, width);
+        return Node::ConstNode(cst, width, extendMSB);
     }
     else if (width == 64) {
         return makeConstNode(cst, width);
@@ -2101,7 +2111,7 @@ bool isZero(uint64_t * v, int32_t width) {
     if (nbLimbs * 64 != width) {
         nbLimbs += 1;
     }
-    for (int32_t i = 0; i < nbLimbs; i += 64) {
+    for (int32_t i = 0; i < nbLimbs; i += 1) {
         if (v[i] != 0) {
             return false;
         }
@@ -2115,7 +2125,7 @@ bool isAllOne(uint64_t * v, int32_t width) {
     if (nbLimbs * 64 != width) {
         nbLimbs += 1;
     }
-    for (int32_t i = 0; i < nbLimbs - 1; i += 64) {
+    for (int32_t i = 0; i < nbLimbs - 1; i += 1) {
         if (v[i] != 0xFFFFFFFFFFFFFFFFULL) {
             return false;
         }
