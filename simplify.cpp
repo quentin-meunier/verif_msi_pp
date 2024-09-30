@@ -79,16 +79,68 @@ static bool mergeWithChildrenIfPossible(NodeOp op, std::vector<Node *> & childre
 }
 
 
-// Concat(a, b) ^ Concat(c, d) ^ Concat(e, f) -> Concat(a ^ c ^ e, b ^ d ^ f)
+// Concat(a, b) ^ Concat(c, d) ^ Concat(e, f) ^ g -> Concat(a ^ c ^ e, b ^ d ^ f) ^ g
 // Note regarding the '+': carry is ignored (not propagated) from an expression to the next
 // This is consistent with the modulo semantic of an expression, but it might differ from a low level implementation
 // Note: Concat(a8, b8) ^ Concat(c8, d8) ^ Concat(u4, v12) ^ Concat(w4, x12)
 //       will not be simplified to Concat(a8 ^ c8, b8 ^ d8) ^ Concat(u4 ^ w4, v12 ^ x12)
 //       This case can be added if it is encountered
 static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeOp * newOp) {
-    int32_t numConcatChildren = 0;
-    Node * firstConcatChild = NULL;
+#if 0
+    std::vector<int> concatChildrenIdx;
+
+    for (int i = 0; i < children.size()) {
+        if (children[i]->op == CONCAT) {
+            concatChildrenIdx.push_back(i);
+        }
+    }
+    int numConcatChildren = concatChildrenIdx.size();
+
+    if (numConcatChildren > 1) {
+        int currChild[numConcatChildren];
+        int currChildSize[numConcatChildren];
+        for (int i = 0; i < numConcatChildren; i += 1) {
+            currChild[i] = children[concatChildrenIdx[i]]->children->size() - 1;
+            currChildSize[i] = children[concatChildrenIdx[i]]->children->at(currChild[i])->width;
+        }
+    }
+
+    int gCurrBit = children[0]->width - 1;
+
+    while (gCurrBit >= 0) {
+        int nbBitsTaken = gCurrBit;
+        for (int i = 0; i < numConcatChildren; i += 1) {
+            if (currChildSize[i] < nbBitsTaken) {
+                nbBitsTaken = currChildSize[i];
+            }
+        }
+
+        for (int i = 0; i < numConcatChildren; i += 1) {
+            if (currChildSize[i] > nbBitsTaken) {
+                currChildSize[i] -= nbBitsTaken;
+            }
+            else {
+                assert(currChildSize[i] == nbBitsTaken);
+                currChild[i] -= 1;
+                currChildSize[i] = children[concatChildrenIdx[i]]->children->at(currChild[i])->width;
+            }
+
+        }
+        gCurrBit -= nbBitsTaken;
+
+
+            if (children[concatChildrenIdx[i]]->chilren->at(currChild[i]))
+
+
+
+
+
+    }
+#else
+    /* Old version */
+    int numConcatChildren = 0;
     bool mergeConcat = true;
+    Node * firstConcatChild = NULL;
     for (const auto & child : children) {
         if (child->op == CONCAT) {
             numConcatChildren += 1;
@@ -139,8 +191,8 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
             children.push_back(&concatNode);
             return true;
         }
-
     }
+#endif
     return false;
 }
 
@@ -158,6 +210,7 @@ static Node & simplifyExtract(Node & node) {
     }
     
     else if (child.op == SEXT || child.op == ZEXT) {
+        assert(false);
         Node & extendNode = child;
         Node & gchild = *extendNode.children->at(1);
         if (msb <= gchild.width - 1) {
@@ -559,6 +612,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             node.simpEq = &simpEq;
             simpEq.simpEq = &simpEq;
         }
+        //std::cout << "# Returning " << simpEq << std::endl;
         return simpEq;
     };
 
@@ -1048,7 +1102,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
 
     // ZeroExt(n, k) ^ ZeroExt(n, m) -> ZeroExt(n, k ^ m)
     // FIXME: check that ZeroExt and SignExt are not used anymore. They should be replaced by Concat(0, ...) or Concat(ms, msb, ...) everywhere
-    if (op == BXOR || op == BAND or op == BOR) {
+    /*
+    if (op == BXOR or op == BAND or op == BOR) {
         bool allChildrenZeroExt = true;
         bool allChildrenSignExt = true;
         for (const auto & child : newChildren) {
@@ -1086,6 +1141,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             modified = true;
         }
     }
+    */
 
 
     // Preprocessing before main switch
@@ -1114,12 +1170,12 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         //print('simp & [ ' + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
         op1 = BOR;
         cst0 = &Const(0, width);
-        cst1 = &Const(-1, width);
+        cst1 = &Const(-1, width, true);
     }
     else if (op == BOR) {
         //print('simp | [ ' + ', '.join(map(lambda x: '%s' % x, newChildren)) + ' ]')
         op1 = BAND;
-        cst0 = &Const(-1, width);
+        cst0 = &Const(-1, width, true);
         cst1 = &Const(0, width);
     }
 
