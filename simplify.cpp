@@ -86,56 +86,226 @@ static bool mergeWithChildrenIfPossible(NodeOp op, std::vector<Node *> & childre
 //       will not be simplified to Concat(a8 ^ c8, b8 ^ d8) ^ Concat(u4 ^ w4, v12 ^ x12)
 //       This case can be added if it is encountered
 static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeOp * newOp) {
-#if 0
+#if 1
     std::vector<int> concatChildrenIdx;
-
-    for (int i = 0; i < children.size()) {
-        if (children[i]->op == CONCAT) {
+    bool concatPresent = false;
+    for (int i = 0; i < (int) children.size(); i += 1) {
+        if (children[i]->op == CONCAT or children[i]->nature == CONST) {
+            concatPresent |= children[i]->op == CONCAT;
             concatChildrenIdx.push_back(i);
         }
     }
     int numConcatChildren = concatChildrenIdx.size();
 
-    if (numConcatChildren > 1) {
-        int currChild[numConcatChildren];
-        int currChildSize[numConcatChildren];
-        for (int i = 0; i < numConcatChildren; i += 1) {
-            currChild[i] = children[concatChildrenIdx[i]]->children->size() - 1;
-            currChildSize[i] = children[concatChildrenIdx[i]]->children->at(currChild[i])->width;
-        }
-    }
+    if (concatPresent and numConcatChildren > 1) {
+        bool removedChild[numConcatChildren] = {false};
+        std::vector<int> bitsTaken;
+        {
+            int currChild[numConcatChildren];
+            int currChildSize[numConcatChildren];
+            for (int i = 0; i < numConcatChildren; i += 1) {
+                Node * child = children[concatChildrenIdx[i]];
+                if (child->nature == CONST) {
+                    currChildSize[i] = child->width;
+                }
+                else {
+                    currChild[i] = child->children->size() - 1;
+                    currChildSize[i] = child->children->at(currChild[i])->width;
+                }
+            }
 
-    int gCurrBit = children[0]->width - 1;
+            int remainingBits = children[0]->width;
 
-    while (gCurrBit >= 0) {
-        int nbBitsTaken = gCurrBit;
-        for (int i = 0; i < numConcatChildren; i += 1) {
-            if (currChildSize[i] < nbBitsTaken) {
-                nbBitsTaken = currChildSize[i];
+            while (true) {
+                int nbBitsTaken = remainingBits;
+                int selChildIdx = -1;
+
+                // Initializing width of segment with the first encountered non constant child
+                for (int i = 0; i < numConcatChildren; i += 1) {
+                    if (removedChild[i]) {
+                        continue;
+                    }
+                    Node * child = children[concatChildrenIdx[i]];
+                    if (child->op == CONCAT and child->children->at(currChild[i])->nature != CONST) {
+                        selChildIdx = i;
+                        nbBitsTaken = currChildSize[i];
+                        break;
+                    }
+                }
+
+                if (selChildIdx == -1) {
+                    for (int i = 0; i < numConcatChildren; i += 1) {
+                        if (removedChild[i]) {
+                            continue;
+                        }
+                        if (currChildSize[i] < nbBitsTaken) {
+                            nbBitsTaken = currChildSize[i];
+                        }
+                    }
+                }
+                else {
+                    // Removing incompatible children with selected child
+                    for (int i = 0; i < numConcatChildren; i += 1) {
+                        if (removedChild[i]) {
+                            continue;
+                        }
+                        Node * child = children[concatChildrenIdx[i]];
+                        if (child->op == CONCAT) {
+                            Node * concatChild = child->children->at(currChild[i]);
+                            if (concatChild->nature != CONST && concatChild->width != nbBitsTaken) {
+                                // a non constant node with different width cannot be merged
+                                removedChild[i] = true;
+                            }
+                            else if (concatChild->nature == CONST && currChildSize[i] < nbBitsTaken) {
+                                // +---------------
+                                // |    a    | cst
+                                // +---------------
+                                //
+                                // +---------------
+                                // |  cst |   b
+                                // +---------------
+                                //std::cout << "2 : " << *concatChild << " - childSize: " << currChildSize[i] << " - nbBitsTaken: " << nbBitsTaken << std::endl;
+                                removedChild[i] = true;
+                            }
+                        }
+                    }
+                }
+
+
+                bitsTaken.push_back(nbBitsTaken);
+
+                remainingBits -= nbBitsTaken;
+                if (remainingBits <= 0) {
+                    assert(remainingBits == 0);
+                    break;
+                }
+
+                for (int i = 0; i < numConcatChildren; i += 1) {
+                    if (removedChild[i]) {
+                        continue;
+                    }
+                    if (currChildSize[i] > nbBitsTaken) {
+                        currChildSize[i] -= nbBitsTaken;
+                    }
+                    else {
+                        assert(currChildSize[i] == nbBitsTaken);
+                        currChild[i] -= 1;
+                        currChildSize[i] = children[concatChildrenIdx[i]]->children->at(currChild[i])->width;
+                    }
+                }
             }
         }
 
+        int numKeptConcatChildren = 0;
         for (int i = 0; i < numConcatChildren; i += 1) {
-            if (currChildSize[i] > nbBitsTaken) {
-                currChildSize[i] -= nbBitsTaken;
+            numKeptConcatChildren += removedChild[i] ? 0 : 1;
+        }
+
+        // Computing constant values on segments for non removed children only
+        if (numKeptConcatChildren > 1) {
+            concatChildrenIdx.clear();
+            std::vector<Node *> newChildren;
+            for (int i = 0; i < (int) children.size(); i += 1) {
+                if (children[i]->nature == CONST or (children[i]->op == CONCAT and !removedChild[i])) {
+                    concatChildrenIdx.push_back(i);
+                }
+                else {
+                    newChildren.push_back(children[i]);
+                }
+            }
+
+            int currChildIdx[numKeptConcatChildren];
+            int currChildSize[numKeptConcatChildren];
+            for (int i = 0; i < numKeptConcatChildren; i += 1) {
+                Node * child = children[concatChildrenIdx[i]];
+                if (child->nature == CONST) {
+                    currChildSize[i] = child->width;
+                }
+                else {
+                    currChildIdx[i] = child->children->size() - 1;
+                    currChildSize[i] = child->children->at(currChildIdx[i])->width;
+                }
+            }
+
+
+            std::vector<Node *> cstChildren;
+            std::vector<Node *> otherChildren;
+            std::vector<Node *> concatChildren;
+            for (const auto & bt : bitsTaken) {
+                cstChildren.clear();
+                otherChildren.clear();
+                for (int i = 0; i < numKeptConcatChildren; i += 1) {
+                    Node * child = children[concatChildrenIdx[i]];
+                    Node * currChild;
+                    if (child->nature == CONST) {
+                        currChild = child;
+                    }
+                    else {
+                        currChild = child->children->at(currChildIdx[i]);
+                    }
+                    if (currChild->nature == CONST) {
+                        cstChildren.push_back(&Extract(currChildSize[i] - 1, currChildSize[i] - bt, *currChild));
+                    }
+                    else {
+                        otherChildren.push_back(currChild);
+                        assert(currChild->width == bt);
+                    }
+
+                    if (currChildSize[i] > bt) {
+                        currChildSize[i] -= bt;
+                    }
+                    else if (child->op == CONCAT) {
+                        currChildIdx[i] -= 1;
+                        if (currChildIdx[i] >= 0) {
+                            currChildSize[i] = children[concatChildrenIdx[i]]->children->at(currChildIdx[i])->width;
+                        }
+                    }
+                }
+
+                Node * cstNode = NULL;
+                Node * opNode = NULL;
+                if (cstChildren.size() == 1) {
+                    cstNode = cstChildren[0];
+                }
+                else if (cstChildren.size() > 1) {
+                    cstNode = &simplify(Node::OpNode(op, cstChildren));
+                    assert(cstNode->nature == CONST);
+                }
+                if (otherChildren.size() == 1) {
+                    opNode = otherChildren[0];
+                }
+                else if (otherChildren.size() > 1) {
+                    opNode = &Node::OpNode(op, otherChildren);
+                }
+                if (cstNode == NULL) {
+                    concatChildren.push_back(opNode);
+                }
+                else if (opNode == NULL) {
+                    concatChildren.push_back(cstNode);
+                }
+                else {
+                    concatChildren.push_back(&simplify(Node::OpNode(op, {cstNode, opNode})));
+                }
+            }
+
+            std::reverse(concatChildren.begin(), concatChildren.end()); // FIXME: copy and reverse at the same time?
+            if (newChildren.size() == 0) {
+                *newOp = CONCAT;
+                children = concatChildren;
+                return true;
             }
             else {
-                assert(currChildSize[i] == nbBitsTaken);
-                currChild[i] -= 1;
-                currChildSize[i] = children[concatChildrenIdx[i]]->children->at(currChild[i])->width;
+                *newOp = op;
+                Node & concatNode = simplify(Node::OpNode(CONCAT, concatChildren));
+                children = newChildren;
+                children.push_back(&concatNode);
+                return true;
             }
-
         }
-        gCurrBit -= nbBitsTaken;
-
-
-            if (children[concatChildrenIdx[i]]->chilren->at(currChild[i]))
-
-
-
-
-
     }
+
+    return false;
+
 #else
     /* Old version */
     int numConcatChildren = 0;
@@ -192,8 +362,8 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
             return true;
         }
     }
-#endif
     return false;
+#endif
 }
 
 
