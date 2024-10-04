@@ -275,7 +275,7 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
                     opNode = otherChildren[0];
                 }
                 else if (otherChildren.size() > 1) {
-                    opNode = &Node::OpNode(op, otherChildren);
+                    opNode = &simplify(Node::OpNode(op, otherChildren));
                 }
                 if (cstNode == NULL) {
                     concatChildren.push_back(opNode);
@@ -1352,12 +1352,14 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
     // Calling mergeWithChildrenIfPossible and mergeConcatChildren
     // Done here because for example for '^', removing '~' node can make new '^' nodes as children
     // (Note those '^' nodes should not have any '~' children)
-    if (newChildren.size() > 0 && (op == BXOR || op == PLUS || op == BAND || op == BOR)) {
+    if (newChildren.size() > 0 && (op == BXOR || op == BAND || op == BOR || op == PLUS)) {
         bool m = mergeWithChildrenIfPossible(op, newChildren);
         modified = modified || m;
 
-        m = mergeConcatChildren(op, newChildren, &op);
-        modified = modified || m;
+        if (op != PLUS) {
+            m = mergeConcatChildren(op, newChildren, &op);
+            modified = modified || m;
+        }
     }
 
 
@@ -1845,7 +1847,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             if ((op == BAND && isZero(constVal, width)) || (op == BOR && isAllOne(constVal, width))) {
                 return setSimpEqAndReturn(node, *cst0);
             }
-            if ((op == BAND && !isAllOne(constVal, width)) || (op == BOR && !isZero(constVal, width))) {
+            if (newChildren.size() == 0 || ((op == BAND && !isAllOne(constVal, width)) || (op == BOR && !isZero(constVal, width)))) {
                 // modified already set to True in while loop
                 newChildren.push_back(&Const(constVal, nlimbs, width));
             }
