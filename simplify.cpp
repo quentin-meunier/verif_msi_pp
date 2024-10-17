@@ -787,7 +787,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         return simpEq;
     };
 
-    if (node.nature == CONST) {
+    if (node.nature == CONST || node.nature == STR) {
         return node;
     }
 

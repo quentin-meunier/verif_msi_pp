@@ -95,7 +95,7 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
     for (int32_t i = 0; i < e.width; i += 1) {                 \
         Node & b = simplifyCore(Extract(i, i, e), true, true); \
         res = check_call;                                      \
-        if (res) {                                             \
+        if (!res) {                                            \
             break;                                             \
         }                                                      \
     }                                                          \
