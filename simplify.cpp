@@ -1115,6 +1115,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 break;
             }
 
+            #if BIT_SIMPLIFY_PLUS
             else if (propagateExtractInwards && child->op == PLUS) {
                 if (msb == lsb) {
                     int32_t idx = 0;
@@ -1146,7 +1147,6 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     }
                     newChildren0 = {aiXorbi, ci};
                     op = BXOR;
-                    break;
                 }
                 else {
                     int32_t idx = 0;
@@ -1176,10 +1176,9 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     newChildren0.clear();
                     newChildren0.insert(newChildren0.end(), res.begin() + lsb, res.begin() + msb + 1);
                     op = CONCAT;
-                    break;
                 }
+                break;
             }
-
 
             else if (propagateExtractInwards && child->op == UMINUS) {
                 if (msb == lsb) {
@@ -1214,6 +1213,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     break;
                 }
             }
+            #endif
 
             else if (propagateExtractInwards && (child->op == GEXP || child->op == GLOG) && msb == 7 && lsb == 0) {
                 // Extract(7, 0, GExp(e)) -> GExp(Extract(7, 0, e))
@@ -1225,7 +1225,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 break;
             }
 
-            else if (propagateExtractInwards && (child->op == ARRAY || child->op == IMUL || child->op == GMUL || child->op == GLOG || child->op == GEXP || child->op == GPOW || child->op == SLSHR || child->op == SLSHL || child->op == SASHR)) {
+            // op == PLUS and op == UMINUS should only be true in the case where the flag BIT_SIMPLIFY_PLUS is false: otherwise we already verified a condition above
+            else if (propagateExtractInwards && (child->op == ARRAY || child->op == PLUS || child->op == UMINUS || child->op == IMUL || child->op == GMUL || child->op == GLOG || child->op == GEXP || child->op == GPOW || child->op == SLSHR || child->op == SLSHL || child->op == SASHR)) {
                 // Particular case: we cannot propagate extract inwards but we need to remove the occurrences of multiple-bit variables
                 // (otherwise the TPS algorithm can conclude no leakage and be wrong)
                 /*

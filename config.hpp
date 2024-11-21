@@ -16,12 +16,13 @@ Author(s): Quentin L. Meunier
 #define MEMORY_STRATEGY         KEEP_NODES
 #define PROPAGATE_CST_ON_BUILD  true
 #define BIT_EXP_ENABLE          true
+#define EXTENDED_SIMPLIFY       true
+#define BIT_SIMPLIFY_PLUS       true
+
 
 #define REM_SINGLE_INPUT_PROBES true
 #define REM_REDUNDANT_PROBES    true
 #define BARTHE_OPT              false
-
-#define EXTENDED_SIMPLIFY       true
 
 #endif
 
