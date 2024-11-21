@@ -21,5 +21,7 @@ Author(s): Quentin L. Meunier
 #define REM_REDUNDANT_PROBES    true
 #define BARTHE_OPT              false
 
+#define EXTENDED_SIMPLIFY       true
+
 #endif
 
