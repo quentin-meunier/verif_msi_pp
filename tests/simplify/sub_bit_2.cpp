@@ -1,6 +1,7 @@
 
 #include "node.hpp"
 #include "utils.hpp"
+#include "simplify.hpp"
 
 
 int main() {

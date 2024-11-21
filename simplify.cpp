@@ -13,6 +13,7 @@ Author(s): Quentin L. Meunier
 #include "simplify.hpp"
 #include "node.hpp"
 #include "arrayexp.hpp"
+#include "config.hpp"
 
 
 /*
@@ -1693,7 +1694,109 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 //          ~a |  (a ^ b) to ~a | ~b
                 //           a | ~(a ^ b) to  a | ~b
                 //          ~a | ~(a ^ b) to ~a |  b
+                // Note: the case a & (~a ^ b) cannot appear since the xor not has been simplified and the '~' would be moved above the xor
                 // These rules are included in the while loop since a factorisation can make new opportunities for simplification
+#if EXTENDED_SIMPLIFY
+                // Allows to take into account cases in which 'a' is a BXOR node in the examples above
+                // Example: (a ^ b) & (a ^ b ^ c) -> a ^ b ^ ~c
+                int32_t i = 0;
+                while (i < (int32_t) newChildren.size()) {
+                    Node * child0 = newChildren[i];
+                    if (child0->op == BXOR or (child0->op == BNOT and child0->children->at(0)->op == BXOR)) {
+                        bool xorHasNot = (op == BOR);
+                        if (child0->op == BNOT) {
+                            child0 = child0->children->at(0);
+                            xorHasNot = !xorHasNot;
+                        }
+                        int32_t k = 0;
+                        std::set<int32_t> idxToRemove;
+                        std::set<int32_t> tempIdxToRemove;
+                        while (k < (int32_t) newChildren.size()) {
+                            if (i == k) {
+                                k += 1;
+                                continue;
+                            }
+                            Node * child1 = newChildren[k];
+                            bool varHasNot = false;
+                            if (child1->op == BNOT) {
+                                child1 = child1->children->at(0);
+                                varHasNot = true;
+                            }
+                            if (child1->op == BXOR) {
+                                // We search for all the children of child1 in the children of child0
+                                // If they are all present, we remove all these children from child0
+                                bool allPresent = true;
+                                tempIdxToRemove.clear();
+                                for (const auto & gChild1 : *child1->children) {
+                                    bool present = false;
+                                    int32_t j = 0;
+                                    while (j < (int32_t) child0->children->size()) {
+                                        Node & xorChild = *child0->children->at(j);
+                                        if (equivalence(*gChild1, xorChild)) {
+                                            present = true;
+                                            tempIdxToRemove.insert(j);
+                                            break;
+                                        }
+                                        j += 1;
+                                    }
+                                    allPresent = allPresent and present;
+                                    if (!allPresent) {
+                                        break;
+                                    }
+                                }
+
+                                if (allPresent) {
+                                    // Copy the temporary indexes to remove in idxToRemove
+                                    idxToRemove.insert(tempIdxToRemove.begin(), tempIdxToRemove.end());
+                                    xorHasNot = xorHasNot ^ (!varHasNot);
+                                }
+                            }
+                            else {
+                                int32_t j = 0;
+                                while (j < (int32_t) child0->children->size()) {
+                                    Node & xorChild = *child0->children->at(j);
+                                    if (equivalence(*child1, xorChild)) {
+                                        idxToRemove.insert(j);
+                                        xorHasNot = xorHasNot ^ (!varHasNot);
+                                        break;
+                                    }
+                                    j += 1;
+                                }
+                            }
+                            if (idxToRemove.size() == child0->children->size() - 1) {
+                                break;
+                            }
+                            k += 1;
+                        }
+
+                        if (idxToRemove.size() != 0) {
+                            std::vector<Node *> newGrandChildren;
+                            for (int32_t idx = 0; idx < (int32_t) child0->children->size(); idx += 1) {
+                                if (!idxToRemove.contains(idx)) {
+                                    newGrandChildren.push_back(child0->children->at(idx));
+                                }
+                            }
+                            assert(newGrandChildren.size() != 0);
+                            Node * newChild;
+                            if (newGrandChildren.size() == 1) {
+                                newChild = newGrandChildren[0];
+                            }
+                            else {
+                                newChild = &Node::OpNode(BXOR, newGrandChildren);
+                            }
+                            if (xorHasNot) {
+                                newChild = &~(*newChild);
+                            }
+                            newChildren[i] = newChild;
+                            bool m = mergeWithChildrenIfPossible(op, newChildren);
+                            (void) m;
+                            hasChanged = true;
+                            modified = true;
+                        }
+                    }
+                    i += 1;
+                }
+#else
                 int32_t i = 0;
                 while (i < (int32_t) newChildren.size()) {
                     Node * child0 = newChildren[i];
@@ -1758,6 +1861,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     }
                     i += 1;
                 }
+#endif
             }
             {
                 // simplify a | (~a & b) to a | b
@@ -1766,6 +1870,109 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 // e.g.                (~a & ~b & c) | (~a & b) | a
                 // after 1 iteration:  (~b & c) | b | a
                 // after 2 iterations: c | b | a
+#if EXTENDED_SIMPLIFY
+                // Deals with cases such as:
+                //   a0 | ~a1 | a2  | ~(a0 | ~a1 | a2) & b ->   a0 | ~a1 | a2  | b
+                // ~(a0 | ~a1 | a2) |  (a0 | ~a1 | a2) & b -> ~(a0 | ~a1 | a2) | b
+                int32_t i = 0;
+                while (i < (int32_t) newChildren.size()) {
+                    Node & child0 = *newChildren[i];
+                    if (child0.op == op1) {
+                        int32_t j = 0;
+                        std::set<int32_t> idxToRemove;
+                        while (j < (int32_t) child0.children->size()) {
+                            Node & op1Child = *child0.children->at(j);
+                            if (op1Child.op == BNOT) {
+                                Node & op1gChild = *op1Child.children->at(0);
+                                if (op1gChild.op == op) {
+                                    // We search for every op1gChild child in newChildren
+                                    bool allPresent = true;
+                                    for (const auto & op1ggChild : *op1gChild.children) {
+                                        bool found = false;
+                                        int32_t k = 0;
+                                        while (k < (int32_t) newChildren.size()) {
+                                            if (i == k) {
+                                                k += 1;
+                                                continue;
+                                            }
+                                            if (equivalence(*op1ggChild, *newChildren[k])) {
+                                                found = true;
+                                                break;
+                                            }
+                                            k += 1;
+                                        }
+                                        allPresent = allPresent && found;
+                                        if (!allPresent) {
+                                            break;
+                                        }
+                                    }
+                                    if (allPresent) {
+                                        idxToRemove.insert(j);
+                                    }
+
+                                }
+                                else {
+                                    // standard case
+                                    int32_t k = 0;
+                                    while (k < (int32_t) newChildren.size()) {
+                                        if (i == k) {
+                                            k += 1;
+                                            continue;
+                                        }
+                                        Node & child1 = *newChildren[k];
+                                        if (equivalence(child1, op1gChild)) {
+                                            idxToRemove.insert(j);
+                                            break;
+                                        }
+                                        k += 1;
+                                    }
+                                }
+                            }
+                            else {
+                                // standard case
+                                int32_t k = 0;
+                                while (k < (int32_t) newChildren.size()) {
+                                    if (i == k) {
+                                        k += 1;
+                                        continue;
+                                    }
+                                    Node & child1 = *newChildren[k];
+                                    if (child1.op == BNOT && equivalence(*child1.children->at(0), op1Child)) {
+                                        idxToRemove.insert(j);
+                                        break;
+                                    }
+                                    k += 1;
+                                }
+                            }
+                            j += 1;
+                        }
+                        if (idxToRemove.size() != 0) {
+                            std::vector<Node *> newGrandChildren;
+                            for (int32_t idx = 0; idx < (int32_t) child0.children->size(); idx += 1) {
+                                if (!idxToRemove.contains(idx)) {
+                                    newGrandChildren.push_back(child0.children->at(idx));
+                                }
+                            }
+                            Node * newChild;
+                            if (newGrandChildren.size() == 0) {
+                                newChild = cst1;
+                            }
+                            else if (newGrandChildren.size() == 1) {
+                                newChild = newGrandChildren[0];
+                            }
+                            else {
+                                newChild = &Node::OpNode(op1, newGrandChildren);
+                            }
+                            newChildren[i] = newChild;
+                            bool m = mergeWithChildrenIfPossible(op, newChildren);
+                            (void) m;
+                            hasChanged = true;
+                            modified = true;
+                        }
+                    }
+                    i += 1;
+                }
+#else
                 int32_t i = 0;
                 while (i < (int32_t) newChildren.size()) {
                     Node & child0 = *newChildren[i];
@@ -1815,6 +2022,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     }
                     i += 1;
                 }
+#endif
             }
         }
 
@@ -1913,6 +2121,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             return setSimpEqAndReturn(node, *newChildren[0]);
         }
         else {
+#if EXTENDED_SIMPLIFY
             // De Morgan
             // (~a & ~b & ~c) -> ~(a | b | c)
             // (~a | ~b | ~c) -> ~(a & b & c)
@@ -1935,6 +2144,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     return setSimpEqAndReturn(node, op1Node);
                 }
             }
+#endif
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
         }
     }

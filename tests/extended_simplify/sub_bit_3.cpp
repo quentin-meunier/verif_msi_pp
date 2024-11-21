@@ -1,14 +1,15 @@
 
 #include "node.hpp"
 #include "utils.hpp"
+#include "simplify.hpp"
 
 
 int main() {
-    Node & p = symbol("p", 'S', 4);
+    Node & p = symbol("p", 'S', 8);
 
     Node & pb = getBitDecomposition(p);
 
-    Node & c0 = constant(0xf, 4);
+    Node & c0 = constant(0xff, 8);
 
     Node & n0 = pb + c0;
 
@@ -18,7 +19,7 @@ int main() {
 
     //std::cout << "n1: " << n1 << std::endl;
 
-    Node & c1 = constant(1, 4);
+    Node & c1 = constant(1, 8);
 
     Node & n2 = n1 + c1;
 
