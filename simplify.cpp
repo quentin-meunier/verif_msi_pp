@@ -1686,6 +1686,46 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         while (hasChanged) {
             hasChanged = false;
             {
+                // simplify e & e and e | e to e
+                // Not setting hasChanged to true since it is the first rule:
+                // we avoid making an additional round of simp rules if it is the only rule taken
+                int32_t i = 0;
+                while (i < (int32_t) newChildren.size()) {
+                    Node & child0 = *newChildren[i];
+                    int32_t j = i + 1;
+                    while (j < (int32_t) newChildren.size()) {
+                        Node & child1 = *newChildren[j];
+                        if (equivalence(child0, child1)) {
+                            // Suppressing child1
+                            newChildren.erase(newChildren.begin() + j);
+                            modified = true;
+                        }
+                        else {
+                            j += 1;
+                        }
+                    }
+                    i += 1;
+                }
+            }
+            {
+                // simplify e & ~e to 0 and e | ~e to 1
+                int32_t i = 0;
+                while (i < (int32_t) newChildren.size()) {
+                    Node & child0 = *newChildren[i];
+                    int32_t j = i + 1;
+                    while (j < (int32_t) newChildren.size()) {
+                        Node & child1 = *newChildren[j];
+                        if ((child0.op == BNOT && equivalence(*child0.children->at(0), child1)) || (child1.op == BNOT && equivalence(child0, *child1.children->at(0)))) {
+                            return setSimpEqAndReturn(node, *cst0);
+                        }
+                        else {
+                            j += 1;
+                        }
+                    }
+                    i += 1;
+                }
+            }
+            {
                 // FIXME: propagate in VerifMSI
                 // Simplify  a &  (a ^ b) to  a & ~b
                 //          ~a &  (a ^ b) to ~a &  b
@@ -1699,7 +1739,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 // These rules are included in the while loop since a factorisation can make new opportunities for simplification
 #if EXTENDED_SIMPLIFY
                 // Allows to take into account cases in which 'a' is a BXOR node in the examples above
-                // Example: (a ^ b) & (a ^ b ^ c) -> a ^ b ^ ~c
+                // Example: (a ^ b) & (a ^ b ^ c) -> a ^ b & ~c
                 int32_t i = 0;
                 while (i < (int32_t) newChildren.size()) {
                     Node * child0 = newChildren[i];
@@ -2024,46 +2064,6 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                     i += 1;
                 }
 #endif
-            }
-        }
-
-        // simplify e & e and e | e to e
-        {
-            int32_t i = 0;
-            while (i < (int32_t) newChildren.size()) {
-                Node & child0 = *newChildren[i];
-                int32_t j = i + 1;
-                while (j < (int32_t) newChildren.size()) {
-                    Node & child1 = *newChildren[j];
-                    if (equivalence(child0, child1)) {
-                        // Suppressing child1
-                        newChildren.erase(newChildren.begin() + j);
-                        modified = true;
-                    }
-                    else {
-                        j += 1;
-                    }
-                }
-                i += 1;
-            }
-        }
-
-        // simplify e & ~e to 0 and e | ~e to 1
-        {
-            int32_t i = 0;
-            while (i < (int32_t) newChildren.size()) {
-                Node & child0 = *newChildren[i];
-                int32_t j = i + 1;
-                while (j < (int32_t) newChildren.size()) {
-                    Node & child1 = *newChildren[j];
-                    if ((child0.op == BNOT && equivalence(*child0.children->at(0), child1)) || (child1.op == BNOT && equivalence(child0, *child1.children->at(0)))) {
-                        return setSimpEqAndReturn(node, *cst0);
-                    }
-                    else {
-                        j += 1;
-                    }
-                }
-                i += 1;
             }
         }
 
