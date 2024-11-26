@@ -11,9 +11,11 @@ Author(s): Quentin L. Meunier
 
 
 #include "simplify.hpp"
+#include "config.hpp"
 #include "node.hpp"
 #include "arrayexp.hpp"
-#include "config.hpp"
+#include "simp_conc.hpp"
+
 
 
 /*
@@ -2311,33 +2313,47 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
 
         // Case all children are Extract nodes with corresponding bit indexes
         // Checking first child in advance in order to get its indexes
-        if (newChildren[0]->op == EXTRACT) {
-            uint64_t firstBit = newChildren[0]->children->at(1)->cst[0];
-            uint64_t currentBit = newChildren[0]->children->at(0)->cst[0] + 1;
+        {
+            if (newChildren[0]->op == EXTRACT) {
+                uint64_t firstBit = newChildren[0]->children->at(1)->cst[0];
+                uint64_t currentBit = newChildren[0]->children->at(0)->cst[0] + 1;
 
-            for (int32_t childNum = 1; childNum < (int32_t) newChildren.size(); childNum += 1) {
-                Node & child = *newChildren[childNum];
-                if (child.op == EXTRACT && child.children->at(1)->cst[0] == currentBit) {
-                    currentBit = child.children->at(0)->cst[0] + 1;
+                for (int32_t childNum = 1; childNum < (int32_t) newChildren.size(); childNum += 1) {
+                    Node & child = *newChildren[childNum];
+                    if (child.op == EXTRACT && child.children->at(1)->cst[0] == currentBit) {
+                        currentBit = child.children->at(0)->cst[0] + 1;
+                    }
+                    else {
+                        return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+                    }
+                }
+                // Checking if all children are equivalent expressions
+                for (int32_t childNum = 1; childNum < (int32_t) newChildren.size(); childNum += 1) {
+                    if (!equivalence(*newChildren[0]->children->at(2), *newChildren[childNum]->children->at(2))) {
+                        return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+                    }
+                }
+
+                if (firstBit == 0 && (int32_t) currentBit == newChildren[0]->children->at(2)->width) {
+                    return setSimpEqAndReturn(node, *newChildren[0]->children->at(2));
                 }
                 else {
-                    return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+                    return setSimpEqAndReturn(node, Extract(currentBit - 1, firstBit, *newChildren[0]->children->at(2)));
                 }
-            }
-            // Checking if all children are equivalent expressions
-            for (int32_t childNum = 1; childNum < (int32_t) newChildren.size(); childNum += 1) {
-                if (!equivalence(*newChildren[0]->children->at(2), *newChildren[childNum]->children->at(2))) {
-                    return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
-                }
-            }
-
-            if (firstBit == 0 && (int32_t) currentBit == newChildren[0]->children->at(2)->width) {
-                return setSimpEqAndReturn(node, *newChildren[0]->children->at(2));
-            }
-            else {
-                return setSimpEqAndReturn(node, Extract(currentBit - 1, firstBit, *newChildren[0]->children->at(2)));
             }
         }
+        #if EXTENDED_MERGE_CONCAT
+        {
+            bool ok;
+            Node * mergedNode = extendedMergeConcatExtract(newChildren, &ok);
+            if (ok) {
+                return setSimpEqAndReturn(node, *mergedNode);
+            }
+            else {
+                return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
+            }
+        }
+        #endif
         return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
     }
 
@@ -2637,5 +2653,8 @@ bool equivalence(Node & node0, Node & node1) {
     }
     return true;
 }
+
+
+
 
 

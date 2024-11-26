@@ -18,6 +18,7 @@ Author(s): Quentin L. Meunier
 #define BIT_EXP_ENABLE          true
 #define EXTENDED_SIMPLIFY       true
 #define BIT_SIMPLIFY_PLUS       true
+#define EXTENDED_MERGE_CONCAT   true
 
 
 #define REM_SINGLE_INPUT_PROBES true
