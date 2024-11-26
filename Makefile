@@ -11,10 +11,10 @@ INCLUDES=
 
 
 
-libverif_msi_pp.a: node.o arrayexp.o SHA256.o utils.o simplify.o check_leakage.o tps.o concrev.o hw.o
+libverif_msi_pp.a: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o
 	ar rcs $@ $^
 
-libverif_msi_pp.so: node.o arrayexp.o SHA256.o utils.o simplify.o check_leakage.o tps.o concrev.o hw.o
+libverif_msi_pp.so: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o
 	g++ $^ -shared -o $@
 
 $(PYTHONLIB): libverif_msi_pp.so pybind11_wrapper.cpp
@@ -36,7 +36,10 @@ node.o: node.cpp node.hpp config.hpp arrayexp.hpp SHA256.hpp
 concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp arrayexp.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-simplify.o: simplify.cpp simplify.hpp node.hpp SHA256.hpp arrayexp.hpp config.hpp
+simplify.o: simplify.cpp simplify.hpp simp_conc.hpp node.hpp SHA256.hpp arrayexp.hpp config.hpp
+	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
+
+simp_conc.o: simp_conc.cpp simp_conc.hpp node.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 hw.o: hw.cpp hw.hpp node.hpp simplify.hpp check_leakage.hpp tps.hpp config.hpp
