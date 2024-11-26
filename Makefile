@@ -2,10 +2,11 @@
 
 CUR_DIR=$(shell pwd)
 PYTHONLIB:=verif_msi_pp$(shell python3.9-config --extension-suffix)
-all: libverif_msi_pp.a libverif_msi_pp.so $(PYTHONLIB)
+#all: libverif_msi_pp.a libverif_msi_pp.so $(PYTHONLIB)
+all: libverif_msi_pp.a libverif_msi_pp.so
 
-#CFLAGS=-g -std=c++20 -Wall -O0 -fPIC
-CFLAGS=-std=c++20 -Wall -O3 -fPIC
+CFLAGS=-g -std=c++20 -Wall -O0 -fPIC
+#CFLAGS=-std=c++20 -Wall -O3 -fPIC
 INCLUDES=
 
 
@@ -35,7 +36,7 @@ node.o: node.cpp node.hpp config.hpp arrayexp.hpp SHA256.hpp
 concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp arrayexp.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-simplify.o: simplify.cpp simplify.hpp node.hpp SHA256.hpp arrayexp.hpp
+simplify.o: simplify.cpp simplify.hpp node.hpp SHA256.hpp arrayexp.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 hw.o: hw.cpp hw.hpp node.hpp simplify.hpp check_leakage.hpp tps.hpp config.hpp
