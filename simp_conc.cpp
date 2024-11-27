@@ -22,7 +22,7 @@ static void traverseExpRec(Node & n) {
     if (n.nature != OP) {
         return;
     }
-    if (n.op == EXTRACT and n.children->at(2)->nature == SYMB) {
+    if (n.op == EXTRACT and (n.children->at(2)->nature == SYMB or n.children->at(2)->op == ARRAY)) {
         if (n.children->at(0)->nature != CONST or n.children->at(1)->nature != CONST) {
             abortAll = true;
             return;
@@ -68,7 +68,7 @@ static Node & replaceExtractsRec(Node & n) {
     if (n.nature != OP) {
         return n;
     }
-    if (n.op == EXTRACT and n.children->at(2)->nature == SYMB) {
+    if (n.op == EXTRACT and (n.children->at(2)->nature == SYMB or n.children->at(2)->op == ARRAY)) {
         Node & e = Extract(0, 0, *n.children->at(2));
         m[&n] = &e;
         return e;
@@ -106,7 +106,7 @@ static Node & buildEquivNodeRec(Node & n) {
     if (n.nature != OP) {
         return n;
     }
-    if (n.op == EXTRACT and n.children->at(2)->nature == SYMB) {
+    if (n.op == EXTRACT and (n.children->at(2)->nature == SYMB or n.children->at(2)->op == ARRAY)) {
         Node & e = *n.children->at(2);
         m[&n] = &e;
         return e;
