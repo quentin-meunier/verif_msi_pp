@@ -209,9 +209,16 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
         if (numKeptConcatChildren > 1) {
             concatChildrenIdx.clear();
             std::vector<Node *> newChildren;
+            int32_t concatChildIdx = 0;
             for (int i = 0; i < (int) children.size(); i += 1) {
-                if (children[i]->nature == CONST or (children[i]->op == CONCAT and !removedChild[i])) {
-                    concatChildrenIdx.push_back(i);
+                if (children[i]->nature == CONST or children[i]->op == CONCAT) {
+                    if (!removedChild[concatChildIdx]) {
+                        concatChildrenIdx.push_back(i);
+                    }
+                    else {
+                        newChildren.push_back(children[i]);
+                    }
+                    concatChildIdx += 1;
                 }
                 else {
                     newChildren.push_back(children[i]);
