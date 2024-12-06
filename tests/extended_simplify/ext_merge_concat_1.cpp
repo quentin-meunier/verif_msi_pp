@@ -5,7 +5,7 @@ int main() {
     Node & m = symbol("m", 'P', 8);
     Node & k = symbol("k", 'P', 8);
 
-    registerArray("sbox", 8, 8, 0x0, 512, NULL, nullptr, 1);
+    registerArray("sbox", 8, 8, 0x0, 256, NULL, nullptr, 1);
     ArrayExp & sbox = getArrayByName("sbox");
 
     Node & e = m ^ Concat(

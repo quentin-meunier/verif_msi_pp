@@ -14,11 +14,14 @@ Author(s): Quentin L. Meunier
 #define KEEP_NODES   2
 
 #define MEMORY_STRATEGY         KEEP_NODES
+
 #define PROPAGATE_CST_ON_BUILD  true
 #define BIT_EXP_ENABLE          true
 #define EXTENDED_SIMPLIFY       true
-#define BIT_SIMPLIFY_PLUS       true
+#define BIT_SIMPLIFY_PLUS       false
 #define EXTENDED_MERGE_CONCAT   true
+
+#define VERIF_REMOVE_CST_IN_ADD true
 
 
 #define REM_SINGLE_INPUT_PROBES true
