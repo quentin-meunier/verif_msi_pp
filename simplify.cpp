@@ -22,6 +22,7 @@ Author(s): Quentin L. Meunier
  * To trace calls, uncomment this code and replace calls to simplifyCore with calls to simplifyCoreWrapper
  *
 
+
 #define DEBUG
 #ifdef DEBUG
 static int offset = 0;
@@ -168,7 +169,6 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
                                 // +---------------
                                 // |  cst |   b
                                 // +---------------
-                                //std::cout << "2 : " << *concatChild << " - childSize: " << currChildSize[i] << " - nbBitsTaken: " << nbBitsTaken << std::endl;
                                 removedChild[i] = true;
                             }
                         }
@@ -1459,7 +1459,6 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             // = b * (a ^ c) ^ a * c
             // = c * (a ^ b) ^ a * b
             if (node.hasWordOp) {
-                // FIXME: faire un flag plus précis que hasWordOp, comme hasGMulOp ?
                 bool m = factorize(GMUL, BXOR, newChildren, width);
                 modified = modified || m;
                 modifiedByFactorization = modifiedByFactorization || m;
@@ -1473,17 +1472,11 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             bool m = factorize(BAND, BXOR, newChildren, width);
             modified = modified || m;
             modifiedByFactorization = modifiedByFactorization || m;
-            //std::cout << "children at 1: [ ";
-            //for (const auto & nc : newChildren) {
-            //    std::cout << nc->verbatimPrint() << ", ";
-            //}
-            //std::cout << "]" << std::endl;
-            // NOTE: do-while loop here becuase it is possible here to have a const(0) among newChildren, or identical children, after factorization
+            // NOTE: do-while loop here because it is possible here to have a const(0) among newChildren, or identical children, after factorization
         } while (modifiedByFactorization);
 
 
         // GPow(a, n) ^ GPow(b, n) and n is a power of 2 -> GPow(a ^ b, n)
-        // FIXME (bis): faire un flag plus précis que hasWordOp, comme hasGMulOp ?
         if (node.hasWordOp) {
             std::map<Node *, int32_t> nbPowChildren;
             for (int32_t i = 0; i < (int32_t) newChildren.size(); i += 1){

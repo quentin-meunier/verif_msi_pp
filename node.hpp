@@ -112,6 +112,7 @@ class Node {
     NodeNature nature;
     NodeOp op;
     bool hasWordOp;
+    bool hasPlus;
     bool wordAnalysisHasFailedOnSubExp;
     int32_t nlimbs;
     uint64_t * cst;

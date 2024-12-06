@@ -36,6 +36,7 @@ Node::Node() {
     nature = NONE;
     op = NOP;
     hasWordOp = false;
+    hasPlus = false;
     wordAnalysisHasFailedOnSubExp = false;
     nlimbs = 0;
     cst = NULL;
@@ -410,6 +411,16 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
             }
         }
     }
+    n->hasPlus = (op == PLUS);
+    if (!n->hasPlus) {
+        for (const auto & c: children) {
+            if (c->hasPlus) {
+                n->hasPlus = true;
+                break;
+            }
+        }
+    }
+
     for (const auto & c: children) {
         if (c->wordAnalysisHasFailedOnSubExp) {
             n->wordAnalysisHasFailedOnSubExp = true;

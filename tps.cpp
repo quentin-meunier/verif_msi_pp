@@ -77,6 +77,64 @@ static Node & getReplacedGraph(Node & node, Node & selMask, Node & childToReplac
 }
 
 
+static Node & removeConstOperandsFromPlusRec(Node & node, std::map<Node *, Node *> & m) {
+    if (node.nature != OP or !node.hasPlus) {
+        return node;
+    }
+    std::vector<Node *> children;
+    for (const auto & child : *node.children) {
+        if (m.contains(child)) {
+            children.push_back(m[child]);
+            continue;
+        }
+        if (node.op == PLUS and child->nature == CONST) {
+            continue;
+        }
+        Node & newChild = removeConstOperandsFromPlusRec(*child, m);
+        children.push_back(&newChild);
+    }
+    if (children == *node.children) {
+        m[&node] = &node;
+        return node;
+    }
+    if (children.size() == 0) {
+        assert(false);
+        Node & n = Const(0, node.width);
+        m[&node] = &n;
+        return n;
+    }
+    if (children.size() == 1) {
+        assert(node.op == PLUS);
+        Node & n = *children[0];
+        m[&node] = &n;
+        return n;
+    }
+    Node & n = Node::OpNode(node.op, children);
+    m[&node] = &n;
+    return n;
+}
+
+
+static Node & removeConstOperandsFromPlus(Node & node) {
+    if (not node.hasPlus) {
+        return node;
+    }
+    else {
+        //std::cout << "RCOFP: " << node << std::endl;
+        std::map<Node *, Node *> m;
+
+        Node & res = removeConstOperandsFromPlusRec(node, m);
+        //std::cout << "Res  : " << res << std::endl;
+        if (&res != &node) {
+            //std::cout << "Calling simplify here" << std::endl;
+            return simplify(res);
+        }
+        return node;
+    }
+}
+
+
+
 static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool verbose) {
     if (verbose) {
         std::cout << "# Call func checkProperty on exp " << nodeIn << std::endl;
@@ -98,6 +156,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
     Node * node = &nodeIn;
     // Simplify made in wrapper
+    #if VERIF_REMOVE_CST_IN_ADD
+    node = &removeConstOperandsFromPlus(*node);
+    #endif
 
     std::set<Node *> masksTaken;
     int cpt = 0;
@@ -275,6 +336,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
         // Simplify
         node = &simplify(*node);
+        #if VERIF_REMOVE_CST_IN_ADD
+        node = &removeConstOperandsFromPlus(*node);
+        #endif
     }
 }
 
