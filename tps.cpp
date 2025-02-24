@@ -103,7 +103,7 @@ static Node & removeConstOperandsFromPlusRec(Node & node, std::map<Node *, Node 
         m[&node] = &n;
         return n;
     }
-    if (children.size() == 1) {
+    if (node.children->size() != children.size() && children.size() == 1) {
         assert(node.op == PLUS);
         Node & n = *children[0];
         m[&node] = &n;

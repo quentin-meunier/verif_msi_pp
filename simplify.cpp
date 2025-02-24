@@ -601,7 +601,12 @@ Node & getBitDecomposition(Node & node) {
         node.concatExtEq = &newA;
         return newA;
     }
-    if (node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW) {
+    #if BIT_SIMPLIFY_PLUS
+    #define COND (node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW)
+    #else
+    #define COND (node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW || node.op == PLUS || node.op == UMINUS)
+    #endif
+    if (COND) {
         std::vector<Node *> newChildren;
         for (const auto & child : *node.children) {
             Node & newChild = getBitDecomposition(*child);
@@ -611,6 +616,7 @@ Node & getBitDecomposition(Node & node) {
         node.concatExtEq = &newNode;
         return newNode;
     }
+    #undef COND
 
     std::vector<Node *> l;
     for (int32_t b = 0; b < node.width; b += 1) {
