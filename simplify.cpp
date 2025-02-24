@@ -602,9 +602,9 @@ Node & getBitDecomposition(Node & node) {
         return newA;
     }
     #if BIT_SIMPLIFY_PLUS
-    #define COND (node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW)
+    #define COND                                         (node.op == SLSHR || node.op == SLSHL || node.op == SASHR || node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW)
     #else
-    #define COND (node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW || node.op == PLUS || node.op == UMINUS)
+    #define COND (node.op == PLUS || node.op == UMINUS || node.op == SLSHR || node.op == SLSHL || node.op == SASHR || node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW)
     #endif
     if (COND) {
         std::vector<Node *> newChildren;
