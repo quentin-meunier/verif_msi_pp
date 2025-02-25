@@ -120,8 +120,6 @@ class Node {
 
     // Cache to Extract node for each bit
     std::vector<Node *> extractBit;
-    // Cache for the concatenation of all the extracted bits, with single bit variables
-    Node * concatExtEq;
     // simplified equivalent node
     Node * simpEq;
     // simplified equivalent node using single-bit variables

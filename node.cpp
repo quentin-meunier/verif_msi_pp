@@ -42,7 +42,6 @@ Node::Node() {
     cst = NULL;
     strn = NULL;
 
-    concatExtEq = NULL;
     simpEq = NULL;
     simpEqUsbv = NULL;
     origSecret = NULL;
