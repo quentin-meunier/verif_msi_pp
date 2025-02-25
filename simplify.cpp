@@ -90,7 +90,7 @@ static bool mergeWithChildrenIfPossible(NodeOp op, std::vector<Node *> & childre
 //       will not be simplified to Concat(a8 ^ c8, b8 ^ d8) ^ Concat(u4 ^ w4, v12 ^ x12)
 //       This case can be added if it is encountered
 // FIXME: propagate in verif_msi
-static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeOp * newOp) {
+static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeOp * newOp, bool usbv) {
 #if 1
     std::vector<int> concatChildrenIdx;
     bool concatPresent = false;
@@ -101,6 +101,36 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
         }
     }
     int numConcatChildren = concatChildrenIdx.size();
+
+    if (concatPresent and numConcatChildren >= 1 and usbv) {
+        // Decomposing "symbolic nodes" for allowing them to merge
+        bool modified = false;
+        for (int i = 0; i < (int) children.size(); i += 1) {
+            if (children[i]->op == ARRAY or children[i]->op == SLSHR or children[i]->op == SLSHL or children[i]->op == SASHR or children[i]->op == PLUS or children[i]->op == EXTRACT) {
+                // Not using getBitDecomposition because an array node with be simplfied to the array node itself,
+                // removing the outer Concat
+                std::vector<Node *> l;
+                for (int32_t b = 0; b < children[i]->width; b += 1) {
+                    l.push_back(&simplifyCore(Extract(b, b, *children[i]), true, true));
+                }
+                children[i] = &Concat(l);
+
+                modified = true;
+            }
+        }
+        if (modified) {
+            // Recomputing indexes
+            concatChildrenIdx.clear();
+            for (int i = 0; i < (int) children.size(); i += 1) {
+                if (children[i]->op == CONCAT or children[i]->nature == CONST) {
+                    concatPresent |= children[i]->op == CONCAT;
+                    concatChildrenIdx.push_back(i);
+                }
+            }
+            numConcatChildren = concatChildrenIdx.size();
+        }
+    }
+
 
     if (concatPresent and numConcatChildren > 1) {
         bool removedChild[numConcatChildren] = {false};
@@ -571,13 +601,13 @@ static Node & getBitDecompositionVar(Node & node, int32_t msb, int32_t lsb) {
 
 static Node & getBitDecompositionVar(Node & node) {
     assert(node.nature == SYMB);
-    if (node.concatExtEq != NULL) {
-        //std::cout << "# Concat ext eq of '" << node << "': " << *node.concatExtEq << std::endl;
-        return *node.concatExtEq;
+    if (node.simpEqUsbv != NULL) {
+        //std::cout << "# Concat ext eq of '" << node << "': " << *node.simpEqUsbv << std::endl;
+        return *node.simpEqUsbv;
     }
     Node * res;
     res = &getBitDecompositionVar(node, node.width - 1, 0);
-    node.concatExtEq = res;
+    node.simpEqUsbv = res;
     return *res;
 }
 
@@ -586,45 +616,21 @@ Node & getBitDecomposition(Node & node) {
     if (node.nature == CONST) {
         return node;
     }
-    if (node.concatExtEq != NULL) {
-        return *node.concatExtEq;
+    if (node.simpEqUsbv != NULL) {
+        return *node.simpEqUsbv;
     }
     if (node.nature == SYMB) {
+        // shortcut, not necessary
         return getBitDecompositionVar(node);
     }
-    if (node.op == ARRAY) {
-        // For arrays, the root node of the decomposition is not a Concat but an array node,
-        // whose child is a concat (or Array, or mult)
-        Node & be = getBitDecomposition(*node.children->at(1));
-        ArrayExp & arr = *ArrayExp::allArrays[*node.children->at(0)->strn];
-        Node & newA = arr[be];
-        node.concatExtEq = &newA;
-        return newA;
-    }
-    #if BIT_SIMPLIFY_PLUS
-    #define COND                                         (node.op == SLSHR || node.op == SLSHL || node.op == SASHR || node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW)
-    #else
-    #define COND (node.op == PLUS || node.op == UMINUS || node.op == SLSHR || node.op == SLSHL || node.op == SASHR || node.op == IMUL || node.op == GMUL || node.op == GLOG || node.op == GEXP || node.op == GPOW)
-    #endif
-    if (COND) {
-        std::vector<Node *> newChildren;
-        for (const auto & child : *node.children) {
-            Node & newChild = getBitDecomposition(*child);
-            newChildren.push_back(&newChild);
-        }
-        Node & newNode = Node::OpNode(node.op, newChildren);
-        node.concatExtEq = &newNode;
-        return newNode;
-    }
-    #undef COND
 
     std::vector<Node *> l;
     for (int32_t b = 0; b < node.width; b += 1) {
-        l.push_back(&simplifyCore(Extract(b, b, node), true, true));
+        l.push_back(&Extract(b, b, node));
     }
-    Node & be = Concat(l);
-    node.concatExtEq = &be;
-    return be;
+    Node & conc = Concat(l);
+    Node & simpConc = simplifyCore(conc, true, true);
+    return simpConc;
 }
 
 
@@ -1240,31 +1246,17 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 break;
             }
 
-            // op == PLUS and op == UMINUS should only be true in the case where the flag BIT_SIMPLIFY_PLUS is false: otherwise we already verified a condition above
-            else if (propagateExtractInwards && (child->op == ARRAY || child->op == PLUS || child->op == UMINUS || child->op == IMUL || child->op == GMUL || child->op == GLOG || child->op == GEXP || child->op == GPOW || child->op == SLSHR || child->op == SLSHL || child->op == SASHR)) {
-                // Particular case: we cannot propagate extract inwards but we need to remove the occurrences of multiple-bit variables
-                // (otherwise the TPS algorithm can conclude no leakage and be wrong)
-                /*
-                if (useSingleBitVariables) {
-                    Node & decompNode = getBitDecomposition(*child);
-                    Node & simplifiedNode = Extract(*msbNode, *lsbNode, decompNode);
-                    return setSimpEqAndReturn(node, simplifiedNode);
-                }
-                else {
-                    return setSimpEqAndReturn(node, defaultNode(node, op, newChildren0, newChildren0.size() != 0));
-                }*/
-                // FIXME: propagate in verif_msi
-                break;
-            }
-
             else {
                 //std::cout << "node: %s" << node << std::endl;
-                assert(not propagateExtractInwards);
                 break;
             }
         } // while (true)
     } // op == EXTRACT
 
+
+    /////////////////////////
+    // Main recursion loop //
+    /////////////////////////
 
     bool modified = (newChildren0.size() != 0);
     std::vector<Node *> newChildren;
@@ -1332,7 +1324,7 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
         modified = modified || m;
 
         if (op != PLUS) {
-            m = mergeConcatChildren(op, newChildren, &op);
+            m = mergeConcatChildren(op, newChildren, &op, useSingleBitVariables);
             modified = modified || m;
         }
     }
