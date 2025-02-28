@@ -13,7 +13,7 @@ int main() {
 
     Node & n = s >> e;
 
-    checkResults(n, n);
+    checkResults(n, s);
 
     return 0;
 }

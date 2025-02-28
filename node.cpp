@@ -1146,7 +1146,7 @@ Node & Node::operator>>(int32_t shval) {
                     res[i] = w;
                 }
                 else if (i + limb_shift == nlimbs - 1) {
-                    res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> limb_rem;
+                    res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> (limb_rem + 64 - mslWidth);
                 }
                 else {
                     res[i] = cst[i + limb_shift] >> limb_rem | cst[i + limb_shift + 1] << (64 - limb_rem);
@@ -1284,14 +1284,14 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
         return std::string("SLShR(") + children->at(0)->expPrint(false, verbatim) + ", " + children->at(1)->expPrint(false, verbatim) + ")";
     }
     else if (op == SASHR) {
-        std::string res = children->at(0)->expPrint(false, verbatim) + " s>> " + children->at(1)->expPrint(false, verbatim);
+        std::string res = children->at(0)->expPrint(false, verbatim) + " s>> " + children->at(1)->expPrint(true, verbatim);
         if (parNeeded) {
             res = std::string("(") + res + ")";
         }
         return res;
     }
     else if (op == SLSHL) {
-        std::string res = children->at(0)->expPrint(false, verbatim) + " s<< " + children->at(1)->expPrint(false, verbatim);
+        std::string res = children->at(0)->expPrint(false, verbatim) + " s<< " + children->at(1)->expPrint(true, verbatim);
         if (parNeeded) {
             res = std::string("(") + res + ")";
         }

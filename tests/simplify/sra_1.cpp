@@ -1,5 +1,4 @@
 
-#include "concrev.hpp"
 #include "utils.hpp"
 
 
@@ -10,7 +9,6 @@ int main() {
     Node & r = constant(0xFFFFFFFFFFFFFFFF, 64);
 
     checkResults(e, r);
-
 
     return 0;
 }

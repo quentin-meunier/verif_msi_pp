@@ -7,9 +7,9 @@ int main() {
 
     Node & p = symbol("p", 'P', 8);
 
-    Node & n = LShR(LShR(LShR(p, 1), 2), 3) + LShR(LShR(LShR(LShR(p, 1), 0), 3), 1);
+    Node & n = (((p >> 1) >> 2) >> 3) + ((((p >> 1) >> 0) >> 3) >> 1);
 
-    Node & res = LShR(p, 6) + LShR(p, 5);
+    Node & res = (p >> 6) + (p >> 5);
 
     checkResults(n, res);
 
