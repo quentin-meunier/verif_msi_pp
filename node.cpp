@@ -194,7 +194,7 @@ Node::~Node() {
         delete children;
     }
     if (cst != NULL) {
-        delete cst;
+        delete [] cst;
     }
 }
 
@@ -1121,7 +1121,7 @@ Node & Node::operator>>(int32_t shval) {
         uint64_t res[nlimbs];
         int32_t limb_shift = shval / 64;
         int32_t limb_rem = shval % 64;
-        int32_t mslWidth = width % 64; // Width of Most Significant Limb
+        int32_t mslWidth = ((width - 1) % 64) + 1; // Width of Most Significant Limb
         if (limb_rem == 0) {
             for (int32_t i = 0; i < nlimbs; i += 1) {
                 if (i + limb_shift >= nlimbs) {
@@ -1137,7 +1137,7 @@ Node & Node::operator>>(int32_t shval) {
             for (int32_t i = 0; i < nlimbs; i += 1) {
                 if (i + limb_shift >= nlimbs) {
                     uint64_t w;
-                    if (mslWidth == 0) {
+                    if (mslWidth == 64) {
                         w = ((int64_t) cst[nlimbs - 1]) >> 63;
                     }
                     else {
@@ -1146,7 +1146,12 @@ Node & Node::operator>>(int32_t shval) {
                     res[i] = w;
                 }
                 else if (i + limb_shift == nlimbs - 1) {
-                    res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> (limb_rem + 64 - mslWidth);
+                    if (limb_rem >= mslWidth) {
+                        res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> 63;
+                    }
+                    else {
+                        res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> (limb_rem + 64 - mslWidth);
+                    }
                 }
                 else {
                     res[i] = cst[i + limb_shift] >> limb_rem | cst[i + limb_shift + 1] << (64 - limb_rem);
@@ -1154,6 +1159,7 @@ Node & Node::operator>>(int32_t shval) {
             }
         }
         if (width % 64 != 0) {
+            // condition equivalent to mslWidth != 64, so the shift below is always < 64
             res[nlimbs - 1] = res[nlimbs - 1] & ((1ULL << mslWidth) - 1);
         }
 
