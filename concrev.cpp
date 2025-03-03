@@ -14,6 +14,7 @@ Author(s): Quentin L. Meunier
 #include <cstdlib>
 #include <cassert>
 #include <random>
+#include <algorithm>
 
 
 #include "concrev.hpp"
@@ -159,7 +160,8 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
         if (nlimbs * 64 != width) {
             nlimbs += 1;
         }
-        uint64_t intRes[nlimbs] = {0};
+        uint64_t intRes[nlimbs];
+        std::fill_n(intRes, nlimbs, 0);
         if (op == BAND) {
             for (int32_t i = 0; i < nlimbs - 1; i += 1) {
                 intRes[i] = 0xFFFFFFFFFFFFFFFFULL;

@@ -16,6 +16,7 @@ Author(s): Quentin L. Meunier
 #include <bit>
 #include <cassert>
 #include <iomanip>
+#include <algorithm>
 
 
 #include "node.hpp"
@@ -1539,7 +1540,8 @@ Node & ConstNodeFromConcat(const std::vector<Node *> & children) {
         nbLimbs += 1;
     }
 
-    uint64_t res[nbLimbs] = {0};
+    uint64_t res[nbLimbs];
+    std::fill_n(res, nbLimbs, 0);
     int32_t limbIdx = 0;
     int32_t bitIdx = 0;
     for (int32_t i = 0; i < (int32_t) children.size(); i += 1) {
