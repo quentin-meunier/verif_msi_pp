@@ -8,6 +8,7 @@ Author(s): Quentin L. Meunier
 
 #include <vector>
 #include <assert.h>
+#include <algorithm>
 
 
 #include "simplify.hpp"
@@ -133,7 +134,8 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
 
 
     if (concatPresent and numConcatChildren > 1) {
-        bool removedChild[numConcatChildren] = {false};
+        bool removedChild[numConcatChildren];
+        std::fill_n(removedChild, numConcatChildren, false);
         std::vector<int> bitsTaken;
         {
             int currChild[numConcatChildren];
@@ -1379,7 +1381,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
                 if (nlimbs * 64 != width) {
                     nlimbs += 1;
                 }
-                uint64_t constVal[nlimbs] = {0};
+                uint64_t constVal[nlimbs];
+                std::fill_n(constVal, nlimbs, 0);
                 int32_t previousConstIdx = -1;
                 while (i < (int32_t) newChildren.size()) {
                     Node & child = *newChildren[i];
@@ -1557,7 +1560,8 @@ Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBit
             if (nlimbs * 64 != width) {
                 nlimbs += 1;
             }
-            uint64_t res[nlimbs] = {0};
+            uint64_t res[nlimbs];
+            std::fill_n(res, nlimbs, 0);
             while (i < (int32_t) newChildren.size()) {
                 Node & child = *newChildren[i];
                 if (child.nature == CONST) {
