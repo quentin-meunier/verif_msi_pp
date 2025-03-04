@@ -19,6 +19,7 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
 bool getDistribWithExev(Node & e, bool * rud);
 bool getDistribWithExev(Node & e);
 
+int32_t getSymbolicBitsNum(Node & n);
 
 
 #endif

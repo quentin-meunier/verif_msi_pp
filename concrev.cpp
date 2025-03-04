@@ -24,6 +24,47 @@ Author(s): Quentin L. Meunier
 #include "simplify.hpp"
 
 
+
+int32_t getSymbolicBitsNum(Node & n) {
+    std::set<Node *> allVars;
+    for (const auto & [k, v] : *n.maskingMaskOcc) {
+        allVars.insert(k);
+    }
+    for (const auto & [k, v] : *n.otherMaskOcc) {
+        allVars.insert(k);
+    }
+#if KEEP_SECRET_VAR_OCC
+    for (const auto & [k, v] : *n.secretVarOcc) {
+        allVars.insert(k);
+    }
+#else
+    for (const auto & k : *n.secretVarOcc) {
+        allVars.insert(k);
+    }
+#endif
+#if KEEP_PUBLIC_VAR_OCC
+    for (const auto & [k, v] : *n.publicVarOcc) {
+        allVars.insert(k);
+    }
+#else
+    for (const auto & k : *n.publicVarOcc) {
+        allVars.insert(k);
+    }
+#endif
+    for (const auto & [k, v] : *n.shareOcc) {
+        for (const auto & [l, w] : *v) {
+            allVars.insert(l);
+        }
+    }
+
+    int32_t nbBits = 0;
+    for (const auto & e : allVars) {
+        nbBits += e->width;
+    }
+    return nbBits;
+}
+
+
 // FIXME: propagate in verif_msi (single bit variables for enumeration)
 // All variables in exps must be single bit
 static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVarsVec) {
