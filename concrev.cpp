@@ -33,24 +33,12 @@ int32_t getSymbolicBitsNum(Node & n) {
     for (const auto & [k, v] : *n.otherMaskOcc) {
         allVars.insert(k);
     }
-#if KEEP_SECRET_VAR_OCC
-    for (const auto & [k, v] : *n.secretVarOcc) {
-        allVars.insert(k);
-    }
-#else
     for (const auto & k : *n.secretVarOcc) {
         allVars.insert(k);
     }
-#endif
-#if KEEP_PUBLIC_VAR_OCC
-    for (const auto & [k, v] : *n.publicVarOcc) {
-        allVars.insert(k);
-    }
-#else
     for (const auto & k : *n.publicVarOcc) {
         allVars.insert(k);
     }
-#endif
     for (const auto & [k, v] : *n.shareOcc) {
         for (const auto & [l, w] : *v) {
             allVars.insert(l);
@@ -76,24 +64,12 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
         for (const auto & [k, v] : *e->otherMaskOcc) {
             allVars.insert(k);
         }
-        #if KEEP_SECRET_VAR_OCC
-            for (const auto & [k, v] : *e->secretVarOcc) {
-                allVars.insert(k);
-            }
-        #else
-            for (const auto & k : *e->secretVarOcc) {
-                allVars.insert(k);
-            }
-        #endif
-        #if KEEP_PUBLIC_VAR_OCC
-            for (const auto & [k, v] : *e->publicVarOcc) {
-                allVars.insert(k);
-            }
-        #else
-            for (const auto & k : *e->publicVarOcc) {
-                allVars.insert(k);
-            }
-        #endif
+        for (const auto & k : *e->secretVarOcc) {
+            allVars.insert(k);
+        }
+        for (const auto & k : *e->publicVarOcc) {
+            allVars.insert(k);
+        }
         for (const auto & [k, v] : *e->shareOcc) {
             for (const auto & [l, w] : *v) {
                 allVars.insert(l);

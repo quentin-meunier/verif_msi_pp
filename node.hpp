@@ -127,16 +127,8 @@ class Node {
     Node * origSecret; // For share nodes: original secret from which the share is derived
     Node * pseudoShareEq; // Pseudo-share equivalent
 
-    #if KEEP_SECRET_VAR_OCC
-    std::map<Node *, int32_t> * secretVarOcc;
-    #else
     std::set<Node *> * secretVarOcc;
-    #endif
-    #if KEEP_PUBLIC_VAR_OCC
-    std::map<Node *, int32_t> * publicVarOcc;
-    #else
     std::set<Node *> * publicVarOcc;
-    #endif
     std::map<Node *, Node *> * currentlyMasking;
     std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > * maskingMaskOcc;
     std::map<Node *, std::map<Node *, int32_t> * > * otherMaskOcc;
