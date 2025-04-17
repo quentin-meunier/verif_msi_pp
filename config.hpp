@@ -20,8 +20,11 @@ Author(s): Quentin L. Meunier
 #define EXTENDED_SIMPLIFY       true
 #define BIT_SIMPLIFY_PLUS       false
 #define EXTENDED_MERGE_CONCAT   true
+#define SEL_MSK_W_NON_MSKNG_OCC true
 
 #define VERIF_REMOVE_CST_IN_ADD true
+
+
 
 
 #define REM_SINGLE_INPUT_PROBES true

@@ -84,6 +84,11 @@ class Node {
     inline static const std::set<NodeOp> associativeOps = {BXOR, PLUS, BAND, BOR, IMUL, GMUL};
     inline static const std::set<NodeOp> bitwiseOps = {BXOR, BAND, BOR, BNOT};
     inline static const std::set<NodeOp> maskingOps = {BXOR, PLUS};
+    #if BIT_SIMPLIFY_PLUS
+    inline static const std::set<NodeOp> wordOps = {ARRAY, SLSHR, SLSHL, SASHR, IMUL, IPOW, GMUL, GPOW, GLOG, GEXP};
+    #else
+    inline static const std::set<NodeOp> wordOps = {ARRAY, PLUS, SLSHR, SLSHL, SASHR, IMUL, IPOW, GMUL, GPOW, GLOG, GEXP};
+    #endif
     inline static const std::set<NodeOp> preserveMaskingOps = {BNOT, ARRAY, UMINUS};
     inline static const std::set<char> forbiddenChars = {'#', '@', '[', ']'};
     
@@ -131,7 +136,11 @@ class Node {
     std::set<Node *> * publicVarOcc;
     std::map<Node *, Node *> * currentlyMasking;
     std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > * maskingMaskOcc;
+    #if SEL_MSK_W_NON_MSKNG_OCC
     std::map<Node *, std::map<Node *, int32_t> * > * otherMaskOcc;
+    #else
+    std::set<Node *> * otherMaskOcc;
+    #endif
     std::map<Node *, std::map<Node *, int32_t> * > * shareOcc;
     std::pair<Node *, Node *> preservedMask;
 

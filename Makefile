@@ -24,16 +24,16 @@ $(PYTHONLIB): libverif_msi_pp.so pybind11_wrapper.cpp
 SHA256.o: SHA256.cpp SHA256.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-arrayexp.o: arrayexp.cpp arrayexp.hpp node.hpp
+arrayexp.o: arrayexp.cpp arrayexp.hpp node.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-tps.o: tps.cpp tps.hpp node.hpp simplify.hpp
+tps.o: tps.cpp tps.hpp node.hpp simplify.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 node.o: node.cpp node.hpp config.hpp arrayexp.hpp SHA256.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp arrayexp.hpp
+concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp arrayexp.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 simplify.o: simplify.cpp simplify.hpp simp_conc.hpp node.hpp SHA256.hpp arrayexp.hpp config.hpp
@@ -45,7 +45,7 @@ simp_conc.o: simp_conc.cpp simp_conc.hpp node.hpp config.hpp
 hw.o: hw.cpp hw.hpp node.hpp simplify.hpp check_leakage.hpp tps.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-check_leakage.o: check_leakage.cpp check_leakage.hpp node.hpp utils.hpp tps.hpp simplify.hpp
+check_leakage.o: check_leakage.cpp check_leakage.hpp node.hpp utils.hpp tps.hpp simplify.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 utils.o: utils.cpp utils.hpp node.hpp arrayexp.hpp simplify.hpp check_leakage.hpp config.hpp hw.hpp
