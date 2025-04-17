@@ -245,22 +245,29 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // - For this CTR Base, choose the CTR with the max height for the same count
         // FIXME: change map copies to an alias, check that this is ok
         std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > & maskingMaskOcc = *node->maskingMaskOcc;
+        #if SEL_MSK_W_NON_MSKNG_OCC
         std::map<Node *, std::map<Node *, int32_t> * > & otherMaskOcc = *node->otherMaskOcc;
+        #else
+        std::set<Node *> & otherMaskOcc = *node->otherMaskOcc;
+        #endif
         int32_t minOtherOcc = 1000000;
         int32_t minMaskingOcc = 1000000;
         bool minRootMask = false;
         Node * selMask = NULL;
         for (const auto & [m, v] : maskingMaskOcc) {
-            int32_t nbOtherOcc;
+            int32_t nbOtherOcc = 0;
 
             int32_t nbMaskingOcc = maskingMaskOcc[m]->size();
 
+            #if SEL_MSK_W_NON_MSKNG_OCC
             if (otherMaskOcc.contains(m)) {
                 nbOtherOcc = otherMaskOcc[m]->size();
             }
-            else {
-                nbOtherOcc = 0;
+            #else
+            if (otherMaskOcc.contains(m)) {
+                continue;
             }
+            #endif
 
             // FIXME: change the condition nbMaskingOcc == 1 with the fact that the number of maskingOcc has strictly decreased since the last time the mask was taken?
             if (masksTaken.contains(m) && !(nbMaskingOcc == 1 && nbOtherOcc == 0)) {
@@ -273,6 +280,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             // 1. First, minimize the number of otherOcc
             // 2. For the masks with a min number of otherOcc, minimize the number of maskingOcc
             // (Old heuristic: minimize total number of occurrences)
+            // if SEL_MSK_W_MSKNG_OCC is false, nbOtherOcc is always 0 if the mask is taken, so we only minimize the number of maskingOcc
             if ((!rootMask && minRootMask) || (rootMask == minRootMask && (nbOtherOcc < minOtherOcc || (nbOtherOcc == minOtherOcc && nbMaskingOcc < minMaskingOcc)))) {
                 selMask = m;
                 minRootMask = rootMask;

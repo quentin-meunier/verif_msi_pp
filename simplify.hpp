@@ -18,9 +18,9 @@ Author(s): Quentin L. Meunier
 
 Node & getBitDecomposition(Node & node);
 
-Node & simplify(Node & n);
+Node & simplify(Node & n, bool propagateExtractInwards = true, bool useSingleBitVariables = false);
 Node & simplifyAndNotPEI(Node & node);
-Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBitVariables);
+Node & simplifyUSBV(Node & node);
 
 bool equivalence(Node & node0, Node & node1);
 

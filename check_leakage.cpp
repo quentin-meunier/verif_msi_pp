@@ -93,7 +93,7 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
     }                                                          \
                                                                \
     for (int32_t i = 0; i < e.width; i += 1) {                 \
-        Node & b = simplifyCore(Extract(i, i, e), true, true); \
+        Node & b = simplifyUSBV(Extract(i, i, e));             \
         res = check_call;                                      \
         if (!res) {                                            \
             break;                                             \
@@ -216,7 +216,7 @@ bool checkTpsTransBit(Node & e0, Node & e1, uint64_t * timeRet) {
                 timerStart = getTime();
             }
 
-            Node & be = Concat(simplifyCore(Extract(b, b, e0), true, true), simplifyCore(Extract(b, b, e1), true, true));
+            Node & be = Concat(simplifyUSBV(Extract(b, b, e0)), simplifyUSBV(Extract(b, b, e1)));
             res = tps(be);
 
             if (timeRet != NULL) {
@@ -313,7 +313,7 @@ bool checkTpsTransXorBit(Node & e0, Node & e1, uint64_t * timeRet) {
             if (timeRet != NULL) {
                 timerStart = getTime();
             }
-            Node & be = simplifyCore(Extract(b, b, e0) ^ Extract(b, b, e1), true, true);
+            Node & be = simplifyUSBV(Extract(b, b, e0) ^ Extract(b, b, e1));
 
             res = tps(be);
             if (timeRet != NULL) {

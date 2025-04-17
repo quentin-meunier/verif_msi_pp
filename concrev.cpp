@@ -30,9 +30,15 @@ int32_t getSymbolicBitsNum(Node & n) {
     for (const auto & [k, v] : *n.maskingMaskOcc) {
         allVars.insert(k);
     }
+    #if SEL_MSK_W_NON_MSKNG_OCC
     for (const auto & [k, v] : *n.otherMaskOcc) {
         allVars.insert(k);
     }
+    #else
+    for (const auto & m : *n.otherMaskOcc) {
+        allVars.insert(m);
+    }
+    #endif
     for (const auto & k : *n.secretVarOcc) {
         allVars.insert(k);
     }
@@ -61,9 +67,15 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
         for (const auto & [k, v] : *e->maskingMaskOcc) {
             allVars.insert(k);
         }
+        #if SEL_MSK_W_NON_MSKNG_OCC
         for (const auto & [k, v] : *e->otherMaskOcc) {
             allVars.insert(k);
         }
+        #else
+        for (const auto & m : *e->otherMaskOcc) {
+            allVars.insert(m);
+        }
+        #endif
         for (const auto & k : *e->secretVarOcc) {
             allVars.insert(k);
         }

@@ -163,7 +163,7 @@ ArrayExp & getArrayAndOffset(Node & addr, Node ** offset) {
 
 
 void checkResults(Node & res, Node & ref) {
-    return checkResults(res, ref, false, false);
+    return checkResults(res, ref, true, false);
 }
 
 
@@ -174,8 +174,8 @@ void checkResults(Node & res, Node & ref, bool pei, bool usbv) {
         std::cout << "KO (nbBits on res: " << res.width << " -- expected " << nbBits << ")" << std::endl;
     }
 
-    Node & res_s = simplifyCore(res, pei, usbv);
-    Node & ref_s = simplifyCore(ref, pei, usbv);
+    Node & res_s = simplify(res, pei, usbv);
+    Node & ref_s = simplify(ref, pei, usbv);
 
     std::cout << "res : " << res_s << " [" << std::dec << res_s.width << "]" << std::endl;
     std::cout << "ref : " << ref_s << " [" << std::dec << ref_s.width << "]" << std::endl;

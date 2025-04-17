@@ -1,4 +1,3 @@
-#include <iostream>
 
 #include "node.hpp"
 #include "utils.hpp"
@@ -11,9 +10,9 @@ int main() {
 
     Node & n = Extract(7, 0, ZeroExt(24, p) ^ ZeroExt(31, m));
 
-    Node & u = simplify(n);
+    Node & res = Concat(constant(0, 7), m) ^ p;
 
-    //std::cout << u << std::endl;
+    checkResults(n, res);
 
     return 0;
 }

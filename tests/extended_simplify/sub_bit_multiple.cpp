@@ -24,7 +24,7 @@ int main() {
 
         //std::cout << "n1: " << n1 << std::endl;
 
-        Node & c1 = constant(256 - v, 8);
+        Node & c1 = constant(255 - v, 8);
 
         Node & n2 = n1 + c1;
 
