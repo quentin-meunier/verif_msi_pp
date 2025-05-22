@@ -401,6 +401,26 @@ void verifMSICleanup() {
 }
 
 
+void dumpConfig() {
+    std::cout << "### VerifMSI++ configuration ###" << std::endl;
+    std::cout << "# Compilation flags:" << std::endl;
+    std::cout << "# MEMORY_STRATEGY: " << ((MEMORY_STRATEGY == KEEP_NODES) ? "KEEP_NODES" : "DELETE_NODES") << std::endl;
+    std::cout << std::boolalpha;
+
+    std::cout << "# PROPAGATE_CST_ON_BUILD: " << PROPAGATE_CST_ON_BUILD << std::endl;
+    std::cout << "# BIT_EXP_ENABLE: " << BIT_EXP_ENABLE << std::endl;
+    std::cout << "# EXTENDED_SIMPLIFY: " << EXTENDED_SIMPLIFY << std::endl;
+    std::cout << "# BIT_SIMPLIFY_PLUS: " << BIT_SIMPLIFY_PLUS << std::endl;
+    std::cout << "# EXTENDED_MERGE_CONCAT: " << EXTENDED_MERGE_CONCAT << std::endl;
+    std::cout << "# SEL_MSK_W_NON_MSKNG_OCC: " << SEL_MSK_W_NON_MSKNG_OCC << std::endl;
+    std::cout << "# VERIF_REMOVE_CST_IN_ADD: " << VERIF_REMOVE_CST_IN_ADD << std::endl;
+    std::cout << "# REM_SINGLE_INPUT_PROBES: " << REM_SINGLE_INPUT_PROBES << std::endl;
+    std::cout << "# REM_REDUNDANT_PROBES: " << REM_REDUNDANT_PROBES << std::endl;
+    std::cout << "# BARTHE_OPT: " << BARTHE_OPT << std::endl;
+
+    std::cout << std::noboolalpha;
+    std::cout << "### End of VerifMSI++ configuration ###" << std::endl;
+}
 
 
 
