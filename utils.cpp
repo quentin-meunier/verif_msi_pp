@@ -401,7 +401,7 @@ void verifMSICleanup() {
 }
 
 
-void dumpConfig(std::ostream &os) {
+void dumpConfig(std::ostream & os) {
     os << "### VerifMSI++ configuration ###" << std::endl;
     os << "# Compilation flags:" << std::endl;
     os << "# MEMORY_STRATEGY: " << ((MEMORY_STRATEGY == KEEP_NODES) ? "KEEP_NODES" : "DELETE_NODES") << std::endl;

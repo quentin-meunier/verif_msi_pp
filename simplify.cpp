@@ -1792,9 +1792,12 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                                     newGrandChildren.push_back(child0->children->at(idx));
                                 }
                             }
-                            assert(newGrandChildren.size() != 0);
+                            // assert(newGrandChildren.size() != 0); // Case is possible
                             Node * newChild;
-                            if (newGrandChildren.size() == 1) {
+                            if (newGrandChildren.size() == 0) {
+                                newChild = &Const(0, width);
+                            }
+                            else if (newGrandChildren.size() == 1) {
                                 newChild = newGrandChildren[0];
                             }
                             else {
