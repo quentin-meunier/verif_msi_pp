@@ -127,7 +127,7 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
             }
         }
         
-        //std::cout << "*** Error: Value for symbol " << node.symb << " not specified" << std::endl;
+        std::cout << "*** Error: Value for symbol " << node << " not specified" << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -263,7 +263,7 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
 
 
 
-static Node & getExpValue(Node & node, std::map<Node *, Node *> & m) {
+Node & getExpValue(Node & node, std::map<Node *, Node *> & m) {
     std::map<Node *, Node *> expCache;
     return getExpValueRec(node, m, expCache);
 }
