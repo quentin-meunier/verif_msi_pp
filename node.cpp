@@ -839,10 +839,10 @@ void Node::setVarsOccurrences() {
 void Node::fillReachableNodes(Node * n, std::set<Node *> & rn) {
     if (not rn.contains(n)) {
         rn.insert(n);
-    }
-    if (n->children != NULL) {
-        for (const auto & child: *n->children) {
-            fillReachableNodes(child, rn);
+        if (n->children != NULL) {
+            for (const auto & child: *n->children) {
+                fillReachableNodes(child, rn);
+            }
         }
     }
 }
