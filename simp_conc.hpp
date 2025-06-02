@@ -1,5 +1,5 @@
-#ifndef SIMP_CONC_HPP
-#define SIMP_CONC_HPP
+#ifndef _simp_conc_hpp_
+#define _simp_conc_hpp_
 
 Node * extendedMergeConcatExtract(std::vector<Node *> & children, bool * ok);
 

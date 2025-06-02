@@ -137,7 +137,7 @@ class Node {
     std::map<Node *, Node *> * currentlyMasking;
     std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > * maskingMaskOcc;
     #if SEL_MSK_W_NON_MSKNG_OCC
-    std::map<Node *, std::map<Node *, int32_t> * > * otherMaskOcc;
+    std::map<Node *, std::set<Node *> * > * otherMaskOcc;
     #else
     std::set<Node *> * otherMaskOcc;
     #endif

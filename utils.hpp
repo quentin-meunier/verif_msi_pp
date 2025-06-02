@@ -7,8 +7,8 @@ Author(s): Quentin L. Meunier
 */
 
 
-#ifndef __utils_hpp_
-#define __utils_hpp_
+#ifndef _utils_hpp_
+#define _utils_hpp_
 
 #include <vector>
 #include <functional>

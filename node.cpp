@@ -53,7 +53,7 @@ Node::Node() {
     currentlyMasking = new std::map<Node *, Node *>();
     maskingMaskOcc = new std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * >();
     #if SEL_MSK_W_NON_MSKNG_OCC
-    otherMaskOcc = new std::map<Node *, std::map<Node *, int32_t> * >();
+    otherMaskOcc = new std::map<Node *, std::set<Node *> * >();
     #else
     otherMaskOcc = new std::set<Node *>();
     #endif
@@ -501,28 +501,20 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
 
 
     // For other mask occurrences, we do the union of all the children
-    for (const auto & child: children) {
+    for (const auto & child : children) {
         #if SEL_MSK_W_NON_MSKNG_OCC
-            for (const auto & [m, val0] : *child->otherMaskOcc) {
+            for (const auto & [m, nbOcc0] : *child->otherMaskOcc) {
+                // assert(nbOcc0 == child->otherMaskOcc->at(m));
                 if (not n->otherMaskOcc->contains(m)) {
-                    n->otherMaskOcc->emplace(m, new std::map<Node *, int32_t>());
+                    n->otherMaskOcc->emplace(m, new std::set<Node *>());
                 }
-                if (child->otherMaskOcc->at(m) == NULL) {
-                    if (n->otherMaskOcc->at(m)->contains(n)) {
-                        n->otherMaskOcc->at(m)->at(n) += 1;
-                    }
-                    else {
-                        n->otherMaskOcc->at(m)->emplace(n, 1);
-                    }
+                if (nbOcc0 == NULL) {
+                    // "child" is the mask m, i.e. mask m is a child of n
+                    n->otherMaskOcc->at(m)->insert(n);
                 }
                 else {
-                    for (const auto & [p, val1] : *child->otherMaskOcc->at(m)) {
-                        if (n->otherMaskOcc->at(m)->contains(p)) {
-                            n->otherMaskOcc->at(m)->at(p) += child->otherMaskOcc->at(m)->at(p);
-                        }
-                        else {
-                            n->otherMaskOcc->at(m)->emplace(p, child->otherMaskOcc->at(m)->at(p));
-                        }
+                    for (const auto & p : *child->otherMaskOcc->at(m)) {
+                        n->otherMaskOcc->at(m)->insert(p);
                     }
                 }
             }
@@ -586,6 +578,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                     if (parent == NULL) {
                         parent = n;
                     }
+                    /*
                     n->otherMaskOcc->at(m)->at(parent) -= 1;
                     // Trying to replace the commented code below with a new code to see if my understanding is correct..
                     // eventually remove if asserts never fail
@@ -601,6 +594,10 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                     assert(n->otherMaskOcc->at(m)->size() == 0);
                     delete n->otherMaskOcc->at(m); // delete map
                     n->otherMaskOcc->erase(m);
+                    */
+                    n->otherMaskOcc->at(m)->erase(parent);
+                    assert(n->otherMaskOcc->at(m)->size() == 0);
+                    delete n->otherMaskOcc->at(m); // delete set
                     #else
                     n->otherMaskOcc->erase(m);
                     #endif
@@ -776,9 +773,8 @@ void Node::printMaskOcc() {
     #if SEL_MSK_W_NON_MSKNG_OCC
     for (const auto & [m, val0] : *otherMaskOcc) {
         std::cout << "#    Mask " << *m << std::endl;
-        for (const auto & [p, val1] : *otherMaskOcc->at(m)) {
+        for (const auto & p : *otherMaskOcc->at(m)) {
             std::cout << "#        Parent: " << *p << std::endl;
-            std::cout << "#            count: " << otherMaskOcc->at(m)->at(p) << std::endl;
         }
     }
     #else
@@ -795,7 +791,7 @@ void Node::setVarsOccurrences() {
         if (symbType == 'M') {
             preservedMask = { this, NULL }; // (mask, parent)
             #if SEL_MSK_W_NON_MSKNG_OCC
-            otherMaskOcc->insert({this, NULL});
+            otherMaskOcc->insert({ this, NULL });
             #else
             otherMaskOcc->insert(this);
             #endif
