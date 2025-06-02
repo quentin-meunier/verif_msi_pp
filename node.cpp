@@ -596,10 +596,11 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                     n->otherMaskOcc->erase(m);
                     */
                     n->otherMaskOcc->at(m)->erase(parent);
-                    assert(n->otherMaskOcc->at(m)->size() == 0);
+                    assert(n->otherMaskOcc->at(m)->size() == 0); // set is empty
                     delete n->otherMaskOcc->at(m); // delete set
+                    n->otherMaskOcc->erase(m); // delete entry in map
                     #else
-                    n->otherMaskOcc->erase(m);
+                    n->otherMaskOcc->erase(m); // delete entry in set
                     #endif
 
 
