@@ -246,7 +246,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // FIXME: change map copies to an alias, check that this is ok
         std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > & maskingMaskOcc = *node->maskingMaskOcc;
         #if SEL_MSK_W_NON_MSKNG_OCC
-        std::map<Node *, std::map<Node *, int32_t> * > & otherMaskOcc = *node->otherMaskOcc;
+        std::map<Node *, std::set<Node *> * > & otherMaskOcc = *node->otherMaskOcc;
         #else
         std::set<Node *> & otherMaskOcc = *node->otherMaskOcc;
         #endif
@@ -302,7 +302,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
         int maxCount = 0;
         Node * selCtrBase = NULL;
-        std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > occs = *maskingMaskOcc[selMask];
+        std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > & occs = *maskingMaskOcc[selMask];
         for (const auto & [ctrBase, val] : occs) { // val is occs[ctrBase]
             if (val->at(ctrBase).first > maxCount) {
                 maxCount = val->at(ctrBase).first;
@@ -316,7 +316,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
         int32_t maxHeight = -1;
         Node * selCtr = NULL;
-        for (const auto & [ctr, val] : *occs[selCtrBase]) { // val is occs[selCtrBase]->at(ctr)
+        for (const auto & [ctr, val] : *occs[selCtrBase]) { // val is occs[selCtrBase][ctr]
             int32_t height = val.second;
             if (val.first == maxCount && height > maxHeight) {
                 maxHeight = height;
