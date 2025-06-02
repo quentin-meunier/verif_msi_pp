@@ -51,7 +51,7 @@ Node::Node() {
     secretVarOcc = new std::set<Node *>();
     publicVarOcc = new std::set<Node *>();
     currentlyMasking = new std::map<Node *, Node *>();
-    maskingMaskOcc = new std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * >();
+    maskingMaskOcc = new std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * >();
     #if SEL_MSK_W_NON_MSKNG_OCC
     otherMaskOcc = new std::map<Node *, std::set<Node *> * >();
     #else
@@ -62,100 +62,6 @@ Node::Node() {
     h = NULL;
 }
 
-
-/*
-Node::Node(const Node & n) {
-    std::cout << "# constructeur par recopie de " << n << std::endl;
-    num = n.nodeNum;
-    width = n.width;
-
-    if (n.children != NULL) {
-        children = new std::vector<Node *>();
-        for (const auto & child : *n.children) {
-            children->push_back(child);
-        }
-    }
-    else {
-        children = NULL;
-    }
-    nbShares = n.nbShares;
-    shareNum = n.shareNum;
-
-    if (n.symb != NULL) {
-        symb = new std::string(*n.symb);
-    }
-    else {
-        symb = NULL;
-    }
-    symbType = n.symbType;
-    nature = n.nature;
-    op = n.op;
-    hasWordOp = n.hasWordOp;
-    wordAnalysisHasFailedOnSubExp = n.wordAnalysisHasFailedOnSubExp;
-    cst = n.cst;
-    if (n.strn != NULL) {
-        strn = new std::string(*n.strn);
-    }
-    else {
-        strn = NULL;
-    }
-
-    concatExtEq = n.concatExtEq;
-    simpEq = n.simpEq;
-    simpEqUsbv = n.simpEqUsbv;
-    origSecret = n.origSecret;
-    pseudoShareEq = n.pseudoShareEq;
-
-    secretVarOcc = new std::map<Node *, int32_t>();
-    *secretVarOcc = *n.secretVarOcc;
-
-    publicVarOcc = new std::map<Node *, int32_t>();
-    *publicVarOcc = *n.publicVarOcc;
-
-    currentlyMasking = new std::map<Node *, Node *>();
-    *currentlyMasking = *n.currentlyMasking;
-
-    otherMaskOcc = new std::map<Node *, std::map<Node *, int32_t> * >();
-    for (const auto & [k, v] : *n.otherMaskOcc) {
-        std::map<Node *, int32_t> * m = new std::map<Node *, int32_t>();
-        for (const auto & [k0, v0] : *v) {
-            m->emplace(k0, v0);
-        }
-        otherMaskOcc->emplace(k, m);
-    }
-
-    shareOcc = new std::map<Node *, std::map<Node *, int32_t> * >();
-    for (const auto & [k, v] : *n.shareOcc) {
-        std::map<Node *, int32_t> * m = new std::map<Node *, int32_t>();
-        for (const auto & [k0, v0] : *v) {
-            m->emplace(k0, v0);
-        }
-        shareOcc->emplace(k, m);
-    }
-
-    maskingMaskOcc = new std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * >();
-    for (const auto & [k, v] : *n.maskingMaskOcc) {
-        std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * m = new std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * >();
-        for (const auto & [k0, v0] : *v) {
-            std::map<Node *, std::pair<int32_t, int32_t>> * m0 = new std::map<Node *, std::pair<int32_t, int32_t>>();
-            for (const auto & [k1, v1] : *v0) {
-                m0->emplace(k1, v1);
-            }
-            m->emplace(k0, m0);
-        }
-        maskingMaskOcc->emplace(k, m);
-    }
-
-
-    // Potentially incorrect as in the printMask function, we test if one of the preserved mask is "this"
-    preservedMask = n.preservedMask;
-    h = new uint64_t[4];
-    for (int32_t i = 0; i < 4; i += 1) {
-        h[i] = n.h[i];
-    }
-
-}
-*/
 
 Node::~Node() {
     //std::cout << "# Deleting node: " << *this << std::endl;
@@ -478,21 +384,30 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     for (const auto & child: children) {
         for (const auto & [m, val0] : *child->maskingMaskOcc) {
             if (not n->maskingMaskOcc->contains(m)) {
-                n->maskingMaskOcc->emplace(m, new std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * >());
+                n->maskingMaskOcc->emplace(m, new std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * >());
             }
             for (const auto & [ctrBase, val1] : *child->maskingMaskOcc->at(m)) {
                 if (not n->maskingMaskOcc->at(m)->contains(ctrBase)) {
-                    n->maskingMaskOcc->at(m)->emplace(ctrBase, new std::map<Node *, std::pair<int32_t, int32_t>>());
+                    n->maskingMaskOcc->at(m)->emplace(ctrBase, new std::map<Node *, std::pair<uint64_t, int32_t>>());
                 }
                 for (const auto & [ctr, val2] : *child->maskingMaskOcc->at(m)->at(ctrBase)) {
                     if (not n->maskingMaskOcc->at(m)->at(ctrBase)->contains(ctr)) {
-                        //std::pair<int32_t, int32_t> entry = child.maskingMaskOcc[m][ctrBase][ctr];
-                        // entry[0] : count (number of occurrences)
-                        // entry[1] : height of ctr starting from ctrBase (0 for ctrBase)
+                        // maskingMaskOcc[m][ctrBase][ctr] = {count, height}
+                        // count:  number of occurrences
+                        // height: height of ctr starting from ctrBase (0 for ctrBase)
                         n->maskingMaskOcc->at(m)->at(ctrBase)->emplace(ctr, child->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr));
                     }
                     else {
-                        n->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first += child->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first;
+                        // saturated addition
+                        // original: n->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first += child->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first;
+                        uint64_t currentCount = n->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first;
+                        uint64_t totalCount = currentCount + child->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first;
+                        if (totalCount < currentCount) {
+                            n->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first = std::numeric_limits<uint64_t>::max();
+                        }
+                        else {
+                            n->maskingMaskOcc->at(m)->at(ctrBase)->at(ctr).first = totalCount;
+                        }
                     }
                 }
             }
@@ -549,7 +464,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                 }
                 if (maskIsMasking) {
                     n->currentlyMasking->emplace(m, child->currentlyMasking->at(m));
-                    // Adding mask to masking mask occ
+                    // Adding mask to maskingMaskOcc
                     int32_t height = child->maskingMaskOcc->at(m)->at(child->currentlyMasking->at(m))->at(child).second;
                     n->maskingMaskOcc->at(m)->at(child->currentlyMasking->at(m))->emplace(n, std::make_pair(1, height + 1));
                 }
@@ -578,27 +493,12 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                     if (parent == NULL) {
                         parent = n;
                     }
-                    /*
-                    n->otherMaskOcc->at(m)->at(parent) -= 1;
-                    // Trying to replace the commented code below with a new code to see if my understanding is correct..
-                    // eventually remove if asserts never fail
-                    //if (n->otherMaskOcc->at(m)->at(parent) == 0) {
-                    //    n->otherMaskOcc->at(m)->erase(parent);
-                    //    if (n->otherMaskOcc->at(m)->size() == 0) {
-                    //        delete n->otherMaskOcc->at(m); // delete map
-                    //        n->otherMaskOcc->erase(m);
-                    //    }
-                    //}
-                    assert(n->otherMaskOcc->at(m)->at(parent) == 0);
-                    n->otherMaskOcc->at(m)->erase(parent);
-                    assert(n->otherMaskOcc->at(m)->size() == 0);
-                    delete n->otherMaskOcc->at(m); // delete map
-                    n->otherMaskOcc->erase(m);
-                    */
+
                     n->otherMaskOcc->at(m)->erase(parent);
                     assert(n->otherMaskOcc->at(m)->size() == 0); // set is empty
                     delete n->otherMaskOcc->at(m); // delete set
                     n->otherMaskOcc->erase(m); // delete entry in map
+
                     #else
                     n->otherMaskOcc->erase(m); // delete entry in set
                     #endif
@@ -606,9 +506,9 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
 
                     // Adding mask to masking mask occurrences
                     if (not n->maskingMaskOcc->contains(m)) {
-                        n->maskingMaskOcc->emplace(m, new std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * >());
+                        n->maskingMaskOcc->emplace(m, new std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * >());
                     }
-                    n->maskingMaskOcc->at(m)->emplace(n, new std::map<Node *, std::pair<int32_t, int32_t>>());
+                    n->maskingMaskOcc->at(m)->emplace(n, new std::map<Node *, std::pair<uint64_t, int32_t>>());
                     n->maskingMaskOcc->at(m)->at(n)->emplace(n, std::make_pair(1, 0));
                 }
             }

@@ -1,6 +1,5 @@
 
-#include "node.hpp"
-#include "utils.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
@@ -35,18 +34,9 @@ int main() {
 
     Node & e = n3 & n2;
 
+    std::cout << "# Masks Occurrences of node: " << e << std::endl;
     e.printMaskOcc();
     e.dump("graph.dot");
-
-    delete &m0;
-    delete &k0;
-    delete &k1;
-    delete &p0;
-    delete &n0;
-    delete &n1;
-    delete &n2;
-    delete &n3;
-    delete &e;
 
     return 0;
 }
