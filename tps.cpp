@@ -244,7 +244,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // - For this m, choose CTR Base with the highest count
         // - For this CTR Base, choose the CTR with the max height for the same count
         // FIXME: change map copies to an alias, check that this is ok
-        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > & maskingMaskOcc = *node->maskingMaskOcc;
+        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > & maskingMaskOcc = *node->maskingMaskOcc;
         #if SEL_MSK_W_NON_MSKNG_OCC
         std::map<Node *, std::set<Node *> * > & otherMaskOcc = *node->otherMaskOcc;
         #else
@@ -300,29 +300,42 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             std::cout << "# Choosing mask " << *selMask << " (number of parent nodes: " << (minMaskingOcc + minOtherOcc) << ")" << std::endl;
         }
 
-        int maxCount = 0;
+        uint64_t minCount = std::numeric_limits<uint64_t>::max();
         Node * selCtrBase = NULL;
-        std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > & occs = *maskingMaskOcc[selMask];
+        std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > & occs = *maskingMaskOcc[selMask];
         for (const auto & [ctrBase, val] : occs) { // val is occs[ctrBase]
-            if (val->at(ctrBase).first > maxCount) {
-                maxCount = val->at(ctrBase).first;
+            if (val->at(ctrBase).first < minCount) {
+                minCount = val->at(ctrBase).first;
                 selCtrBase = ctrBase;
             }
         }
+        if (selCtrBase == NULL) {
+            for (const auto & [ctrBase, val] : occs) { // val is occs[ctrBase]
+                selCtrBase = ctrBase;
+                break;
+            }
+        }
+
 
         if (verbose) {
-            std::cout << "# Choosing following ctr base with " << maxCount << " occurrences: " << *selCtrBase << std::endl;
+            std::cout << "# Choosing following ctr base with " << minCount << " occurrences: " << *selCtrBase << std::endl;
         }
 
         int32_t maxHeight = -1;
         Node * selCtr = NULL;
-        for (const auto & [ctr, val] : *occs[selCtrBase]) { // val is occs[selCtrBase][ctr]
-            int32_t height = val.second;
-            if (val.first == maxCount && height > maxHeight) {
-                maxHeight = height;
-                selCtr = ctr;
+        if (minCount == std::numeric_limits<uint64_t>::max()) {
+            selCtr = selCtrBase;
+        }
+        else {
+            for (const auto & [ctr, val] : *occs[selCtrBase]) { // val is occs[selCtrBase][ctr]
+                int32_t height = val.second;
+                if (val.first == minCount && height > maxHeight) {
+                    maxHeight = height;
+                    selCtr = ctr;
+                }
             }
         }
+        assert(selCtr != NULL);
         
         if (verbose) {
             std::cout << "# Choosing following ctr with a height of " << maxHeight << ": " << *selCtr << std::endl;

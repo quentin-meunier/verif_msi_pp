@@ -134,21 +134,30 @@ class Node {
 
     std::set<Node *> * secretVarOcc;
     std::set<Node *> * publicVarOcc;
+    
+    // currentlyMasking: Masks masking current node, value is ctrBase
     std::map<Node *, Node *> * currentlyMasking;
-    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<int32_t, int32_t>> * > * > * maskingMaskOcc;
+
+    // maskingMaskOcc[mask][ctrBase][ctr] = {count, height}
+    // count  : number of occurrences
+    // height : height of ctr starting from ctrBase (0 for ctrBase)
+    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > * maskingMaskOcc;
+
     #if SEL_MSK_W_NON_MSKNG_OCC
+    // otherMaskOcc[mask] = set() containing all parents in sub-expression
     std::map<Node *, std::set<Node *> * > * otherMaskOcc;
     #else
     std::set<Node *> * otherMaskOcc;
     #endif
+
     std::map<Node *, std::map<Node *, int32_t> * > * shareOcc;
+ 
+    // preservedMask: bijection of a mask, can mask if a maskingNode is encountered. tuple if not None: (mask, parent)
     std::pair<Node *, Node *> preservedMask;
 
     uint64_t * h;
 
-
     Node();
-    //Node(const Node & n);
     ~Node();
 
     static Node & SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
