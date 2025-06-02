@@ -306,7 +306,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     n->children = orderedChildren;
     n->nature = OP;
     n->op = op;
-    n->hasWordOp = (op == IMUL or op == IPOW or op == GMUL or op == GPOW or op == GLOG or op == GEXP);
+    n->hasWordOp = wordOps.contains(op);
     if (!n->hasWordOp) {
         for (const auto & c: children) {
             if (c->hasWordOp) {
