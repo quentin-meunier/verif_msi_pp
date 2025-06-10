@@ -154,7 +154,7 @@ Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
         n->width = width;
         n->simpEq = n;
         SHA256 sha;
-        sha.update(std::to_string(width) + std::to_string(cst));
+        sha.update(std::to_string(width) + "," + std::to_string(cst));
         n->h = sha.digest();
         return *n;
     }
@@ -163,10 +163,28 @@ Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
         if (nlimbs * 64 != width) {
             nlimbs += 1;
         }
+
+        uint64_t localCst[nlimbs];
+        localCst[0] = cst;
+        if (extendMSB && (cst >> 63 == 1)) {
+            for (int32_t i = 1; i < nlimbs; i += 1) {
+                localCst[i] = 0xffffffffffffffffULL;
+            }
+            if (width % 64 != 0) {
+                localCst[nlimbs - 1] >>= (64 - (width % 64));
+            }
+        }
+        else {
+            for (int32_t i = 1; i < nlimbs; i += 1) {
+                localCst[i] = 0;
+            }
+        }
+
+
         std::string s = std::to_string(width);
-        s += std::to_string(cst);
-        for (int32_t i = 1; i < nlimbs; i += 1) {
-            s += std::to_string(0);
+        for (int32_t i = 0; i < nlimbs; i += 1) {
+            s += "," + std::to_string(localCst[i]);
+            //s += std::to_string(localCst[i]);
         }
 
         SHA256 sha;
@@ -183,19 +201,8 @@ Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
         n->nature = CONST;
         n->nlimbs = nlimbs;
         n->cst = new uint64_t[nlimbs];
-        n->cst[0] = cst;
-        if (extendMSB && (cst >> 63 == 1)) {
-            for (int32_t i = 1; i < nlimbs; i += 1) {
-                n->cst[i] = 0xffffffffffffffffULL;
-            }
-            if (width % 64 != 0) {
-                n->cst[nlimbs - 1] >>= (64 - (width % 64));
-            }
-        }
-        else {
-            for (int32_t i = 1; i < nlimbs; i += 1) {
-                n->cst[i] = 0;
-            }
+        for (int32_t i = 0; i < nlimbs; i += 1) {
+            n->cst[i] = localCst[i];
         }
         n->width = width;
         n->simpEq = n;
@@ -209,7 +216,8 @@ Node & Node::ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width) {
     assert(nlimbs > 1);
     std::string s = std::to_string(width);
     for (int32_t i = 0; i < nlimbs; i += 1) {
-        s += std::to_string(cst[i]);
+        s += "," + std::to_string(cst[i]);
+        //s += std::to_string(cst[i]);
     }
 
     SHA256 sha;
