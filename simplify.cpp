@@ -1382,7 +1382,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                             modified = true;
                             continue;
                         }
-                        else if (equivalence(child, Const(-1, width))) {
+                        else if (equivalence(child, Const(-1, width, true))) {
                             for (int32_t j = 0; j < nlimbs; j += 1) {
                                 constVal[j] = child.cst[j];
                             }
@@ -1491,7 +1491,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         // Final considerations
         if (newChildren.size() == 0) {
             if (addNotNode) {
-                return setSimpEqAndReturn(node, Const(-1, width));
+                return setSimpEqAndReturn(node, Const(-1, width, true));
             }
             else {
                 return setSimpEqAndReturn(node, Const(0, width));
