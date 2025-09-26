@@ -1,6 +1,5 @@
 
-#include "utils.hpp"
-#include "concrev.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
@@ -15,9 +14,12 @@ int main() {
 
     bool rud;
 
+    //Node & es = simplify(exp_0, true, true);
+    //std::cout << "es : " << es << std::endl;
+
     bool sid = getDistribWithExev(exp_0, &rud);
 
-    if (rud && sid) {
+    if (!rud && sid) {
         std::cout << "OK" << std::endl;
     }
     else {

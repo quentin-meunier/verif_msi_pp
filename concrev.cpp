@@ -400,12 +400,19 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
 }
 
 
-static void getDistribRefBis(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & nonSecretVars, int32_t idx, std::map<Node *, Node *> & m) {
-    if (idx < (int32_t) nonSecretVars.size()) {
-        Node & var = *nonSecretVars[idx];
+
+
+
+
+
+
+static void getDistribRefBis(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
+    if (idx < (int32_t) maskVars.size()) {
+        Node & var = *maskVars[idx];
+        assert(var.width == 1);
         for (int64_t val = 0; val < (1LL << var.width); val += 1) {
             m.insert_or_assign(&var, &Const(val, var.width));
-            getDistribRefBis(e0, distribRef, nonSecretVars, idx + 1, m);
+            getDistribRefBis(e0, distribRef, maskVars, idx + 1, m);
         }
     }
     else {
@@ -415,25 +422,26 @@ static void getDistribRefBis(Node & e0, std::map<uint64_t, uint64_t> & distribRe
 }
 
 
-static void getDistribRef(Node & e0, std::vector<Node *> & secretVars, std::vector<Node *> & nonSecretVars, std::map<uint64_t, uint64_t> & distribRef) {
-    std::map<Node *, Node *> m;
+static void getDistribRef(Node & e0, std::vector<Node *> & secretVars, std::vector<Node *> & maskVars, std::map<uint64_t, uint64_t> & distribRef, std::map<Node *, Node *> & m) {
     for (const auto & k : secretVars) {
+        assert(k->width == 1);
         m[k] = &Const(0, k->width);
     }
 
     for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
         distribRef.insert_or_assign(v, 0);
     }
-    getDistribRefBis(e0, distribRef, nonSecretVars, 0, m);
+    getDistribRefBis(e0, distribRef, maskVars, 0, m);
 }
 
 
-static void getDistribWithExevRecBis(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & nonSecretVars, int32_t idx, std::map<Node *, Node *> & m) {
-    if (idx < (int32_t) nonSecretVars.size()) {
-        Node & var = *nonSecretVars[idx];
+static void getDistribWithExevRecBis(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
+    if (idx < (int32_t) maskVars.size()) {
+        Node & var = *maskVars[idx];
+        assert(var.width == 1);
         for (int64_t val = 0; val < (1LL << var.width); val += 1) {
             m.insert_or_assign(&var, &Const(val, var.width));
-            getDistribWithExevRecBis(e0, distrib, distribRef, nonSecretVars, idx + 1, m);
+            getDistribWithExevRecBis(e0, distrib, maskVars, idx + 1, m);
         }
     }
     else {
@@ -443,14 +451,13 @@ static void getDistribWithExevRecBis(Node & e0, std::map<uint64_t, uint64_t> & d
 }
 
 
-static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & secretVars, std::vector<Node *> & nonSecretVars, int32_t idx, std::map<Node *, Node *> & m, bool * rud) {
+static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & secretVars, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m, bool * rud) {
     if (idx < (int32_t) secretVars.size()) {
         Node & var = *secretVars[idx];
         for (int64_t val = 0; val < (1LL << var.width); val += 1) {
             m.insert_or_assign(&var, &Const(val, var.width));
-            bool sid = getDistribWithExevRec(e0, distribRef, secretVars, nonSecretVars, idx + 1, m, rud);
+            bool sid = getDistribWithExevRec(e0, distribRef, secretVars, maskVars, idx + 1, m, rud);
             if (!sid) {
-                *rud = false;
                 return false;
             }
         }
@@ -461,19 +468,53 @@ static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & dist
         for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
             distrib.insert_or_assign(v, 0);
         }
-        getDistribWithExevRecBis(e0, distrib, distribRef, nonSecretVars, 0, m);
+        getDistribWithExevRecBis(e0, distrib, maskVars, 0, m);
         *rud = true;
         for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
             if (distrib[v] != distribRef[0]) {
                 *rud = false;
             }
             if (distrib[v] != distribRef[v]) {
+                *rud = false;
                 return false;
             }
         }
         return true;
     }
 }
+
+
+
+static bool enumeratePublicVarsRec(Node & e0, std::vector<Node *> & publicVars, std::vector<Node *> & secretVars, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m, bool * rud) {
+    if (idx < (int32_t) publicVars.size()) {
+        Node & publicVar = *publicVars[idx];
+        assert(publicVar.width == 1);
+        for (int64_t val = 0; val < (1LL << publicVar.width); val += 1) {
+            m.insert_or_assign(&publicVar, &Const(val, publicVar.width));
+            bool sid = enumeratePublicVarsRec(e0, publicVars, secretVars, maskVars, idx + 1, m, rud);
+            if (!sid) {
+                return false;
+            }
+        }
+        return true;
+    }
+    else {
+        // Computing distribution for each combination of values for public variables
+        std::map<uint64_t, uint64_t> distribRef;
+        getDistribRef(e0, secretVars, maskVars, distribRef, m);
+    
+        bool rudLocal;
+        bool res = getDistribWithExevRec(e0, distribRef, secretVars, maskVars, 0, m, &rudLocal);
+        if (!rudLocal || !res) {
+            *rud = false;
+        }
+        return res;
+    }
+}
+
+
+
+
 
 
 bool getDistribWithExev(Node & e, bool * rud) {
@@ -487,27 +528,30 @@ bool getDistribWithExev(Node & e, bool * rud) {
     getVarsList(exp, allVarsVec);
 
     std::vector<Node *> secretVars;
-    std::vector<Node *> nonSecretVars;
+    std::vector<Node *> publicVars;
+    std::vector<Node *> maskVars;
 
     for (const auto & v : allVarsVec) {
-        if (v->symbType == 'S' or v->symbType == 'P') {
+        if (v->symbType == 'S') {
             secretVars.push_back(v);
         }
+        else if (v->symbType == 'P') {
+            publicVars.push_back(v);
+        }
         else {
-            nonSecretVars.push_back(v);
+            assert(v->symbType == 'M');
+            maskVars.push_back(v);
         }
     }
 
-    std::map<uint64_t, uint64_t> distribRef;
-    getDistribRef(e0, secretVars, nonSecretVars, distribRef);
-    
+    *rud = true;
     std::map<Node *, Node *> m;
-    return getDistribWithExevRec(e0, distribRef, secretVars, nonSecretVars, 0, m, rud);
+    return enumeratePublicVarsRec(e0, publicVars, secretVars, maskVars, 0, m, rud);
 }
 
 
 bool getDistribWithExev(Node & e) {
-    bool rud;
+    bool rud = true;
     return getDistribWithExev(e, &rud);
 }
 
