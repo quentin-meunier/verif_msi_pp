@@ -485,6 +485,7 @@ bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool ve
         niValidity(*n);
     }
     PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
     return checkPropertyWrapper(nodes, NI, pp, bitDecompose, false, verbose);
 }
 
