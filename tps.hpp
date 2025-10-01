@@ -37,6 +37,8 @@ std::string secProp2str(SecurityProperty secProp);
 
 bool tps(Node & nodeIn, bool bitDecompose = false, bool verbose = false);
 bool tps(std::vector<Node *> & nodes, bool bitDecompose = false, bool verbose = false);
+bool tpsNoFalsePositive(Node & nodeIn, bool bitDecompose = false, bool verbose = false);
+bool tpsNoFalsePositive(std::vector<Node *> & nodes, bool bitDecompose = false, bool verbose = false);
 bool ni(Node & nodeIn, int maxShareOcc, bool bitDecompose = false, bool verbose = false);
 bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose = false, bool verbose = false);
 bool rni(Node & nodeIn, int diff, bool bitDecompose = false, bool verbose = false);

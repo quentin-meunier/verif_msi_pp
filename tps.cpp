@@ -14,6 +14,7 @@ Author(s): Quentin L. Meunier
 #include "tps.hpp"
 #include "node.hpp"
 #include "simplify.hpp"
+#include "concrev.hpp"
 
 
 
@@ -135,10 +136,13 @@ static Node & removeConstOperandsFromPlus(Node & node) {
 
 
 
-static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool verbose) {
+static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool noFalsePositive, bool verbose) {
     if (verbose) {
         std::cout << "# Call func checkProperty on exp " << nodeIn << std::endl;
     }
+    
+    assert(not noFalsePositive or secProp == TPS);
+
     int maxShareOcc = 0;
     int diff;
     std::set<int> * outputIndexes = NULL;
@@ -293,6 +297,12 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             if (verbose) {
                 std::cout << "# No mask can be taken" << std::endl;
             }
+            if (noFalsePositive) {
+                if (verbose) {
+                    std::cout << "# NoFalsePositive enabled, calling enumeration" << std::endl;
+                }
+                return getDistribWithExev(*node);
+            }
             return false;
         }
 
@@ -364,19 +374,19 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 }
 
 
-static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool verbose) {
+static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool noFalsePositive, bool verbose) {
     Node * n = &simplify(nodeIn);
     if (bitDecompose) {
         n = &getBitDecomposition(*n);
     }
     Node::setModeTemporaryNodes();
-    bool res = checkProperty(*n, secProp, params, verbose);
+    bool res = checkProperty(*n, secProp, params, noFalsePositive, verbose);
     Node::setModePermanentNodes();
     return res;
 }
 
 
-static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool verbose) {
+static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool noFalsePositive, bool verbose) {
     std::vector<Node *> nodes;
     for (const auto & n : nodesIn) {
         nodes.push_back(&simplify(*n));
@@ -391,7 +401,7 @@ static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty
 
     Node::setModeTemporaryNodes();
     Node & c = simplify(Concat(nodes));
-    bool res = checkProperty(c, secProp, params, verbose);
+    bool res = checkProperty(c, secProp, params, noFalsePositive, verbose);
     Node::setModePermanentNodes();
     return res;
 }
@@ -432,7 +442,7 @@ static void piniValidity(Node & n) {
 bool tps(Node & nodeIn, bool bitDecompose, bool verbose) {
     tpsValidity(nodeIn);
     PropParams dummy;
-    return checkPropertyWrapper(nodeIn, TPS, dummy, bitDecompose, verbose);
+    return checkPropertyWrapper(nodeIn, TPS, dummy, bitDecompose, false, verbose);
 }
 
 
@@ -441,15 +451,32 @@ bool tps(std::vector<Node *> & nodes, bool bitDecompose, bool verbose) {
         tpsValidity(*n);
     }
     PropParams dummy;
-    return checkPropertyWrapper(nodes, TPS, dummy, bitDecompose, verbose);
+    return checkPropertyWrapper(nodes, TPS, dummy, bitDecompose, false, verbose);
 }
+
+
+bool tpsNoFalsePositive(Node & nodeIn, bool bitDecompose, bool verbose) {
+    tpsValidity(nodeIn);
+    PropParams dummy;
+    return checkPropertyWrapper(nodeIn, TPS, dummy, bitDecompose, true, verbose);
+}
+
+
+bool tpsNoFalsePositive(std::vector<Node *> & nodes, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        tpsValidity(*n);
+    }
+    PropParams dummy;
+    return checkPropertyWrapper(nodes, TPS, dummy, bitDecompose, true, verbose);
+}
+
 
 
 bool ni(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool verbose) {
     niValidity(nodeIn);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
-    return checkPropertyWrapper(nodeIn, NI, pp, bitDecompose, verbose);
+    return checkPropertyWrapper(nodeIn, NI, pp, bitDecompose, false, verbose);
 }
 
 
@@ -458,7 +485,7 @@ bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool ve
         niValidity(*n);
     }
     PropParams pp;
-    return checkPropertyWrapper(nodes, NI, pp, bitDecompose, verbose);
+    return checkPropertyWrapper(nodes, NI, pp, bitDecompose, false, verbose);
 }
 
 
@@ -467,7 +494,7 @@ bool rni(Node & nodeIn, int diff, bool bitDecompose, bool verbose) {
     rniValidity(nodeIn);
     PropParams pp;
     pp.diff = diff;
-    return checkPropertyWrapper(nodeIn, RNI, pp, bitDecompose, verbose);
+    return checkPropertyWrapper(nodeIn, RNI, pp, bitDecompose, false, verbose);
 }
 
 
@@ -477,7 +504,7 @@ bool rni(std::vector<Node *> & nodes, int diff, bool bitDecompose, bool verbose)
     }
     PropParams pp;
     pp.diff = diff;
-    return checkPropertyWrapper(nodes, RNI, pp, bitDecompose, verbose);
+    return checkPropertyWrapper(nodes, RNI, pp, bitDecompose, false, verbose);
 }
 
 
@@ -486,7 +513,7 @@ bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bi
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes; 
-    return checkPropertyWrapper(nodeIn, PINI, pp, bitDecompose, verbose);
+    return checkPropertyWrapper(nodeIn, PINI, pp, bitDecompose, false, verbose);
 }
 
 
@@ -497,7 +524,7 @@ bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIn
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes; 
-    return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, verbose);
+    return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, false, verbose);
 }
 
 

@@ -543,6 +543,10 @@ bool getDistribWithExev(Node & e, bool * rud) {
             maskVars.push_back(v);
         }
     }
+    //std::cout << "# getDistribWithExev:" << std::endl;
+    //std::cout << "     Expression: " << e << std::endl;
+    //std::cout << "     Modified expression: " << e0 << std::endl;
+    //std::cout << "     enumerating on " << secretVars.size() + publicVars.size() + maskVars.size() << " bits" << std::endl;
 
     *rud = true;
     std::map<Node *, Node *> m;

@@ -19,14 +19,8 @@ Author(s): Quentin L. Meunier
 
 
 #define CHECK_VAL_BODY(check_call, check_call_bd) ({    \
-    uint64_t timerStart;                                \
-    uint64_t timerEnd;                                  \
     bool res;                                           \
     bool usedBitExp;                                    \
-                                                        \
-    if (timeRet != NULL) {                              \
-        timerStart = getTime();                         \
-    }                                                   \
                                                         \
     if (e.hasWordOp) {                                  \
         res = false;                                    \
@@ -54,10 +48,6 @@ Author(s): Quentin L. Meunier
         }                                               \
     }                                                   \
                                                         \
-    if (timeRet != NULL) {                              \
-        timerEnd = getTime();                           \
-        *timeRet = timerEnd - timerStart;               \
-    }                                                   \
     if (usedBitExpRet != NULL) {                        \
         *usedBitExpRet = usedBitExp;                    \
     }                                                   \
@@ -65,32 +55,26 @@ Author(s): Quentin L. Meunier
 })
 
 
-bool checkTpsVal(Node & e, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkTpsVal(Node & e, bool * usedBitExpRet) {
     CHECK_VAL_BODY(tps(e), tps(e, true));
 }
 
-bool checkNIVal(Node & e, int maxShareOcc, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkNIVal(Node & e, int maxShareOcc, bool * usedBitExpRet) {
     CHECK_VAL_BODY(ni(e, maxShareOcc), ni(e, maxShareOcc, true));
 }
 
-bool checkRNIVal(Node & e, int diff, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkRNIVal(Node & e, int diff, bool * usedBitExpRet) {
     CHECK_VAL_BODY(rni(e, diff), rni(e, diff, true));
 }
 
-bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet) {
     CHECK_VAL_BODY(pini(e, maxShareOcc, outputIndexes), pini(e, maxShareOcc, outputIndexes, true));
 }
 
 #undef CHECK_VAL_BODY
 
 #define CHECK_VAL_BODY_BIT(check_call) ({                      \
-    uint64_t timerStart = 0;                                   \
-    uint64_t timerEnd;                                         \
     bool res;                                                  \
-                                                               \
-    if (timeRet != NULL) {                                     \
-        timerStart = getTime();                                \
-    }                                                          \
                                                                \
     for (int32_t i = 0; i < e.width; i += 1) {                 \
         Node & b = simplifyUSBV(Extract(i, i, e));             \
@@ -100,27 +84,23 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
         }                                                      \
     }                                                          \
                                                                \
-    if (timeRet != NULL) {                                     \
-        timerEnd = getTime();                                  \
-        *timeRet = timerEnd - timerStart;                      \
-    }                                                          \
     return res;                                                \
 })
 
 
-bool checkTpsValBit(Node & e, uint64_t * timeRet) {
+bool checkTpsValBit(Node & e) {
     CHECK_VAL_BODY_BIT(tps(b));
 }
 
-bool checkNIValBit(Node & e, int maxShareOcc, uint64_t * timeRet) {
+bool checkNIValBit(Node & e, int maxShareOcc) {
     CHECK_VAL_BODY_BIT(ni(b, maxShareOcc));
 }
 
-bool checkRNIValBit(Node & e, int diff, uint64_t * timeRet) {
+bool checkRNIValBit(Node & e, int diff) {
     CHECK_VAL_BODY_BIT(rni(b, diff));
 }
 
-bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes, uint64_t * timeRet) {
+bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes) {
     CHECK_VAL_BODY_BIT(pini(b, maxShareOcc, outputIndexes));
 }
 
@@ -129,14 +109,8 @@ bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes, u
 
 
 #define CHECK_TRANS_BODY(check_call, check_call_bd) ({                                 \
-    uint64_t timerStart;                                                               \
-    uint64_t timerEnd;                                                                 \
     bool res;                                                                          \
     bool usedBitExp;                                                                   \
-                                                                                       \
-    if (timeRet != NULL) {                                                             \
-        timerStart =  getTime();                                                       \
-    }                                                                                  \
                                                                                        \
     std::vector<Node *> n = {&e0, &e1};                                                \
                                                                                        \
@@ -171,10 +145,6 @@ bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes, u
         }                                                                              \
     }                                                                                  \
                                                                                        \
-    if (timeRet != NULL) {                                                             \
-        timerEnd = getTime();                                                          \
-        *timeRet = timerEnd - timerStart;                                              \
-    }                                                                                  \
     if (usedBitExpRet != NULL) {                                                       \
         *usedBitExpRet = usedBitExp;                                                   \
     }                                                                                  \
@@ -182,160 +152,23 @@ bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes, u
 })
 
 
-bool checkTpsTrans(Node & e0, Node & e1, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkTpsTrans(Node & e0, Node & e1, bool * usedBitExpRet) {
     CHECK_TRANS_BODY(tps(n), tps(n, true));
 }
 
-bool checkNITrans(Node & e0, Node & e1, int maxShareOcc, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkNITrans(Node & e0, Node & e1, int maxShareOcc, bool * usedBitExpRet) {
     CHECK_TRANS_BODY(ni(n, maxShareOcc), ni(n, maxShareOcc, true));
 }
 
-bool checkRNITrans(Node & e0, Node & e1, int diff, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkRNITrans(Node & e0, Node & e1, int diff, bool * usedBitExpRet) {
     CHECK_TRANS_BODY(rni(n, diff), rni(n, diff, true));
 }
 
-bool checkPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet, uint64_t * timeRet) {
+bool checkPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet) {
     CHECK_TRANS_BODY(pini(n, maxShareOcc, outputIndexes), pini(n, maxShareOcc, outputIndexes, true));
 }
 
 
 #undef CHECK_TRANS_BODY
-
-
-bool checkTpsTransBit(Node & e0, Node & e1, uint64_t * timeRet) {
-    if (bitExpEnable()) {
-        uint64_t tpsTime = 0;
-        bool res;
-
-        assert(e0.width == e1.width);
-
-        for (int32_t b = e0.width - 1; b >= 0; b -=1) {
-            uint64_t timerStart;
-            uint64_t timerEnd;
-            if (timeRet != NULL) {
-                timerStart = getTime();
-            }
-
-            Node & be = Concat(simplifyUSBV(Extract(b, b, e0)), simplifyUSBV(Extract(b, b, e1)));
-            res = tps(be);
-
-            if (timeRet != NULL) {
-                timerEnd = getTime();
-                tpsTime += timerEnd - timerStart;
-            }
-
-            if (!res) {
-                break;
-            }
-        }
-        if (timeRet != NULL) {
-            *timeRet = tpsTime;
-        }
-
-        return res;
-    }
-    else {
-        if (timeRet != NULL) {
-            *timeRet = 0;
-        }
-        return false;
-    }
-}
-    
-
-
-bool checkTpsTransXor(Node & e0, Node & e1, bool * usedBitExpRet, uint64_t * timeRet) {
-    bool res;
-    bool usedBitExp;
-    uint64_t timerStart;
-    uint64_t timerEnd;
-    
-    assert(e0.width == e1.width);
-
-    if (timeRet != NULL) {
-        timerStart = getTime();
-    }
-    Node & e = simplify(e0 ^ e1);
-
-    if (e.hasWordOp) {
-        res = false;
-        usedBitExp = false;
-        if (!(e0.wordAnalysisHasFailedOnSubExp || e1.wordAnalysisHasFailedOnSubExp)) {
-            res = tps(e);
-            // FIXME: if only transition and no value, how to make the flag become true? check each exp independently?
-            //if (!res) {
-            //   e0.wordAnalysisHasFailedOnSubExp = true;
-            //   e1.wordAnalysisHasFailedOnSubExp = true;
-            //}
-        }
-
-        if (!res && bitExpEnable()) {
-            Node & be = getBitDecomposition(e);
-            usedBitExp = true;
-            res = tps(be);
-        }
-    }
-        
-    else {
-        if (bitExpEnable()) {
-            Node & be = getBitDecomposition(e);
-            usedBitExp = true;
-            res = tps(be);
-        }
-        else {
-            usedBitExp = false;
-            res = tps(e);
-        }
-    }
-
-    if (timeRet != NULL) {
-        timerEnd = getTime();
-        *timeRet = timerEnd - timerStart;
-    }
-    if (usedBitExpRet != NULL) {
-        *usedBitExpRet = usedBitExp;
-    }
-
-    return res;
-}
-
-
-bool checkTpsTransXorBit(Node & e0, Node & e1, uint64_t * timeRet) {
-    if (bitExpEnable()) {
-        uint64_t tpsTime = 0;
-        bool res;
-
-        assert(e0.width == e1.width);
-
-        for (int32_t b = e0.width - 1; b >= 0; b -= 1) {
-            uint64_t timerStart;
-            uint64_t timerEnd;
-            if (timeRet != NULL) {
-                timerStart = getTime();
-            }
-            Node & be = simplifyUSBV(Extract(b, b, e0) ^ Extract(b, b, e1));
-
-            res = tps(be);
-            if (timeRet != NULL) {
-                timerEnd = getTime();
-                tpsTime += timerEnd - timerStart;
-            }
-
-            if (!res) {
-                break;
-            }
-        }
-        if (timeRet != NULL) {
-            *timeRet = tpsTime;
-        }
-        return res;
-    }
-    else {
-        if (timeRet != NULL) {
-            *timeRet = 0;
-        }
-        return false;
-    }
-}
 
 
