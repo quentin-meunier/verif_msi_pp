@@ -17,7 +17,7 @@ int main() {
     Node & u2 = *u[2];
 
     Node & v0 = *v[0];
-    Node & v1 = *v[2];
+    Node & v1 = *v[1];
     Node & v2 = *v[2];
 
     Node & e = u0 ^ m ^ u1 ^ u2;

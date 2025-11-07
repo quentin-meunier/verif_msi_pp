@@ -11,10 +11,10 @@ INCLUDES=
 
 
 
-libverif_msi_pp.a: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o
+libverif_msi_pp.a: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o simp_rules.o utils_private.o
 	ar rcs $@ $^
 
-libverif_msi_pp.so: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o
+libverif_msi_pp.so: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o simp_rules.o utils_private.o
 	g++ $^ -shared -o $@
 
 $(PYTHONLIB): libverif_msi_pp.so pybind11_wrapper.cpp
@@ -27,13 +27,13 @@ SHA256.o: SHA256.cpp SHA256.hpp
 arrayexp.o: arrayexp.cpp arrayexp.hpp node.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-tps.o: tps.cpp tps.hpp node.hpp simplify.hpp config.hpp
+tps.o: tps.cpp tps.hpp node.hpp simplify.hpp config.hpp utils_private.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 node.o: node.cpp node.hpp config.hpp arrayexp.hpp SHA256.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp arrayexp.hpp config.hpp
+concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp utils_private.hpp arrayexp.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 simplify.o: simplify.cpp simplify.hpp simp_conc.hpp node.hpp SHA256.hpp arrayexp.hpp config.hpp
@@ -42,7 +42,7 @@ simplify.o: simplify.cpp simplify.hpp simp_conc.hpp node.hpp SHA256.hpp arrayexp
 simp_conc.o: simp_conc.cpp simp_conc.hpp node.hpp config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-hw.o: hw.cpp hw.hpp node.hpp simplify.hpp check_leakage.hpp tps.hpp config.hpp
+hw.o: hw.cpp hw.hpp node.hpp simplify.hpp check_leakage.hpp tps.hpp config.hpp utils.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 check_leakage.o: check_leakage.cpp check_leakage.hpp node.hpp utils.hpp tps.hpp simplify.hpp config.hpp
@@ -50,6 +50,13 @@ check_leakage.o: check_leakage.cpp check_leakage.hpp node.hpp utils.hpp tps.hpp 
 
 utils.o: utils.cpp utils.hpp node.hpp arrayexp.hpp simplify.hpp check_leakage.hpp config.hpp hw.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
+
+simp_rules.o: simp_rules.cpp simp_rules.hpp node.hpp config.hpp
+	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
+
+utils_private.o: utils_private.cpp utils_private.hpp node.hpp config.hpp
+	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
+
 
 
 clean:

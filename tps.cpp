@@ -15,6 +15,7 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 #include "simplify.hpp"
 #include "concrev.hpp"
+#include "utils_private.hpp"
 
 
 
@@ -141,7 +142,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         std::cout << "# Call func checkProperty on exp " << nodeIn << std::endl;
     }
     
-    assert(not noFalsePositive or secProp == TPS);
+    assert(not noFalsePositive or (secProp == TPS or secProp == NI or secProp == PINI)) ;
 
     int maxShareOcc = 0;
     int diff;
@@ -215,22 +216,17 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             }
         }
         else if (secProp == PINI) {
-            bool isPINI = true;
             //print('# outputIndexes: %s' % ' '.join(map(lambda x: '%d' % x, outputIndexes)))
+            std::set<int32_t> internalSharesIndexes;
             for (const auto & [s, shares] : *node->shareOcc) {
-                int nbOcc = 0;
                 for (const auto & [sh, val] : *shares) {
-                    int num = sh->shareNum;
-                    if (!outputIndexes->contains(num)) {
-                        nbOcc += 1;
+                    int32_t num = sh->shareNum;
+                    if (not outputIndexes->contains(num)) {
+                        internalSharesIndexes.insert(num);
                     }
                 }
-                if (nbOcc > maxShareOcc) {
-                    isPINI = false;
-                    break;
-                }
             }
-            if (isPINI) {
+            if ((int32_t) internalSharesIndexes.size() <= maxShareOcc) {
                 return true;
             }
         }
@@ -301,7 +297,15 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 if (verbose) {
                     std::cout << "# NoFalsePositive enabled, calling enumeration" << std::endl;
                 }
-                return getDistribWithExev(*node);
+                if (secProp == TPS) {
+                    return isTPSWithExev(*node);
+                }
+                else if (secProp == NI) {
+                    return isNIWithExev(*node, maxShareOcc);
+                }
+                else if (secProp == PINI) {
+                    return isPINIWithExev(*node, maxShareOcc, *outputIndexes);
+                }
             }
             return false;
         }
@@ -407,38 +411,6 @@ static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty
 }
 
 
-static void tpsValidity(Node & n) {
-    if (n.shareOcc->size() != 0) {
-        std::cerr << "*** Error: Threshold Probing verification should not use a share representation but explicit secret variables and masks" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-static void niValidity(Node & n) {
-    if (n.secretVarOcc->size() != 0) {
-        std::cerr << "*** Error: NI verification should use a share representation and not explicit secret variables" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-static void rniValidity(Node & n) {
-    if (n.secretVarOcc->size() != 0) {
-        std::cerr << "*** Error: RNI verification should use a share representation and not explicit secret variables" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-static void piniValidity(Node & n) {
-    if (n.secretVarOcc->size() != 0) {
-        std::cerr << "*** Error: PINI verification should use a share representation and not explicit secret variables" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-
 bool tps(Node & nodeIn, bool bitDecompose, bool verbose) {
     tpsValidity(nodeIn);
     PropParams dummy;
@@ -490,6 +462,24 @@ bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool ve
 }
 
 
+bool niNoFalsePositive(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool verbose) {
+    niValidity(nodeIn);
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    return checkPropertyWrapper(nodeIn, NI, pp, bitDecompose, true, verbose);
+}
+
+
+bool niNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        niValidity(*n);
+    }
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    return checkPropertyWrapper(nodes, NI, pp, bitDecompose, true, verbose);
+}
+
+
 
 bool rni(Node & nodeIn, int diff, bool bitDecompose, bool verbose) {
     rniValidity(nodeIn);
@@ -526,6 +516,26 @@ bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIn
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes; 
     return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, false, verbose);
+}
+
+
+bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
+    piniValidity(nodeIn);
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes; 
+    return checkPropertyWrapper(nodeIn, PINI, pp, bitDecompose, true, verbose);
+}
+
+
+bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        piniValidity(*n);
+    }
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes; 
+    return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, true, verbose);
 }
 
 

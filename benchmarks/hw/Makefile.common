@@ -1,0 +1,29 @@
+
+OBJ_DIR := obj
+EXEC_DIR := bin
+SRC_FILES = $(wildcard *.cpp)
+EXEC := $(patsubst %.cpp,$(EXEC_DIR)/%,$(SRC_FILES))
+OBJ_FILES := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
+
+VMSI_HOME ?= $(shell realpath ../../)
+
+all: create_rep $(EXEC)
+
+.PRECIOUS: $(OBJ_FILES)
+
+create_rep:
+	mkdir -p $(OBJ_DIR) $(EXEC_DIR)
+
+$(EXEC_DIR)/%: $(OBJ_DIR)/%.o $(VMSI_HOME)/libverif_msi_pp.a
+	g++ -o $@ $< -L$(VMSI_HOME) -lverif_msi_pp -Wl,-rpath,$(VMSI_HOME)
+
+$(OBJ_DIR)/%.o: %.cpp
+	g++ -g -c -std=c++20 -o $@ -I$(VMSI_HOME) $<
+
+clean:
+	rm -f $(OBJ_DIR)/*.o
+
+realclean: clean
+	rm -rf $(EXEC_DIR) $(OBJ_DIR)
+
+

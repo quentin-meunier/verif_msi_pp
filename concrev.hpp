@@ -17,10 +17,13 @@ bool compareExpsWithExev(Node & e0, Node & e1, std::map<Node *, Node *> & res, u
 bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval);
 bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *, Node *> & res, uint64_t * v0, uint64_t * v1);
 bool getDistribWithExev(Node & e, bool * rud);
-bool getDistribWithExev(Node & e);
+bool isTPSWithExev(Node & e);
+bool isNIWithExev(Node & e, int32_t maxShareOcc);
+bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes);
 Node & getExpValue(Node & node, std::map<Node *, Node *> & m);
 
 int32_t getSymbolicBitsNum(Node & n);
+int32_t getMaxSymbVarWidth(Node & n);
 
 
 #endif

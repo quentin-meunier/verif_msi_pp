@@ -7,18 +7,15 @@ Author(s): Quentin L. Meunier
 */
 
 
-#ifndef _verif_msi_pp_hpp_
-#define _verif_msi_pp_hpp_
+#ifndef _utils_private_hpp_
+#define _utils_private_hpp_
 
 #include "node.hpp"
-#include "simplify.hpp"
-#include "utils.hpp"
-#include "concrev.hpp"
-#include "arrayexp.hpp"
-#include "tps.hpp"
-#include "check_leakage.hpp"
-#include "hw.hpp"
-#include "simp_rules.hpp"
+
+void tpsValidity(Node & n);
+void niValidity(Node & n);
+void rniValidity(Node & n);
+void piniValidity(Node & n);
 
 
 #endif

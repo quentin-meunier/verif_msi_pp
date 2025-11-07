@@ -22,6 +22,7 @@ Author(s): Quentin L. Meunier
 #include "utils.hpp"
 #include "arrayexp.hpp"
 #include "simplify.hpp"
+#include "utils_private.hpp"
 
 
 
@@ -57,6 +58,44 @@ int32_t getSymbolicBitsNum(Node & n) {
     }
     return nbBits;
 }
+
+
+int32_t getMaxSymbVarWidth(Node & n) {
+    std::set<Node *> allVars;
+    for (const auto & [k, v] : *n.maskingMaskOcc) {
+        allVars.insert(k);
+    }
+    #if SEL_MSK_W_NON_MSKNG_OCC
+    for (const auto & [k, v] : *n.otherMaskOcc) {
+        allVars.insert(k);
+    }
+    #else
+    for (const auto & m : *n.otherMaskOcc) {
+        allVars.insert(m);
+    }
+    #endif
+    for (const auto & k : *n.secretVarOcc) {
+        allVars.insert(k);
+    }
+    for (const auto & k : *n.publicVarOcc) {
+        allVars.insert(k);
+    }
+    for (const auto & [k, v] : *n.shareOcc) {
+        for (const auto & [l, w] : *v) {
+            allVars.insert(l);
+        }
+    }
+
+    int32_t maxNbBits = 0;
+    for (const auto & e : allVars) {
+        if (e->width > maxNbBits) {
+            maxNbBits = e->width;
+        }
+    }
+    return maxNbBits;
+}
+
+
 
 
 // FIXME: propagate in verif_msi (single bit variables for enumeration)
@@ -404,8 +443,6 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
 
 
 
-
-
 static void getDistribRefBis(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
     if (idx < (int32_t) maskVars.size()) {
         Node & var = *maskVars[idx];
@@ -520,8 +557,8 @@ static bool enumeratePublicVarsRec(Node & e0, std::vector<Node *> & publicVars, 
 bool getDistribWithExev(Node & e, bool * rud) {
     assert(e.width <= 64);
 
-    Node & e1 = replaceSharesWithSecretsAndMasks(e);
-    Node & e0 = getBitDecomposition(e1);
+    tpsValidity(e);
+    Node & e0 = getBitDecomposition(e);
     
     std::vector<Node *> allVarsVec;
     std::vector<Node *> exp {&e0};
@@ -554,9 +591,282 @@ bool getDistribWithExev(Node & e, bool * rud) {
 }
 
 
-bool getDistribWithExev(Node & e) {
+bool isTPSWithExev(Node & e) {
     bool rud = true;
     return getDistribWithExev(e, &rud);
 }
+
+
+/////////// NI Test //////////
+
+
+
+static void getDistribRec(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
+    if (idx < (int32_t) maskVars.size()) {
+        Node & var = *maskVars[idx];
+        assert(var.width == 1);
+        for (int64_t val = 0; val < (1LL << var.width); val += 1) {
+            m.insert_or_assign(&var, &Const(val, var.width));
+            getDistribRec(e0, distrib, maskVars, idx + 1, m);
+        }
+    }
+    else {
+        uint64_t v = getExpValue(e0, m).cst[0];
+        distrib[v] += 1;
+    }
+}
+
+
+static void getDistrib(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::vector<Node *> & maskVars, std::map<Node *, Node *> & m) {
+    for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
+        distrib.insert_or_assign(v, 0);
+    }
+    getDistribRec(e0, distrib, maskVars, 0, m);
+}
+
+
+// Returns true if the share s is effective, i.e. if it has no impact on the exp distribution, false otherwise
+static bool shareIsEffective(Node & e0, std::vector<Node *> & sharesWithFixedVal, Node & s, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
+    // Enumerating on relevant shares except the tested share
+    if (idx < (int32_t) sharesWithFixedVal.size()) {
+        Node & shareWithFixedVal = *sharesWithFixedVal[idx];
+        assert(shareWithFixedVal.width == 1);
+        for (int64_t val = 0; val < (1LL << shareWithFixedVal.width); val += 1) {
+            m.insert_or_assign(&shareWithFixedVal, &Const(val, shareWithFixedVal.width));
+            bool ni = shareIsEffective(e0, sharesWithFixedVal, s, maskVars, idx + 1, m);
+            if (!ni) {
+                return false;
+            }
+        }
+        return true;
+    }
+    else {
+        // Computing distribution for both values of the tested relevant shares
+        std::map<uint64_t, uint64_t> distrib0;
+        std::map<uint64_t, uint64_t> distrib1;
+
+        assert(s.width == 1);
+        m.insert_or_assign(&s, &Const(0, 1));
+        getDistrib(e0, distrib0, maskVars, m);
+        m.insert_or_assign(&s, &Const(1, 1));
+        getDistrib(e0, distrib1, maskVars, m);
+
+        for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
+            if (distrib0[v] != distrib1[v]) {
+                return true;
+                break;
+            }
+        }
+        return false;
+    }
+}
+
+
+static void getEffectiveShares(Node & e0, std::vector<Node *> & publicVars, std::vector<Node *> & shareVars, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m, std::set<Node *> & effectiveShares) {
+    // Enumerating on public variables and non relevant shares
+    if (idx < (int32_t) publicVars.size()) {
+        Node & publicVar = *publicVars[idx];
+        assert(publicVar.width == 1);
+        for (int64_t val = 0; val < (1LL << publicVar.width); val += 1) {
+            m.insert_or_assign(&publicVar, &Const(val, publicVar.width));
+            getEffectiveShares(e0, publicVars, shareVars, maskVars, idx + 1, m, effectiveShares);
+        }
+    }
+    else {
+        // For each relevant share, we compute its effectiveness w.r.t masks for each valuation of other relevant shares
+        std::vector<Node *> sharesWithFixedVal;
+        for (const auto & s : shareVars) {
+            if (not effectiveShares.contains(s)) {
+                sharesWithFixedVal.clear();
+                for (const auto & rs : shareVars) {
+                    if (rs != s) {
+                        sharesWithFixedVal.push_back(rs);
+                    }
+                }
+                bool sIsEffective = shareIsEffective(e0, sharesWithFixedVal, *s, maskVars, 0, m);
+                if (sIsEffective) {
+                    effectiveShares.insert(s);
+                }
+            }
+        }
+    }
+}
+
+
+
+bool isNIWithExev(Node & e, int32_t maxShareOcc) {
+    assert(e.width <= 64);
+
+    niValidity(e);
+    Node & e0 = getBitDecomposition(e);
+    
+    std::vector<Node *> allVarsVec;
+    std::vector<Node *> exp {&e0};
+    getVarsList(exp, allVarsVec);
+
+    std::vector<Node *> shareVarsOrig;
+    std::vector<Node *> shareVars;
+    std::vector<Node *> publicVars;
+    std::vector<Node *> maskVars;
+    std::set<Node *> secretVars;
+
+    for (const auto & v : allVarsVec) {
+        if (v->symbType == 'A') {
+            shareVarsOrig.push_back(v);
+        }
+        else if (v->symbType == 'P') {
+            publicVars.push_back(v);
+        }
+        else {
+            assert(v->symbType == 'M');
+            maskVars.push_back(v);
+        }
+    }
+    for (const auto & v : shareVarsOrig) {
+        secretVars.insert(v->origSecret);
+    }
+
+    for (const auto & v : secretVars) {
+        int32_t nbShares = 0;
+        for (const auto & sh : shareVarsOrig) {
+            if (sh->origSecret == v) {
+                nbShares += 1;
+            }
+        }
+        if (nbShares > maxShareOcc) {
+            for (const auto & sh : shareVarsOrig) {
+                if (sh->origSecret == v) {
+                    shareVars.push_back(sh);
+                }
+            }
+        }
+        else {
+            // shares whose number for the same variable in the expression is less than maxShareOcc are regarded as public variables
+            for (const auto & sh : shareVarsOrig) {
+                if (sh->origSecret == v) {
+                    publicVars.push_back(sh);
+                }
+            }
+        }
+    }
+
+    //std::cout << "# isNIWithExev:" << std::endl;
+    //std::cout << "#     Expression: " << e << std::endl;
+    //std::cout << "#     Modified expression: " << e0 << std::endl;
+    //std::cout << "#     Public Vars or irrelevant shares: ";
+    //for (const auto & v : publicVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << "#     Share Vars: ";
+    //for (const auto & v : shareVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << "#     Mask Vars: ";
+    //for (const auto & v : maskVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+
+    //std::cout << "#     Enumerating on " << publicVars.size() + shareVars.size() + maskVars.size() << " bits in total" << std::endl;
+
+    std::map<Node *, Node *> m;
+    std::set<Node *> effectiveShares;
+    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
+    for (const auto & s : secretVars) {
+        int32_t nbEffectiveShares = 0;
+        //std::cout << "# Effective shares for " << *s << ": ";
+        for (const auto & sh : shareVars) {
+            if (sh->origSecret == s and effectiveShares.contains(sh)) {
+                //std::cout << *sh << ", ";
+                nbEffectiveShares += 1;
+            }
+        }
+        //std::cout << std::endl;
+        //std::cout << std::endl << "# Total: " << nbEffectiveShares << std::endl;
+        if (nbEffectiveShares > maxShareOcc) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes) {
+    assert(e.width <= 64);
+
+    niValidity(e);
+    Node & e0 = getBitDecomposition(e);
+    
+    std::vector<Node *> allVarsVec;
+    std::vector<Node *> exp {&e0};
+    getVarsList(exp, allVarsVec);
+
+    //std::vector<Node *> shareVarsOrig;
+    std::vector<Node *> shareVars;
+    std::vector<Node *> publicVars;
+    std::vector<Node *> maskVars;
+    std::set<Node *> secretVars;
+
+    for (const auto & v : allVarsVec) {
+        if (v->symbType == 'A') {
+            shareVars.push_back(v);
+        }
+        else if (v->symbType == 'P') {
+            publicVars.push_back(v);
+        }
+        else {
+            assert(v->symbType == 'M');
+            maskVars.push_back(v);
+        }
+    }
+    for (const auto & v : shareVars) {
+        secretVars.insert(v->origSecret);
+    }
+
+    //std::cout << "# isPINIWithExev:" << std::endl;
+    //std::cout << "#     maxShareOcc: " << maxShareOcc << std::endl;
+    //std::cout << "#     Expression: " << e << std::endl;
+    //std::cout << "#     Modified expression: " << e0 << std::endl;
+    //std::cout << "#     Public Vars: ";
+    //for (const auto & v : publicVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << "#     Share Vars: ";
+    //for (const auto & v : shareVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << "#     Mask Vars: ";
+    //for (const auto & v : maskVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+
+    //std::cout << "#     enumerating on " << publicVars.size() + shareVars.size() + maskVars.size() << " bits in total" << std::endl;
+
+    std::map<Node *, Node *> m;
+    std::set<Node *> effectiveShares;
+    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
+    
+    std::set<int> effectiveShareIndexesNotInOutputIndexes;
+
+    //std::cout << "# Effective Shares: ";
+    for (const auto & sh : effectiveShares) {
+        //std::cout << *sh << ", " << std::endl;
+        if (!outputIndexes.contains(sh->shareNum)) {
+            effectiveShareIndexesNotInOutputIndexes.insert(sh->shareNum);
+        }
+    }
+    //std::cout << std::endl;
+
+    //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << effectiveShareIndexesNotInOutputIndexes.size() << std::endl;
+
+    return (int32_t) effectiveShareIndexesNotInOutputIndexes.size() <= maxShareOcc;
+
+}
+
 
 

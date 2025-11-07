@@ -16,6 +16,7 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 #include "arrayexp.hpp"
 #include "simp_conc.hpp"
+#include "simp_rules.hpp"
 
 
 
@@ -751,7 +752,9 @@ Node & simplifyUSBV(Node & node) {
 static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBitVariables) {
     assert(not useSingleBitVariables or propagateExtractInwards);
 
-    auto setSimpEqAndReturn = [useSingleBitVariables](Node & node, Node & simpEq) -> Node & {
+    auto setSimpEqAndReturn = [useSingleBitVariables](Node & node, Node & simpEquiv) -> Node & {
+        Node & simpEq = getEquiv(simpEquiv);
+
         if (useSingleBitVariables) {
             node.simpEqUsbv = &simpEq;
             simpEq.simpEq = &simpEq;

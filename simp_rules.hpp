@@ -6,20 +6,18 @@ SPDX-License-Identifier: GPL-3.0-only
 Author(s): Quentin L. Meunier
 */
 
-
-#ifndef _verif_msi_pp_hpp_
-#define _verif_msi_pp_hpp_
+#ifndef _simp_rules_hpp_
+#define _simp_rules_hpp_
 
 #include "node.hpp"
-#include "simplify.hpp"
-#include "utils.hpp"
-#include "concrev.hpp"
-#include "arrayexp.hpp"
-#include "tps.hpp"
-#include "check_leakage.hpp"
-#include "hw.hpp"
-#include "simp_rules.hpp"
 
+
+
+void addGenericSimpRule(Node & s, Node & t);
+void addSpecificSimpRule(Node & s, Node & t);
+
+Node & getEquiv(Node & e);
+Node & getEquiv(Node & e, bool * found);
 
 #endif
 
