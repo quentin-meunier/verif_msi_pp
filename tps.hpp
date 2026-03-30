@@ -54,10 +54,10 @@ bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIn
 bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);
 bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);
 
-bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
-bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
-bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
-bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
 
 #endif
 

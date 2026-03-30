@@ -819,7 +819,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         removeProbesWithGlitches(gatesToVerify);
     }
 
-    else if (secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI) {
+    else if (secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI || secProp == OPINI) {
         // Probe reduction is not applicable to TPS
         // Checking if all input shares are part of the reachable gates
         std::set<Node *> reachableInputShares;
@@ -966,7 +966,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         *nbCheck = tuples.size();
     }
     else {
-        assert(secProp == PINI);
+        assert(secProp == PINI || secProp == OPINI);
         std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>>> tuples;
         std::vector<HWElement *> internalGates;
         for (const auto & g : gates) {
@@ -976,6 +976,31 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         }
         tupleEnumPINI(outputList, internalGates, order, withGlitches, tuples);
 
+        std::vector<std::vector<Node *>> allOutputLeakages;
+        if (secProp == OPINI) {
+            auto getLeakExpsNode = [&](HWElement & gate) -> Node & {
+                if (withGlitches) {
+                    std::set<Node *> s;
+                    for (const auto & leakExp : gate.leakageOut) {
+                        s.insert(leakExp);
+                    }
+                    std::vector<Node *> v;
+                    for (const auto & e : s) {
+                        v.push_back(e);
+                    }
+                    return Concat(v);
+                }
+                else {
+                    return *gate.symbExp;
+                }
+            };
+ 
+            for (int outputIdx = 0; outputIdx < (int) outputList.size(); outputIdx += 1) {
+                for (int outputShareIdx = 0; outputShareIdx < (int) outputList[outputIdx].size(); outputShareIdx += 1) {
+                    allOutputLeakages[outputIdx][outputShareIdx] = &getLeakExpsNode(*outputList[outputIdx][outputShareIdx]);
+                }
+            }
+        }
 
         std::cout << "# Number of tuples: " << tuples.size() << std::endl;
 
@@ -985,11 +1010,22 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             bool res;
             std::set<int32_t> outputIndexes = std::get<3>(t);
             Node & conc = Concat(*std::get<0>(t));
-            if (noFalsePositive) {
-                res = piniNoFalsePositive(conc, std::get<2>(t), outputIndexes, true);
+            if (secProp == PINI) {
+                if (noFalsePositive) {
+                    res = piniNoFalsePositive(conc, std::get<2>(t), outputIndexes, true);
+                }
+                else {
+                    res = pini(conc, std::get<2>(t), outputIndexes, true);
+                }
             }
             else {
-                res = pini(conc, std::get<2>(t), outputIndexes, true);
+                assert(secProp == OPINI);
+                if (noFalsePositive) {
+                    res = opiniNoFalsePositive(conc, std::get<2>(t), outputIndexes, allOutputLeakages, true);
+                }
+                else {
+                    res = opini(conc, std::get<2>(t), outputIndexes, allOutputLeakages, true);
+                }
             }
 
             if (!res) {

@@ -587,7 +587,7 @@ bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<
 }
 
 
-bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
     piniValidity(nodeIn);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
@@ -604,7 +604,7 @@ bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::v
     for (int idx : additionalInputIndexes) {
         outputIndexes.insert(idx);
         for (const auto & output : allOutputsLeakages) {
-            probesLeakagesWithNewOutputs.push_back(output->at(idx));
+            probesLeakagesWithNewOutputs.push_back(output[idx]);
         }
     }
     pp.additionalInputIndexes = NULL;
@@ -612,7 +612,7 @@ bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::v
 }
 
 
-bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
         piniValidity(*n);
     }
@@ -629,7 +629,7 @@ bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputI
     for (int idx : additionalInputIndexes) {
         outputIndexes.insert(idx);
         for (const auto & output : allOutputsLeakages) {
-            nodes.push_back(output->at(idx));
+            nodes.push_back(output[idx]);
         }
     }
     pp.additionalInputIndexes = NULL;
@@ -637,7 +637,7 @@ bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputI
 }
 
 
-bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
     piniValidity(nodeIn);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
@@ -654,7 +654,7 @@ bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & output
     for (int idx : additionalInputIndexes) {
         outputIndexes.insert(idx);
         for (const auto & output : allOutputsLeakages) {
-            probesLeakagesWithNewOutputs.push_back(output->at(idx));
+            probesLeakagesWithNewOutputs.push_back(output[idx]);
         }
     }
     pp.additionalInputIndexes = NULL;
@@ -662,7 +662,7 @@ bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & output
 }
 
 
-bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
         piniValidity(*n);
     }
@@ -679,7 +679,7 @@ bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set
     for (int idx : additionalInputIndexes) {
         outputIndexes.insert(idx);
         for (const auto & output : allOutputsLeakages) {
-            nodes.push_back(output->at(idx));
+            nodes.push_back(output[idx]);
         }
     }
     pp.additionalInputIndexes = NULL;
