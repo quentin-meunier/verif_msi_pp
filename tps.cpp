@@ -33,6 +33,12 @@ std::string secProp2str(SecurityProperty secProp) {
             return "RNI";
         case PINI:
             return "PINI";
+        case OPINI:
+            return "OPINI";
+        case OPINI_1ST_CALL:
+            return "OPINI_1ST_CALL";
+        case OPINI_2ND_CALL:
+            return "OPINI_2ND_CALL";
         default:
             assert(false);
     }
@@ -147,6 +153,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
     int maxShareOcc = 0;
     int diff;
     std::set<int> * outputIndexes = NULL;
+    std::set<int> * additionalInputIndexes = NULL;
 
     if (secProp == NI) {
         maxShareOcc = params.maxShareOcc;
@@ -158,6 +165,12 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         maxShareOcc = params.maxShareOcc;
         outputIndexes = params.outputIndexes;
     }
+    else if (secProp == OPINI_1ST_CALL || secProp == OPINI_2ND_CALL) {
+        maxShareOcc = params.maxShareOcc;
+        outputIndexes = params.outputIndexes;
+        additionalInputIndexes = params.additionalInputIndexes;
+    }
+
 
     Node * node = &nodeIn;
     // Simplify made in wrapper
@@ -227,6 +240,41 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 }
             }
             if ((int32_t) internalSharesIndexes.size() <= maxShareOcc) {
+                return true;
+            }
+        }
+        else if (secProp == OPINI_1ST_CALL) {
+            //print('# outputIndexes: %s' % ' '.join(map(lambda x: '%d' % x, outputIndexes)))
+            std::set<int32_t> internalSharesIndexes;
+            for (const auto & [s, shares] : *node->shareOcc) {
+                for (const auto & [sh, val] : *shares) {
+                    int32_t num = sh->shareNum;
+                    if (not outputIndexes->contains(num)) {
+                        internalSharesIndexes.insert(num);
+                    }
+                }
+            }
+            if ((int32_t) internalSharesIndexes.size() <= maxShareOcc) {
+                // FIXME: possible to return true here whereas more replacements could be made, in a way that the 2nd check will fail but would have succeeded if all replacements had been made
+                // We now need to check that we can also simulate the output share indexes with the same indexes as those used for input shares
+                for (int32_t num : internalSharesIndexes) {
+                    additionalInputIndexes->insert(num);
+                }
+                return true;
+            }
+        }
+        else if (secProp == OPINI_2ND_CALL) {
+            bool isOPini = true;
+            std::set<int32_t> internalSharesIndexes;
+            for (const auto & [s, shares] : *node->shareOcc) {
+                for (const auto & [sh, val] : *shares) {
+                    int32_t num = sh->shareNum;
+                    if (not outputIndexes->contains(num)) {
+                        isOPini = false;
+                    }
+                }
+            }
+            if (isOPini) {
                 return true;
             }
         }
@@ -503,7 +551,7 @@ bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bi
     piniValidity(nodeIn);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
-    pp.outputIndexes = &outputIndexes; 
+    pp.outputIndexes = &outputIndexes;
     return checkPropertyWrapper(nodeIn, PINI, pp, bitDecompose, false, verbose);
 }
 
@@ -514,7 +562,7 @@ bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIn
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
-    pp.outputIndexes = &outputIndexes; 
+    pp.outputIndexes = &outputIndexes;
     return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, false, verbose);
 }
 
@@ -523,7 +571,7 @@ bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputI
     piniValidity(nodeIn);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
-    pp.outputIndexes = &outputIndexes; 
+    pp.outputIndexes = &outputIndexes;
     return checkPropertyWrapper(nodeIn, PINI, pp, bitDecompose, true, verbose);
 }
 
@@ -534,8 +582,108 @@ bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
-    pp.outputIndexes = &outputIndexes; 
+    pp.outputIndexes = &outputIndexes;
     return checkPropertyWrapper(nodes, PINI, pp, bitDecompose, true, verbose);
+}
+
+
+bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+    piniValidity(nodeIn);
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes;
+    std::set<int> additionalInputIndexes;
+    pp.additionalInputIndexes = &additionalInputIndexes;
+    bool res = checkPropertyWrapper(nodeIn, OPINI_1ST_CALL, pp, bitDecompose, false, verbose);
+    if (!res) {
+        return false;
+    }
+    pp.maxShareOcc = 0; // No more additional shares authorized since all authorized indexes correspond to an output index
+    std::vector<Node *> probesLeakagesWithNewOutputs;
+    probesLeakagesWithNewOutputs.push_back(&nodeIn);
+    for (int idx : additionalInputIndexes) {
+        outputIndexes.insert(idx);
+        for (const auto & output : allOutputsLeakages) {
+            probesLeakagesWithNewOutputs.push_back(output->at(idx));
+        }
+    }
+    pp.additionalInputIndexes = NULL;
+    return checkPropertyWrapper(probesLeakagesWithNewOutputs, OPINI_2ND_CALL, pp, bitDecompose, false, verbose);
+}
+
+
+bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        piniValidity(*n);
+    }
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes;
+    std::set<int> additionalInputIndexes;
+    pp.additionalInputIndexes = &additionalInputIndexes;
+    bool res = checkPropertyWrapper(nodes, OPINI_1ST_CALL, pp, bitDecompose, false, verbose);
+    if (!res) {
+        return false;
+    }
+    pp.maxShareOcc = 0;
+    for (int idx : additionalInputIndexes) {
+        outputIndexes.insert(idx);
+        for (const auto & output : allOutputsLeakages) {
+            nodes.push_back(output->at(idx));
+        }
+    }
+    pp.additionalInputIndexes = NULL;
+    return checkPropertyWrapper(nodes, OPINI_2ND_CALL, pp, bitDecompose, false, verbose);
+}
+
+
+bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+    piniValidity(nodeIn);
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes;
+    std::set<int> additionalInputIndexes;
+    pp.additionalInputIndexes = &additionalInputIndexes;
+    bool res = checkPropertyWrapper(nodeIn, OPINI_1ST_CALL, pp, bitDecompose, true, verbose);
+    if (!res) {
+        return false;
+    }
+    pp.maxShareOcc = 0;
+    std::vector<Node *> probesLeakagesWithNewOutputs;
+    probesLeakagesWithNewOutputs.push_back(&nodeIn);
+    for (int idx : additionalInputIndexes) {
+        outputIndexes.insert(idx);
+        for (const auto & output : allOutputsLeakages) {
+            probesLeakagesWithNewOutputs.push_back(output->at(idx));
+        }
+    }
+    pp.additionalInputIndexes = NULL;
+    return checkPropertyWrapper(probesLeakagesWithNewOutputs, OPINI_2ND_CALL, pp, bitDecompose, true, verbose);
+}
+
+
+bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        piniValidity(*n);
+    }
+    PropParams pp;
+    pp.maxShareOcc = maxShareOcc;
+    pp.outputIndexes = &outputIndexes;
+    std::set<int> additionalInputIndexes;
+    pp.additionalInputIndexes = &additionalInputIndexes;
+    bool res = checkPropertyWrapper(nodes, OPINI_1ST_CALL, pp, bitDecompose, true, verbose);
+    if (!res) {
+        return false;
+    }
+    pp.maxShareOcc = 0;
+    for (int idx : additionalInputIndexes) {
+        outputIndexes.insert(idx);
+        for (const auto & output : allOutputsLeakages) {
+            nodes.push_back(output->at(idx));
+        }
+    }
+    pp.additionalInputIndexes = NULL;
+    return checkPropertyWrapper(nodes, OPINI_2ND_CALL, pp, bitDecompose, true, verbose);
 }
 
 

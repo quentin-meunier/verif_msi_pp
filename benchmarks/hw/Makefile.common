@@ -5,7 +5,7 @@ SRC_FILES = $(wildcard *.cpp)
 EXEC := $(patsubst %.cpp,$(EXEC_DIR)/%,$(SRC_FILES))
 OBJ_FILES := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-VMSI_HOME ?= $(shell realpath ../../)
+VMSI_HOME ?= $(shell realpath ../../..)
 
 all: create_rep $(EXEC)
 

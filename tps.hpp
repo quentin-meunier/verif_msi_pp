@@ -22,7 +22,10 @@ typedef enum _SecurityProperty {
     NI,
     SNI,
     RNI,
-    PINI
+    PINI,
+    OPINI,
+    OPINI_1ST_CALL,
+    OPINI_2ND_CALL,
 } SecurityProperty;
 
 
@@ -30,6 +33,7 @@ typedef struct _PropParams {
     int maxShareOcc;
     int diff;
     std::set<int> * outputIndexes;
+    std::set<int> * additionalInputIndexes;
 } PropParams;
 
 
@@ -50,7 +54,10 @@ bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIn
 bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);
 bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);
 
-
+bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
 
 #endif
 

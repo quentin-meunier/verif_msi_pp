@@ -71,6 +71,12 @@ bool checkPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, bool
     CHECK_VAL_BODY(pini(e, maxShareOcc, outputIndexes), pini(e, maxShareOcc, outputIndexes, true));
 }
 
+bool checkOPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputLeakages, bool * usedBitExpRet) {
+    CHECK_VAL_BODY(opini(e, maxShareOcc, outputIndexes, allOutputLeakages), opini(e, maxShareOcc, outputIndexes, allOutputLeakages, true));
+}
+
+
+
 #undef CHECK_VAL_BODY
 
 #define CHECK_VAL_BODY_BIT(check_call) ({                      \
@@ -102,6 +108,10 @@ bool checkRNIValBit(Node & e, int diff) {
 
 bool checkPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes) {
     CHECK_VAL_BODY_BIT(pini(b, maxShareOcc, outputIndexes));
+}
+
+bool checkOPINIValBit(Node & e, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputLeakages) {
+    CHECK_VAL_BODY_BIT(opini(b, maxShareOcc, outputIndexes, allOutputLeakages));
 }
 
 #undef CHECK_VAL_BODY_BIT
@@ -168,6 +178,9 @@ bool checkPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outpu
     CHECK_TRANS_BODY(pini(n, maxShareOcc, outputIndexes), pini(n, maxShareOcc, outputIndexes, true));
 }
 
+bool checkOPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *> *> & allOutputLeakages, bool * usedBitExpRet) {
+    CHECK_TRANS_BODY(opini(n, maxShareOcc, outputIndexes, allOutputLeakages), opini(n, maxShareOcc, outputIndexes, allOutputLeakages, true));
+}
 
 #undef CHECK_TRANS_BODY
 
