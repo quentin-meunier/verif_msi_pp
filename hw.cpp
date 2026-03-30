@@ -51,6 +51,9 @@ static void dumpCircuitGates(const char * filename, std::set<HWElement *> & hwEl
             else if (hwe->op == BXOR) {
                 s = std::string("XOR Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
             }
+            else if (hwe->op == BNOT) {
+                s = std::string("NOT Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
+            }
             else if (hwe->op == INPUT) {
                 Node & n = *hwe->symbExp;
                 if (n.nature == SYMB) {
@@ -761,6 +764,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
                 }
 
                 if (h->symbExp->otherMaskOcc->size() == 0) {
+                    std::cout << "# test of gate " << g->num << " with gate " << h->num << std::endl;
                     std::set<Node *> gMasks;
                     std::set<Node *> hMasks;
                     std::transform(g->symbExp->maskingMaskOcc->begin(), g->symbExp->maskingMaskOcc->end(), std::inserter(gMasks, gMasks.end()), [](auto pair){ return pair.first; });
