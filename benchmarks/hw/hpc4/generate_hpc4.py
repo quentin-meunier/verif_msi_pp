@@ -9,7 +9,7 @@ import os
  
 nbShares = 3
 order = 2
-prop = 'ni'
+prop = 'pini'
 withGlitches = False
 noFalsePositive = False
 outfilePrefix = 'hpc4_gen'
@@ -151,7 +151,7 @@ def generate_hpc4(*argv):
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Wang, W., Ji, F., Zhang, J., & Yu, Y. (2023). Efficient Private Circuits with Precomputation. IACR Transactions on Cryptographic Hardware and Embedded Systems." << std::endl;
+    std::cout << "[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon." << std::endl;
 }
 
     
@@ -336,9 +336,9 @@ int32_t hpc4_%d_shares(int32_t * nbCheck) {
             else if (strcmp(prop, "pini") == 0) {
                 secProp = PINI;
             }
-            /*else if (strcmp(prop, "opini") == 0) {
+            else if (strcmp(prop, "opini") == 0) {
                 secProp = OPINI;
-            }*/
+            }
             else {
                 std::cerr << "*** Error: Unknown security property: ";
                 std::cerr << "    Valid values are: \\\'ni\\\' (Non-Interference), \\\'sni\\\' (Strong Non-Interference), \\\'rni\\\' (Relaxed Non-Interference), \\\'pini\\\' (Probing-Isolating Non-Interference), \\\'opini\\\' (Output Probing-Isolating Non-Interference) and \\\'tps\\\' (Treshold Probing Security)" << std::endl;
