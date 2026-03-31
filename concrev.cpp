@@ -865,7 +865,56 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
     //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << effectiveShareIndexesNotInOutputIndexes.size() << std::endl;
 
     return (int32_t) effectiveShareIndexesNotInOutputIndexes.size() <= maxShareOcc;
+}
 
+
+bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes, std::set<int> & additionalInputIndexes) {
+    assert(e.width <= 64);
+
+    niValidity(e);
+    Node & e0 = getBitDecomposition(e);
+    
+    std::vector<Node *> allVarsVec;
+    std::vector<Node *> exp {&e0};
+    getVarsList(exp, allVarsVec);
+
+    std::vector<Node *> shareVars;
+    std::vector<Node *> publicVars;
+    std::vector<Node *> maskVars;
+    std::set<Node *> secretVars;
+
+    for (const auto & v : allVarsVec) {
+        if (v->symbType == 'A') {
+            shareVars.push_back(v);
+        }
+        else if (v->symbType == 'P') {
+            publicVars.push_back(v);
+        }
+        else {
+            assert(v->symbType == 'M');
+            maskVars.push_back(v);
+        }
+    }
+    for (const auto & v : shareVars) {
+        secretVars.insert(v->origSecret);
+    }
+
+    std::map<Node *, Node *> m;
+    std::set<Node *> effectiveShares;
+    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
+    
+    //std::cout << "# Effective Shares: ";
+    for (const auto & sh : effectiveShares) {
+        //std::cout << *sh << ", " << std::endl;
+        if (!outputIndexes.contains(sh->shareNum)) {
+            additionalInputIndexes.insert(sh->shareNum);
+        }
+    }
+    //std::cout << std::endl;
+
+    //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << effectiveShareIndexesNotInOutputIndexes.size() << std::endl;
+
+    return (int32_t) additionalInputIndexes.size() <= maxShareOcc;
 }
 
 

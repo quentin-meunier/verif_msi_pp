@@ -5,8 +5,8 @@ PYTHONLIB:=verif_msi_pp$(shell python3.9-config --extension-suffix)
 #all: libverif_msi_pp.a libverif_msi_pp.so $(PYTHONLIB)
 all: libverif_msi_pp.a libverif_msi_pp.so
 
-CFLAGS=-g -std=c++20 -Wall -O0 -fPIC
-#CFLAGS=-std=c++20 -Wall -O3 -fPIC
+#CFLAGS=-g -std=c++20 -Wall -O0 -fPIC
+CFLAGS=-std=c++20 -Wall -O3 -fPIC
 INCLUDES=
 
 

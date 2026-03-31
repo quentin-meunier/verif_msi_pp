@@ -313,11 +313,22 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                     }
                 }
                 if ((int32_t) internalSharesIndexes.size() > maxShareOcc) {
-                    return false;
+                    if (verbose) {
+                        std::cout << "# No mask can be taken" << std::endl;
+                    }
+                    if (noFalsePositive) {
+                        if (verbose) {
+                            std::cout << "# NoFalsePositive enabled, calling enumeration" << std::endl;
+                        }
+                        return isOPINIWithExev(*node, maxShareOcc, *outputIndexes, *additionalInputIndexes);
+                    }
+                    else {
+                        return false;
+                    }
                 }
 
                 // We now need to check that we can also simulate the output share indexes with the same indexes as those used for input shares
-                for (int32_t num : internalSharesIndexes) {
+                for (int num : internalSharesIndexes) {
                     additionalInputIndexes->insert(num);
                 }
                 return true;
@@ -338,9 +349,6 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 }
                 else if (secProp == PINI) {
                     return isPINIWithExev(*node, maxShareOcc, *outputIndexes);
-                }
-                else if (secProp == OPINI) {
-                    assert(false); // Not implemented
                 }
             }
             return false;

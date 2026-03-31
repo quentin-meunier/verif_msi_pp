@@ -9,8 +9,8 @@ import os
  
 nbShares = 3
 order = 2
-prop = 'ni'
-withGlitches = False
+prop = 'pini'
+withGlitches = True
 noFalsePositive = False
 outfilePrefix = 'opini_mult_gen'
 outfile = None

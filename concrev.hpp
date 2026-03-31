@@ -21,6 +21,7 @@ bool isTPSWithExev(Node & e);
 bool isNIWithExev(Node & e, int32_t maxShareOcc);
 bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes);
 Node & getExpValue(Node & node, std::map<Node *, Node *> & m);
+bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes, std::set<int> & additionalInputIndexes);
 
 int32_t getSymbolicBitsNum(Node & n);
 int32_t getMaxSymbVarWidth(Node & n);

@@ -12,10 +12,12 @@ tests/temp
 benchmarks/hw/dom_and/bin
 benchmarks/hw/gms_and/bin
 benchmarks/hw/hpc4/bin
+benchmarks/hw/hpc4/*.cpp
 benchmarks/hw/isw_and/bin
 benchmarks/hw/isw_and_refresh/bin
 benchmarks/hw/Makefile.common/bin
 benchmarks/hw/opini_mult/bin
+benchmarks/hw/opini_mult/*.cpp
 benchmarks/hw/otsm/bin
 benchmarks/hw/pini_mult/bin
 
