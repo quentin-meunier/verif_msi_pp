@@ -24,8 +24,6 @@ typedef enum _SecurityProperty {
     RNI,
     PINI,
     OPINI,
-    OPINI_1ST_CALL,
-    OPINI_2ND_CALL,
 } SecurityProperty;
 
 

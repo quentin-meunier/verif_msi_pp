@@ -887,9 +887,35 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
     });
 
     std::cout << "# Reduced gates (" << gates.size() << "):   " << vecGatesNumStr(gates) << std::endl;
-    for (const auto & gate : gates) {
-        std::cout << "# Gate " << gate->num << ": " << *gate->symbExp << std::endl;
+    if (withGlitches) {
+        std::cout << "# (in curly braces the leakage)" << std::endl;
     }
+    for (const auto & gate : gates) {
+        std::cout << "# Gate " << gate->num << ": " << *gate->symbExp;
+        if (withGlitches) {
+            bool first = true;
+            std::cout << " { ";
+            for (const auto & n : gate->leakageOut) {
+                if (!first) {
+                    std::cout << ", ";
+                }
+                first = false;
+                std::cout << *n;
+            }
+            std::cout << " }";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "# Outputs: ";
+    for (const auto & output : outputList) {
+        std::cout << "[ ";
+        for (const auto & outputShare : output) {
+            std::cout << outputShare->num << " ";
+        }
+        std::cout << "] ";
+    }
+    std::cout << std::endl;
 
 
     if ((secProp == NI || secProp == TPS) && HWElement::bartheOpt) {
@@ -901,7 +927,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
     std::cout << "# Starting tuple enumeration" << std::endl;
 
-    if (secProp != PINI) {
+    if (secProp != PINI && secProp != OPINI) {
         std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> tuples;
         tupleEnum(gates, order, withGlitches, doRemSingleInputProbesOpt, tuples);
 
@@ -977,6 +1003,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         tupleEnumPINI(outputList, internalGates, order, withGlitches, tuples);
 
         std::vector<std::vector<Node *>> allOutputLeakages;
+
         if (secProp == OPINI) {
             auto getLeakExpsNode = [&](HWElement & gate) -> Node & {
                 if (withGlitches) {
@@ -995,7 +1022,9 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
                 }
             };
  
+            allOutputLeakages.resize(outputList.size());
             for (int outputIdx = 0; outputIdx < (int) outputList.size(); outputIdx += 1) {
+                allOutputLeakages[outputIdx].resize(outputList[outputIdx].size());
                 for (int outputShareIdx = 0; outputShareIdx < (int) outputList[outputIdx].size(); outputShareIdx += 1) {
                     allOutputLeakages[outputIdx][outputShareIdx] = &getLeakExpsNode(*outputList[outputIdx][outputShareIdx]);
                 }
