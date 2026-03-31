@@ -961,7 +961,6 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 }
                 newChildren0.clear();
                 newChildren0.push_back(lsNode);
-                // FIXME: not sure about the behaviour here...
                 newChildren0.insert(newChildren0.end(), concatNode.children->begin() + startChildIdx + 1, concatNode.children->begin() + endChildIdx);
                 newChildren0.push_back(msNode);
                 op = CONCAT;
