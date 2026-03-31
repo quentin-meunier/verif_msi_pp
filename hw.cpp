@@ -764,7 +764,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
                 }
 
                 if (h->symbExp->otherMaskOcc->size() == 0) {
-                    std::cout << "# test of gate " << g->num << " with gate " << h->num << std::endl;
+                    //std::cout << "# test of gate " << g->num << " with gate " << h->num << std::endl;
                     std::set<Node *> gMasks;
                     std::set<Node *> hMasks;
                     std::transform(g->symbExp->maskingMaskOcc->begin(), g->symbExp->maskingMaskOcc->end(), std::inserter(gMasks, gMasks.end()), [](auto pair){ return pair.first; });
@@ -796,7 +796,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
 
 
 int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, int32_t * nbCheck) {
-    std::cout << "# Checking Security at order " << order << " (" << (withGlitches ? "with glitches" : "no glitches") << ", " << secProp2str(secProp) << " property, no False Positive: " << (noFalsePositive ? "Yes" : "No") << std::endl;
+    std::cout << "# Checking Security at order " << order << " (" << (withGlitches ? "with glitches" : "no glitches") << ", " << secProp2str(secProp) << " property, no False Positive: " << (noFalsePositive ? "Yes" : "No") << ")" << std::endl;
 
 
     std::set<HWElement *> outputs;

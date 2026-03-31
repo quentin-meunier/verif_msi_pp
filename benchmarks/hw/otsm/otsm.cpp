@@ -1,29 +1,30 @@
-/* Copyright (C) 2023, Sorbonne Universite, LIP6
+/* Copyright (C) 2026, Sorbonne Universite, LIP6
  * This file is part of the VerifMSI++ project, under the GPL v3.0 license
  * See https://www.gnu.org/licenses/gpl-3.0.en.html for license information
  * SPDX-License-Identifier: GPL-3.0-only
- * Author: Quentin L. Meunier
+ * Author: Quentin L. Meunier, Lucie Chauvière
  */
 
 #include <cstring>
 
 #include "verif_msi_pp.hpp"
 
+
 int32_t order = 1; // Shouldn't be changed, designed for order 1 security
-SecurityProperty secProp = TPS;
-bool withGlitches = false;
+SecurityProperty secProp = OPINI;
+bool withGlitches = true;
 bool noFalsePositive = false;
-bool dumpCirc = true;
+bool dumpCirc = false;
 bool checkFunctionality = true;
 const char * circuitFilename = "circuit.dot";
 
 
 void usage(const char * argv) {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-    std::cout << "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the GMS scheme with 3 shares from [1]." << std::endl;
+    std::cout << "   This script contains a VerifMSI++ description of the OTSM gadget from [1]." << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "-o,   --order <n>              : Set the order of the verification to (default: " << order << ")" << std::endl;
-    std::cout << "-p,   --prop                   : Set security property to verify: either \'ni\' (Non-Interference), \'sni\' (Strong Non-Interference) \'rni\' (Relaxed Non-Interference), \'pini\' (Probe-Isolating Non-Interference), \'opini\' (Output-PINI) or \'tps\' (Treshold Probing Security). NI, SNI, RNI and PINI use a share description for the inputs, while TPS uses a secrets + masks description (default: '" << secProp2str(secProp) << "')" << std::endl;
+    std::cout << "-p,   --prop                   : Set security property to verify: either \'ni\' (Non-Interference), \'sni\' (Strong Non-Interference) \'rni\' (Relaxed Non-Interference), \'pini\' (Probe-Isolating Non-Interference), \'opini\' (Output-PINI) or \'tps\' (Treshold Probing Security). NI, SNI, RNI, PINI and OPINI use a share description for the inputs, while TPS uses a secrets + masks description (default: '" << secProp2str(secProp) << "')" << std::endl;
     std::cout << "-g,   --with-glitches          : Consider glitch propagation throughout gates (defaut: " << (withGlitches ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-ng,  --without-glitches       : Do not consider glitch propagation throughout gates (defaut: " << (withGlitches ? "No" : "Yes") << ")" << std::endl;
     std::cout << "-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positives (defaut: " << (noFalsePositive ? "No" : "Yes") << ")" << std::endl;
@@ -31,7 +32,7 @@ void usage(const char * argv) {
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \"" << circuitFilename << "\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Reparaz, O., Bilgin, B., Nikova, S., Gierlichs, B., & Verbauwhede, I. (2015). Consolidating masking schemes. 35th Annual Cryptology Conference, 2015. Springer Berlin Heidelberg." << std::endl;
+    std::cout << "[1] H. Rahimi & A. Moradi (2026). TSM+ and OTSM-Correct Application of Time Sharing Masking in Round-Based Designs. Cryptology ePrint Archive. https://eprint.iacr.org/2026/004" << std::endl;
 }
 
     
@@ -45,68 +46,73 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 }
 
 
-int32_t gms_and_3_shares(int32_t * nbCheck) {
 
-    Node & a = symbol("a", 'S', 1);
-    Node & b = symbol("b", 'S', 1);
+int32_t otsm(int32_t * nbCheck) {
 
-    std::vector<Node *> v_a = getShares(a, 3);
-    std::vector<Node *> v_b = getShares(b, 3);
+    Node & k1 = symbol("k1", 'S', 4);
+    Node & k2 = symbol("k2", 'S', 4);
 
-    Node & n_a0 = *v_a[0];
-    Node & n_a1 = *v_a[1];
-    Node & n_a2 = *v_a[2];
+    std::vector<Node *> a = getRealShares(k1, 2);
+    std::vector<Node *> b = getRealShares(k2, 2);
 
-    Node & n_b0 = *v_b[0];
-    Node & n_b1 = *v_b[1];
-    Node & n_b2 = *v_b[2];
+    Node & k10 = *a[0];
+    Node & k11 = *a[1];
+    Node & k20 = *b[0];
+    Node & k21 = *b[1];
+    Node & z0 = symbol("z0", 'M', 4);
+    Node & z1 = symbol("z1", 'M', 4);
+    Node & z2 = symbol("z2", 'M', 4);
+    Node & z3 = symbol("z3", 'M', 4);
+    Node & z4 = symbol("z4", 'M', 4);
+    Node & z5 = symbol("z5", 'M', 4);
 
 
-    Node & n_z12 = symbol("z12", 'M', 1);
-    Node & n_z13 = symbol("z13", 'M', 1);
-    Node & n_z23 = symbol("z23", 'M', 1);
+    HWElement & x0 = inputGate(k10);
+    HWElement & x1 = inputGate(k11);
+    HWElement & y0 = inputGate(k20);
+    HWElement & y1 = inputGate(k21);
+    HWElement & r0 = inputGate(z0);
+    HWElement & r1 = inputGate(z1);
+    HWElement & r2 = inputGate(z2);
+    HWElement & r3 = inputGate(z3);
+    HWElement & r4 = inputGate(z4);
+    HWElement & r5 = inputGate(z5);
 
-    HWElement & a0 = inputGate(n_a0);
-    HWElement & a1 = inputGate(n_a1);
-    HWElement & a2 = inputGate(n_a2);
-    HWElement & b0 = inputGate(n_b0);
-    HWElement & b1 = inputGate(n_b1);
-    HWElement & b2 = inputGate(n_b2);
+    HWElement & x1y1 = andGate(x1, y1);
+    HWElement & x0y0 = andGate(x0, y0);
+    HWElement & x0r2 = andGate(x0, r2);
+    HWElement & y0r0 = andGate(y0, r0);
+    HWElement & x0r3 = andGate(x0, r3);
+    HWElement & y0r1 = andGate(y0, r1);
+    
+    std::vector<HWElement *> vect_x1_p = { &x1, &r0, &r1 };
+    HWElement & x1_p = xorGate(vect_x1_p);
+    std::vector<HWElement *> vect_y1_p = { &y1, &r2, &r3 };
+    HWElement & y1_p = xorGate(vect_y1_p);
+    std::vector<HWElement *> vect_xy1_p = { &x1y1, &r4, &r5 };
+    HWElement & xy1_p = xorGate(vect_xy1_p);
+    std::vector<HWElement *> vect_fc1 = { &x0y0, &x0r2, &y0r0, &r4 };
+    HWElement & fc1 = xorGate(vect_fc1);
+    std::vector<HWElement *> vect_fc2 = { &x0r3, &y0r1, &r5 };
+    HWElement & fc2 = xorGate(vect_fc2);
 
-    HWElement & z12 = inputGate(n_z12);
-    HWElement & z13 = inputGate(n_z13);
-    HWElement & z23 = inputGate(n_z23);
- 
-    // Non linear layer
-    HWElement & a0b0 = andGate(a0, b0);
-    HWElement & a0b1 = andGate(a0, b1);
-    HWElement & a0b2 = andGate(a0, b2);
-    HWElement & a1b0 = andGate(a1, b0);
-    HWElement & a1b1 = andGate(a1, b1);
-    HWElement & a1b2 = andGate(a1, b2);
-    HWElement & a2b0 = andGate(a2, b0);
-    HWElement & a2b1 = andGate(a2, b1);
-    HWElement & a2b2 = andGate(a2, b2);
+    HWElement & r_x0 = Register(x0);
+    HWElement & r_y1_p = Register(y1_p);
+    HWElement & r_y0 = Register(y0);
+    HWElement & r_x1_p = Register(x1_p);
+    HWElement & r_fc1 = Register(fc1);
+    HWElement & r_fc2 = Register(fc2);
+    
+    
+    HWElement & x0y1_p = andGate(r_x0, r_y1_p);
+    HWElement & y0x1_p = andGate(r_y0, r_x1_p);
+    std::vector<HWElement *> vect_f0 = { &x0y1_p, &y0x1_p, &r_fc1, &r_fc2 };
 
-    // Linear Layer
-    HWElement & l00 = xorGate(a0b0, a2b0);
-    HWElement & l0 = xorGate(l00, a0b2);
-    HWElement & l10 = xorGate(a1b0, a0b1);
-    HWElement & l1 = xorGate(l10, a1b1);
-    HWElement & l20 = xorGate(a2b1, a1b2);
-    HWElement & l2 = xorGate(l20, a2b2);
-
-    // Refreshing Layer
-    HWElement & c00 = xorGate(l0, z12);
-    HWElement & c0 = xorGate(c00, z13);
-    HWElement & c10 = xorGate(l1, z12);
-    HWElement & c1 = xorGate(c10, z23);
-    HWElement & c20 = xorGate(l2, z13);
-    HWElement & c2 = xorGate(c20, z23);
- 
+    HWElement & f0 = xorGate(vect_f0);
+    HWElement & f1 = Register(xy1_p);
 
     if (checkFunctionality) {
-        bool res = compareExpsWithExev(c0.getSymbExp() ^ c1.getSymbExp() ^ c2.getSymbExp(), a & b);
+        bool res = compareExpsWithExev(f0.getSymbExp() ^ f1.getSymbExp(), k1 & k2);
         if (res) {
             std::cout << "# Functionality (exhaustive evaluation): [OK]" << std::endl;
         }
@@ -115,19 +121,15 @@ int32_t gms_and_3_shares(int32_t * nbCheck) {
         }
     }
 
-    std::vector<HWElement *> outputs; // only c shares for gms_and
+    std::vector<HWElement *> outputs { &f0, &f1 };
 
-    outputs.push_back(&c0);
-    outputs.push_back(&c1);
-    outputs.push_back(&c2);
-
-    std::vector<std::vector<HWElement *>> outputList;
-    outputList.push_back(outputs);
     if (dumpCirc) {
         dumpCircuit(circuitFilename, outputs);
     }
-    //int32_t nbLeak = checkSecurity(order, withGlitches, secProp, c0, c1, c2)
+
+
     int32_t nbLeak = checkSecurity(order, withGlitches, secProp, outputs, noFalsePositive, nbCheck);
+
     return nbLeak;
 }
 
@@ -200,7 +202,7 @@ int main(int argc, const char ** argv) {
 
 
     int32_t nbCheck;
-    int32_t nbLeak = gms_and_3_shares(&nbCheck);
+    int32_t nbLeak = otsm(&nbCheck);
     std::cout << "# Total Nb. of expressions analysed: " << nbCheck << std::endl;
     std::cout << "# Total Nb. of potential leakages found: " << nbLeak << std::endl;
 

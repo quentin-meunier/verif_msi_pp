@@ -10,16 +10,20 @@ tests/mask_occ/bin
 tests/extended_simplify/bin
 tests/temp
 benchmarks/hw/dom_and/bin
+benchmarks/hw/dom_and/*.cpp
 benchmarks/hw/gms_and/bin
 benchmarks/hw/hpc4/bin
 benchmarks/hw/hpc4/*.cpp
 benchmarks/hw/isw_and/bin
+benchmarks/hw/isw_and/*.cpp
 benchmarks/hw/isw_and_refresh/bin
+benchmarks/hw/isw_and_refresh/*.cpp
 benchmarks/hw/Makefile.common/bin
 benchmarks/hw/opini_mult/bin
 benchmarks/hw/opini_mult/*.cpp
 benchmarks/hw/otsm/bin
 benchmarks/hw/pini_mult/bin
+benchmarks/hw/pini_mult/*.cpp
 
 verif_msi_pp.cpython-39-x86_64-linux-gnu.so
 
