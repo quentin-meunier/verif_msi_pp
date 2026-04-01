@@ -11,8 +11,8 @@
 
 
 int32_t order = 1; // Shouldn't be changed, designed for order 1 security
-SecurityProperty secProp = OPINI;
-bool withGlitches = true;
+SecurityProperty secProp = PINI;
+bool withGlitches = false;
 bool noFalsePositive = false;
 bool dumpCirc = false;
 bool checkFunctionality = true;
@@ -22,7 +22,7 @@ int32_t bitwidth = 1;
 
 void usage(const char * argv) {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-    std::cout << "   This script contains a VerifMSI++ description of the OTSM gadget from [1]." << std::endl;
+    std::cout << "   This script contains a VerifMSI++ description of the TSM gadget from [1]." << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "-o,   --order <n>              : Set the order of the verification to (default: " << order << ")" << std::endl;
     std::cout << "-p,   --prop                   : Set security property to verify: either \'ni\' (Non-Interference), \'sni\' (Strong Non-Interference) \'rni\' (Relaxed Non-Interference), \'pini\' (Probe-Isolating Non-Interference), \'opini\' (Output-PINI) or \'tps\' (Treshold Probing Security). NI, SNI, RNI, PINI and OPINI use a share description for the inputs, while TPS uses a secrets + masks description (default: '" << secProp2str(secProp) << "')" << std::endl;
@@ -48,7 +48,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 
 
-int32_t otsm(int32_t * nbCheck) {
+int32_t tsm(int32_t * nbCheck) {
 
     Node & k1 = symbol("k1", 'S', bitwidth);
     Node & k2 = symbol("k2", 'S', bitwidth);
@@ -66,8 +66,6 @@ int32_t otsm(int32_t * nbCheck) {
     Node & z2 = symbol("z2", 'M', bitwidth);
     Node & z3 = symbol("z3", 'M', bitwidth);
     Node & z4 = symbol("z4", 'M', bitwidth);
-    Node & z5 = symbol("z5", 'M', bitwidth);
-
 
     HWElement & x0 = inputGate(k10);
     HWElement & x1 = inputGate(k11);
@@ -78,41 +76,34 @@ int32_t otsm(int32_t * nbCheck) {
     HWElement & r2 = inputGate(z2);
     HWElement & r3 = inputGate(z3);
     HWElement & r4 = inputGate(z4);
-    HWElement & r5 = inputGate(z5);
-
-    HWElement & x1y1 = andGate(x1, y1);
-    HWElement & x0y0 = andGate(x0, y0);
-    HWElement & x0r2 = andGate(x0, r2);
-    HWElement & y0r0 = andGate(y0, r0);
-    HWElement & x0r3 = andGate(x0, r3);
-    HWElement & y0r1 = andGate(y0, r1);
     
-    std::vector<HWElement *> vect_x1_p = { &x1, &r0, &r1 };
-    HWElement & x1_p = xorGate(vect_x1_p);
-    std::vector<HWElement *> vect_y1_p = { &y1, &r2, &r3 };
-    HWElement & y1_p = xorGate(vect_y1_p);
-    std::vector<HWElement *> vect_xy1_p = { &x1y1, &r4, &r5 };
-    HWElement & xy1_p = xorGate(vect_xy1_p);
-    std::vector<HWElement *> vect_fc1 = { &x0y0, &x0r2, &y0r0, &r4 };
-    HWElement & fc1 = xorGate(vect_fc1);
-    std::vector<HWElement *> vect_fc2 = { &x0r3, &y0r1, &r5 };
-    HWElement & fc2 = xorGate(vect_fc2);
+    HWElement & x0_p = xorGate(x0, r3);
+    HWElement & x1_p = xorGate(x1, r3);
+    HWElement & y0_p = xorGate(y0, r4);
+    HWElement & y1_p = xorGate(y1, r4);
 
-    HWElement & r_x0 = Register(x0);
+    HWElement & r_r0 = Register(r0);
+    HWElement & r_r1 = Register(r1);
+    HWElement & r_r2 = Register(r2);
     HWElement & r_y1_p = Register(y1_p);
-    HWElement & r_y0 = Register(y0);
     HWElement & r_x1_p = Register(x1_p);
-    HWElement & r_fc1 = Register(fc1);
-    HWElement & r_fc2 = Register(fc2);
-    
-    
-    HWElement & x0y1_p = andGate(r_x0, r_y1_p);
-    HWElement & y0x1_p = andGate(r_y0, r_x1_p);
 
-    std::vector<HWElement *> vect_f0 = { &x0y1_p, &y0x1_p, &r_fc1, &r_fc2 };
+    HWElement & x0y0_p = andGate(x0_p, y0_p);
+    HWElement & r0x0y0_p = xorGate(x0y0_p, r0);
+    HWElement & r_r0x0y0_p = Register(r0x0y0_p);
+    HWElement & r_r1x0_p = Register(xorGate(x0_p, r1));
+    HWElement & r_r2y0_p = Register(xorGate(y0_p, r2));
+    HWElement & r1x0y1_p = andGate(r_r1x0_p, r_y1_p);
+    HWElement & r2y0x1_p = andGate(r_r2y0_p, r_x1_p);
+    std::vector<HWElement *> vect_f0 = { &r_r0x0y0_p, &r1x0y1_p, &r2y0x1_p };
+    
+    HWElement & r1y1_p = andGate(r_r1, r_y1_p);
+    HWElement & r2x1_p = andGate(r_r2, r_x1_p);
+    HWElement & x1y1_p = andGate(r_x1_p, r_y1_p);
+    std::vector<HWElement *> vect_f1 = { &r_r0, &r1y1_p, &r2x1_p, &x1y1_p };
 
     HWElement & f0 = xorGate(vect_f0);
-    HWElement & f1 = Register(xy1_p);
+    HWElement & f1 = xorGate(vect_f1);
 
     if (checkFunctionality) {
         bool res = compareExpsWithExev(f0.getSymbExp() ^ f1.getSymbExp(), k1 & k2);
@@ -205,7 +196,7 @@ int main(int argc, const char ** argv) {
 
 
     int32_t nbCheck;
-    int32_t nbLeak = otsm(&nbCheck);
+    int32_t nbLeak = tsm(&nbCheck);
     std::cout << "# Total Nb. of expressions analysed: " << nbCheck << std::endl;
     std::cout << "# Total Nb. of potential leakages found: " << nbLeak << std::endl;
 
