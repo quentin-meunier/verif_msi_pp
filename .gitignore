@@ -12,6 +12,8 @@ tests/temp
 benchmarks/hw/dom_and/bin
 benchmarks/hw/dom_and/*.cpp
 benchmarks/hw/gms_and/bin
+benchmarks/hw/hpc3/bin
+benchmarks/hw/hpc3/*.cpp
 benchmarks/hw/hpc4/bin
 benchmarks/hw/hpc4/*.cpp
 benchmarks/hw/isw_and/bin
