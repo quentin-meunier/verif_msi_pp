@@ -12,14 +12,14 @@ order = 2
 prop = 'pini'
 withGlitches = True
 noFalsePositive = False
-outfilePrefix = 'opini_mult_gen'
+outfilePrefix = 'opini1_mult_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
 
 
 def usage():
     print('Usage: %s [options]' % os.path.basename(__file__))
-    print('   This script generates a VerifMSI++ file describing a circuit implementing the O-PINI multiplication gadget from [1].')
+    print('   This script generates a VerifMSI++ file of the O-PINI1 gadget from [1].')
     print('Options:')
     print('-f,   --outfile <file>         : Set the name of the generated output file to <file> (default: %s)' % outfile)
     print('-n,   --nb-shares <n>          : Set the number of shares in the scheme to <n> (default: %d)' % nbShares)
@@ -49,7 +49,7 @@ def propPy2cpp(prop):
     assert(False)
 
 
-def generate_opini_mult(*argv):
+def generate_opini1_mult(*argv):
     global nbShares
     global order
     global prop
@@ -135,7 +135,7 @@ def generate_opini_mult(*argv):
     
     content += '''void usage(const char * argv) {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-    std::cout << "   This script contains a VerifMSI++ description of a circuit implementing the O-PINI multiplication gadget from [1] with %d shares." << std::endl;
+    std::cout << "   This script contains a VerifMSI++ description of the O-PINI1 gadget from [1] with %d shares." << std::endl;
     std::cout << "   This file was generated using the script %s" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "-o,   --order <n>              : Set the order of the verification to (default: " << order << ")" << std::endl;
@@ -162,7 +162,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 }
 
 
-int32_t opini_mult_%d_shares(int32_t * nbCheck) {
+int32_t opini1_mult_%d_shares(int32_t * nbCheck) {
 
 ''' % (nbShares, currentScript, nbShares)
 
@@ -258,18 +258,13 @@ int32_t opini_mult_%d_shares(int32_t * nbCheck) {
     content += '    HWElement & xorS1 = s1;\n'
     if(nbShares > 1):
         for i in range(2, nbShares):
-            content += '    HWElement & xorS%d = xorGate(xorS%d, s%d);\n' % (i, i-1, i)
-    content += '    HWElement & s%d = xorS%d;\n' % (nbShares, nbShares-1)
+            content += '    HWElement & xorS%d = xorGate(xorS%d, s%d);\n' % (i, i - 1, i)
+    content += '    HWElement & s%d = xorS%d;\n' % (nbShares, nbShares - 1)
     content += '\n'
 
     for i in range(1, nbShares + 1):
         content += '    HWElement & %s%d = xorGate(d%d, s%d);\n' % (outputVar, i, i, i)
     content += '\n'
- 
-    '''content += '\n'
-    for i in range(1, nbShares + 1):
-        content += '    HWElement & %s%d = %s%d_%d;\n' % (outputVar, i, outputVar, i, nbShares)'''
-    
 
     content += '\n'
     content += '    if (checkFunctionality) {\n'
@@ -375,7 +370,7 @@ int32_t opini_mult_%d_shares(int32_t * nbCheck) {
 
 
     int32_t nbCheck;
-    int32_t nbLeak = opini_mult_%d_shares(&nbCheck);
+    int32_t nbLeak = opini1_mult_%d_shares(&nbCheck);
     std::cout << "# Total Nb. of expressions analysed: " << nbCheck << std::endl;
     std::cout << "# Total Nb. of potential leakages found: " << nbLeak << std::endl;
 
@@ -390,7 +385,7 @@ int32_t opini_mult_%d_shares(int32_t * nbCheck) {
 
 
 if __name__ == '__main__':
-    generate_opini_mult(*sys.argv[1:])
+    generate_opini1_mult(*sys.argv[1:])
 
 
 

@@ -21,8 +21,10 @@ benchmarks/hw/isw_and/*.cpp
 benchmarks/hw/isw_and_refresh/bin
 benchmarks/hw/isw_and_refresh/*.cpp
 benchmarks/hw/Makefile.common/bin
-benchmarks/hw/opini_mult/bin
-benchmarks/hw/opini_mult/*.cpp
+benchmarks/hw/opini1/bin
+benchmarks/hw/opini1/*.cpp
+benchmarks/hw/opini2/bin
+benchmarks/hw/opini2/*.cpp
 benchmarks/hw/otsm/bin
 benchmarks/hw/pini_mult/bin
 benchmarks/hw/pini_mult/*.cpp
