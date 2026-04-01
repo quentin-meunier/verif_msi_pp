@@ -1,65 +1,88 @@
 
 
 CUR_DIR=$(shell pwd)
-PYTHONLIB:=verif_msi_pp$(shell python3.9-config --extension-suffix)
-#all: libverif_msi_pp.a libverif_msi_pp.so $(PYTHONLIB)
-all: libverif_msi_pp.a libverif_msi_pp.so
+INC_DIR=include
+SRC_DIR=src
+OBJ_DIR=obj
+
+BUILD_PYTHON ?= 0
+
+PYTHONLIB := verif_msi_pp$(shell python3.9-config --extension-suffix)
+
+
+SRC_FILES=$(wildcard $(SRC_DIR)/*.cpp)
+OBJ_FILES=$(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
+
+
+PYTHON_TARGET :=
+ifeq ($(BUILD_PYTHON),0)
+SRC_FILES := $(filter-out $(SRC_DIR)/pybind11_wrapper.cpp,$(SRC_FILES))
+else
+PYTHON_TARGET := $(PYTHONLIB)
+endif
+
+all: create_objdir libverif_msi_pp.a libverif_msi_pp.so $(PYTHON_TARGET)
+
 
 #CFLAGS=-g -std=c++20 -Wall -O0 -fPIC
 CFLAGS=-std=c++20 -Wall -O3 -fPIC
-INCLUDES=
+INCLUDES=-I$(INC_DIR)
 
 
+create_objdir:
+	mkdir -p $(OBJ_DIR)
 
-libverif_msi_pp.a: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o simp_rules.o utils_private.o
+libverif_msi_pp.a: $(OBJ_FILES)
 	ar rcs $@ $^
 
-libverif_msi_pp.so: node.o arrayexp.o SHA256.o utils.o simp_conc.o simplify.o check_leakage.o tps.o concrev.o hw.o simp_rules.o utils_private.o
+libverif_msi_pp.so: $(OBJ_FILES)
 	g++ $^ -shared -o $@
 
 $(PYTHONLIB): libverif_msi_pp.so pybind11_wrapper.cpp
 	g++ -O3 -Wall -Werror -shared -std=c++20 -fPIC `python3 -m pybind11 --includes` -I. pybind11_wrapper.cpp -o $@ -L. -lverif_msi_pp -Wl,-rpath,$(CUR_DIR)
 
 
-SHA256.o: SHA256.cpp SHA256.hpp
+$(OBJ_DIR)/SHA256.o: $(SRC_DIR)/SHA256.cpp $(INC_DIR)/SHA256.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-arrayexp.o: arrayexp.cpp arrayexp.hpp node.hpp config.hpp
+$(OBJ_DIR)/arrayexp.o: $(SRC_DIR)/arrayexp.cpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-tps.o: tps.cpp tps.hpp node.hpp simplify.hpp config.hpp utils_private.hpp
+$(OBJ_DIR)/tps.o: $(SRC_DIR)/tps.cpp $(INC_DIR)/tps.hpp $(INC_DIR)/node.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/config.hpp $(INC_DIR)/utils_private.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-node.o: node.cpp node.hpp config.hpp arrayexp.hpp SHA256.hpp
+$(OBJ_DIR)/node.o: $(SRC_DIR)/node.cpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/SHA256.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-concrev.o: concrev.cpp concrev.hpp node.hpp utils.hpp utils_private.hpp arrayexp.hpp config.hpp
+$(OBJ_DIR)/concrev.o: $(SRC_DIR)/concrev.cpp $(INC_DIR)/concrev.hpp $(INC_DIR)/node.hpp $(INC_DIR)/utils.hpp $(INC_DIR)/utils_private.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-simplify.o: simplify.cpp simplify.hpp simp_conc.hpp node.hpp SHA256.hpp arrayexp.hpp config.hpp
+$(OBJ_DIR)/simplify.o: $(SRC_DIR)/simplify.cpp $(INC_DIR)/simplify.hpp $(INC_DIR)/simp_conc.hpp $(INC_DIR)/node.hpp $(INC_DIR)/SHA256.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-simp_conc.o: simp_conc.cpp simp_conc.hpp node.hpp config.hpp
+$(OBJ_DIR)/simp_conc.o: $(SRC_DIR)/simp_conc.cpp $(INC_DIR)/simp_conc.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-hw.o: hw.cpp hw.hpp node.hpp simplify.hpp check_leakage.hpp tps.hpp config.hpp utils.hpp
+$(OBJ_DIR)/hw.o: $(SRC_DIR)/hw.cpp $(INC_DIR)/hw.hpp $(INC_DIR)/node.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/check_leakage.hpp $(INC_DIR)/tps.hpp $(INC_DIR)/config.hpp $(INC_DIR)/utils.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-check_leakage.o: check_leakage.cpp check_leakage.hpp node.hpp utils.hpp tps.hpp simplify.hpp config.hpp
+$(OBJ_DIR)/check_leakage.o: $(SRC_DIR)/check_leakage.cpp $(INC_DIR)/check_leakage.hpp $(INC_DIR)/node.hpp $(INC_DIR)/utils.hpp $(INC_DIR)/tps.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-utils.o: utils.cpp utils.hpp node.hpp arrayexp.hpp simplify.hpp check_leakage.hpp config.hpp hw.hpp
+$(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(INC_DIR)/utils.hpp $(INC_DIR)/node.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/check_leakage.hpp $(INC_DIR)/config.hpp $(INC_DIR)/hw.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-simp_rules.o: simp_rules.cpp simp_rules.hpp node.hpp config.hpp
+$(OBJ_DIR)/simp_rules.o: $(SRC_DIR)/simp_rules.cpp $(INC_DIR)/simp_rules.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-utils_private.o: utils_private.cpp utils_private.hpp node.hpp config.hpp
+$(OBJ_DIR)/utils_private.o: $(SRC_DIR)/utils_private.cpp $(INC_DIR)/utils_private.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
 	g++ -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
 
 
 clean:
-	rm -f *.o
+	rm -f $(OBJ_DIR)/*.o
 
+realclean: clean
+	rm -rf $(OBJ_DIR) libverif_msi_pp.a libverif_msi_pp.so 
 
