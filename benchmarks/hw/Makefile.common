@@ -18,7 +18,7 @@ $(EXEC_DIR)/%: $(OBJ_DIR)/%.o $(VMSI_HOME)/libverif_msi_pp.a
 	g++ -o $@ $< -L$(VMSI_HOME) -lverif_msi_pp -Wl,-rpath,$(VMSI_HOME)
 
 $(OBJ_DIR)/%.o: %.cpp
-	g++ -g -c -std=c++20 -o $@ -I$(VMSI_HOME) $<
+	g++ -g -c -std=c++20 -o $@ -I$(VMSI_HOME)/include $<
 
 clean:
 	rm -f $(OBJ_DIR)/*.o
