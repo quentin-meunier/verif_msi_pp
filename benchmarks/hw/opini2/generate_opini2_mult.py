@@ -15,6 +15,7 @@ noFalsePositive = True
 outfilePrefix = 'opini2_mult_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
+article = '[1] Gaëtan Cassiers and François-Xavier Standaert. 2021. Provably Secure Hardware Masking in the Transition- and Glitch-Robust Probing Model: Better Safe than Sorry. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2021, 2 (2021), 136–158. https://tches.iacr.org/index.php/TCHES/article/view/8790/8390'
 
 
 def usage():
@@ -30,7 +31,7 @@ def usage():
     print('-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positive (defaut: %s)' % (noFalsePositive and 'No' or 'Yes'))
     print('-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: %s)' % (noFalsePositive and 'Yes' or 'No'))
     print('')
-    print('[1] Gaëtan Cassiers and François-Xavier Standaert. 2021. Provably Secure Hardware Masking in the Transition- and Glitch-Robust Probing Model: Better Safe than Sorry. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2021, 2 (2021), 136–158. https://tches.iacr.org/index.php/TCHES/article/view/8790/8390')
+    print('%s' % article)
 
 
 def propPy2cpp(prop):
@@ -148,7 +149,7 @@ def generate_opini2_mult(*argv):
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Gaëtan Cassiers and François-Xavier Standaert. 2021. Provably Secure Hardware Masking in the Transition- and Glitch-Robust Probing Model: Better Safe than Sorry. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2021, 2 (2021), 136–158. https://tches.iacr.org/index.php/TCHES/article/view/8790/8390" << std::endl;
+    std::cout << "%s" << std::endl;
 }
 
     
@@ -164,7 +165,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 int32_t opini2_mult_%d_shares(int32_t * nbCheck) {
 
-''' % (nbShares, currentScript, nbShares)
+''' % (nbShares, currentScript, article, nbShares)
 
 
     inputVars = ('x', 'y')

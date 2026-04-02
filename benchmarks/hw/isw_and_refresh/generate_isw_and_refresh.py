@@ -21,6 +21,7 @@ withAdditionalRand = True
 outfilePrefix = 'isw_and_refresh_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
+article = '[1] Ishai, Y., Sahai, A., & Wagner, D. (2003). Private circuits: Securing hardware against probing attacks. 23rd Annual International Cryptology Conference, 2003. Springer Berlin Heidelberg.'
 
 
 def usage():
@@ -38,7 +39,7 @@ def usage():
     print('-r,   --with-rand              : Use an additional random for computing expressions of the form a_i & b_j,')
     print('-nr,  --with-rand              : Do not use additional random for computing expressions of the form a_i & b_j (default: %s)' % (withAdditionalRand and 'No' or 'Yes'))
     print('')
-    print('[1] Ishai, Y., Sahai, A., & Wagner, D. (2003). Private circuits: Securing hardware against probing attacks. 23rd Annual International Cryptology Conference, 2003. Springer Berlin Heidelberg.')
+    print('%s' % article)
 
 
 def propPy2cpp(prop):
@@ -160,7 +161,7 @@ def generate_isw_and_refresh(*argv):
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] De Cnudde, T., Reparaz, O., Bilgin, B., Nikova, S., Nikov, V., & Rijmen, V. (2016). Masking AES with shares in hardware. In Cryptographic Hardware and Embedded Systems (CHES) 2016. Springer Berlin Heidelberg." << std::endl;
+    std::cout << "%s" << std::endl;
 }
 
     
@@ -176,7 +177,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 int32_t isw_and_refresh_%d_shares(int32_t * nbCheck) {
 
-''' % (nbShares, currentScript, nbShares)
+''' % (nbShares, currentScript, article, nbShares)
 
 
     inputVars = ['a', 'b']

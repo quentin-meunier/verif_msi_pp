@@ -18,6 +18,7 @@ bool dumpCirc = false;
 bool checkFunctionality = true;
 const char * circuitFilename = "circuit.dot";
 int32_t bitwidth = 1;
+std::string article = "[1] H. Rahimi & A. Moradi (2026). TSM+ and OTSM-Correct Application of Time Sharing Masking in Round-Based Designs. Cryptology ePrint Archive. https://eprint.iacr.org/2026/004";
 
 
 void usage(const char * argv) {
@@ -33,7 +34,7 @@ void usage(const char * argv) {
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \"" << circuitFilename << "\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] H. Rahimi & A. Moradi (2026). TSM+ and OTSM-Correct Application of Time Sharing Masking in Round-Based Designs. Cryptology ePrint Archive. https://eprint.iacr.org/2026/004" << std::endl;
+    std::cout << article << std::endl;
 }
 
     

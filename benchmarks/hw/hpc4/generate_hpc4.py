@@ -15,11 +15,12 @@ noFalsePositive = False
 outfilePrefix = 'hpc4_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
+article = '[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.'
 
 
 def usage():
     print('Usage: %s [options]' % os.path.basename(__file__))
-    print('   This script generates a VerifMSI++ file describing a circuit implementing the finite field multiplication following the scheme from [1].')
+    print('   This script generates a VerifMSI++ file describing a circuit implementing the HPC4 gadget from [1].')
     print('Options:')
     print('-f,   --outfile <file>         : Set the name of the generated output file to <file> (default: %s)' % outfile)
     print('-n,   --nb-shares <n>          : Set the number of shares in the scheme to <n> (default: %d)' % nbShares)
@@ -30,7 +31,7 @@ def usage():
     print('-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positive (defaut: %s)' % (noFalsePositive and 'No' or 'Yes'))
     print('-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: %s)' % (noFalsePositive and 'Yes' or 'No'))
     print('')
-    print('[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.')
+    print('%s' % article)
 
 
 def propPy2cpp(prop):
@@ -135,7 +136,7 @@ def generate_hpc4(*argv):
     
     content += '''void usage(const char * argv) {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-    std::cout << "   This script contains a VerifMSI++ description of a circuit implementing the finite field multiplication following the scheme from [1] with %d shares." << std::endl;
+    std::cout << "   This script contains a VerifMSI++ description of a circuit implementing the HPC4 gadget from [1] with %d shares." << std::endl;
     std::cout << "   This file was generated using the script %s" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "-o,   --order <n>              : Set the order of the verification to (default: " << order << ")" << std::endl;
@@ -148,7 +149,7 @@ def generate_hpc4(*argv):
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633. https://tches.iacr.org/index.php/TCHES/article/view/11689/11209" << std::endl;
+    std::cout << "%s" << std::endl;
 }
 
     
@@ -164,7 +165,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 int32_t hpc4_%d_shares(int32_t * nbCheck) {
 
-''' % (nbShares, currentScript, nbShares)
+''' % (nbShares, currentScript, article, nbShares)
 
 
     inputVars = ('x', 'y')

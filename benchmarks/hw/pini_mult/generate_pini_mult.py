@@ -15,6 +15,7 @@ noFalsePositive = False
 outfilePrefix = 'pini_mult_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
+article = '[1] Wang, W., Ji, F., Zhang, J., & Yu, Y. (2023). Efficient Private Circuits with Precomputation. IACR Transactions on Cryptographic Hardware and Embedded Systems.'
 
 
 def usage():
@@ -30,7 +31,7 @@ def usage():
     print('-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positive (defaut: %s)' % (noFalsePositive and 'No' or 'Yes'))
     print('-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: %s)' % (noFalsePositive and 'Yes' or 'No'))
     print('')
-    print('[1] Wang, W., Ji, F., Zhang, J., & Yu, Y. (2023). Efficient Private Circuits with Precomputation. IACR Transactions on Cryptographic Hardware and Embedded Systems.')
+    print('%s' % article)
 
 
 def propPy2cpp(prop):
@@ -148,7 +149,7 @@ def generate_pini_mult(*argv):
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Wang, W., Ji, F., Zhang, J., & Yu, Y. (2023). Efficient Private Circuits with Precomputation. IACR Transactions on Cryptographic Hardware and Embedded Systems." << std::endl;
+    std::cout << "%s" << std::endl;
 }
 
     
@@ -164,7 +165,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 int32_t pini_mult_%d_shares(int32_t * nbCheck) {
 
-''' % (nbShares, currentScript, nbShares)
+''' % (nbShares, currentScript, article, nbShares)
 
 
     inputVars = ('x', 'y')

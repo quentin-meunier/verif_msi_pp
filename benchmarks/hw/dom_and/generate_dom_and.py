@@ -7,14 +7,15 @@
 import sys
 import os
  
-nbShares = 3
-order = 2
+nbShares = 2
+order = 1
 prop = 'ni'
 withGlitches = True
 noFalsePositive = False
 outfilePrefix = 'dom_and_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
+article = '[1] Groß, H., Mangard, S., & Korak, T. (2017). An efficient side-channel protected AES implementation with arbitrary protection order. In Topics in Cryptology–CT-RSA 2017: The Cryptographers\' Track at the RSA Conference 2017, Springer International Publishing.'
 
 
 def usage():
@@ -30,7 +31,7 @@ def usage():
     print('-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positive (defaut: %s)' % (noFalsePositive and 'No' or 'Yes'))
     print('-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: %s)' % (noFalsePositive and 'Yes' or 'No'))
     print('')
-    print('[1] Groß, H., Mangard, S., & Korak, T. (2017). An efficient side-channel protected AES implementation with arbitrary protection order. In Topics in Cryptology–CT-RSA 2017: The Cryptographers\' Track at the RSA Conference 2017, Springer International Publishing.')
+    print('%s' % article)
 
 
 def propPy2cpp(prop):
@@ -147,7 +148,7 @@ def generate_dom_and(*argv):
     std::cout << "-d, --dump-circuit             : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c, --check-functionality      : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Groß, H., Mangard, S., & Korak, T. (2017). An efficient side-channel protected AES implementation with arbitrary protection order. In Topics in Cryptology–CT-RSA 2017: The Cryptographers\\\' Track at the RSA Conference 2017, Springer International Publishing." << std::endl;
+    std::cout << "%s" << std::endl;
 }
 
     
@@ -163,7 +164,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 int32_t dom_and_%d_shares(int32_t * nbCheck) {
 
-''' % (nbShares, currentScript, nbShares)
+''' % (nbShares, currentScript, article, nbShares)
 
 
     inputVars = ('a', 'b')

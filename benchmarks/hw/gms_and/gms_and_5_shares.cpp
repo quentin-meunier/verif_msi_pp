@@ -16,6 +16,7 @@ bool noFalsePositive = false;
 bool dumpCirc = false;
 bool checkFunctionality = false;
 const char * circuitFilename = "circuit.dot";
+std::string article = "[1] Reparaz, O., Bilgin, B., Nikova, S., Gierlichs, B., & Verbauwhede, I. (2015). Consolidating masking schemes. 35th Annual Cryptology Conference, 2015. Springer Berlin Heidelberg.";
 
 void usage(const char * argv) {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
@@ -31,7 +32,7 @@ void usage(const char * argv) {
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \"" << circuitFilename << "\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Reparaz, O., Bilgin, B., Nikova, S., Gierlichs, B., & Verbauwhede, I. (2015). Consolidating masking schemes. 35th Annual Cryptology Conference, 2015. Springer Berlin Heidelberg." << std::endl;
+    std::cout << article << std::endl;
 }
 
     

@@ -16,6 +16,8 @@ outfilePrefix = 'hpc3_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
 
+article = '[1] Knichel, David, and Amir Moradi. Low-latency hardware private circuits. Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security. 2022. https://eprint.iacr.org/2022/507'
+
 
 def usage():
     print('Usage: %s [options]' % os.path.basename(__file__))
@@ -30,7 +32,7 @@ def usage():
     print('-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positive (defaut: %s)' % (noFalsePositive and 'No' or 'Yes'))
     print('-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: %s)' % (noFalsePositive and 'Yes' or 'No'))
     print('')
-    print('[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. https://tches.iacr.org/index.php/TCHES/article/view/11689/11209')
+    print('%s' % article)
 
 
 def propPy2cpp(prop):
@@ -148,7 +150,7 @@ def generate_hpc3(*argv):
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \\\"" << circuitFilename << "\\\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
     std::cout << std::endl;
-    std::cout << "[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. https://tches.iacr.org/index.php/TCHES/article/view/11689/11209" << std::endl;
+    std::cout << "%s" << std::endl;
 }
 
     
@@ -164,7 +166,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 
 int32_t hpc3_%d_shares(int32_t * nbCheck) {
 
-''' % (nbShares, currentScript, nbShares)
+''' % (nbShares, currentScript, article, nbShares)
 
 
     inputVars = ('x', 'y')
