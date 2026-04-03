@@ -1,4 +1,4 @@
-# Copyright (C) 2023, Sorbonne Universite, LIP6
+# Copyright (C) 2026, Sorbonne Universite, LIP6
 # This file is part of the VerifMSI++ project, under the GPL v3.0 license
 # See https://www.gnu.org/licenses/gpl-3.0.en.html for license information
 # SPDX-License-Identifier: GPL-3.0-only
@@ -10,19 +10,19 @@ import os
 nbShares = 3
 order = 2
 prop = 'pini'
-withGlitches = False
-noFalsePositive = False
-outfilePrefix = 'hpc3_gen'
+withGlitches = True
+noFalsePositive = True
+outfilePrefix = 'opini2_mult_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
 bitwidth = 1
 
-article = '[1] D. Knichel, and A. Moradi. Low-latency hardware private circuits. Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security. 2022. https://eprint.iacr.org/2022/507'
+article = '[1] Gaëtan Cassiers and François-Xavier Standaert. 2021. Provably Secure Hardware Masking in the Transition- and Glitch-Robust Probing Model: Better Safe than Sorry. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2021, 2 (2021), 136–158. https://tches.iacr.org/index.php/TCHES/article/view/8790/8390'
 
 
 def usage():
     print('Usage: %s [options]' % os.path.basename(__file__))
-    print('   This script generates a VerifMSI++ file describing a circuit implementing the HPC3 gadget from [1].')
+    print('   This script generates a VerifMSI++ file of the O-PINI2 gadget from [1].')
     print('Options:')
     print('-f,   --outfile <file>         : Set the name of the generated output file to <file> (default: %s)' % outfile)
     print('-n,   --nb-shares <n>          : Set the number of shares in the scheme to <n> (default: %d)' % nbShares)
@@ -52,7 +52,7 @@ def propPy2cpp(prop):
     assert(False)
 
 
-def generate_hpc3(*argv):
+def generate_opini2_mult(*argv):
     global nbShares
     global order
     global prop
@@ -115,7 +115,7 @@ def generate_hpc3(*argv):
         return v
     
     
-    content = '''/* Copyright (C) 2023, Sorbonne Universite, LIP6
+    content = '''/* Copyright (C) 2026, Sorbonne Universite, LIP6
  * This file is part of the VerifMSI++ project, under the GPL v3.0 license
  * See https://www.gnu.org/licenses/gpl-3.0.en.html for license information
  * SPDX-License-Identifier: GPL-3.0-only
@@ -140,7 +140,7 @@ def generate_hpc3(*argv):
     
     content += '''void usage(const char * argv) {
     std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-    std::cout << "   This script contains a VerifMSI++ description of a circuit implementing the HPC3 gadget from [1] with %d shares." << std::endl;
+    std::cout << "   This script contains a VerifMSI++ description of the O-PINI2 gadget from [1] with %d shares." << std::endl;
     std::cout << "   This file was generated using the script %s" << std::endl;
     std::cout << "Options:" << std::endl;
     std::cout << "-o,   --order <n>              : Set the order of the verification to (default: " << order << ")" << std::endl;
@@ -167,7 +167,7 @@ std::vector<Node *> getShares(Node & s, int32_t nbShares) {
 }
 
 
-int32_t hpc3_%d_shares(int32_t * nbCheck) {
+int32_t opini2_mult_%d_shares(int32_t * nbCheck) {
 
 ''' % (nbShares, currentScript, article, nbShares)
 
@@ -185,83 +185,93 @@ int32_t hpc3_%d_shares(int32_t * nbCheck) {
     content += '\n'
 
     for var in inputVars:
-        for i in range(nbShares):
-            content += '    Node & n_%s%d = *v_%s[%d];\n' % (var, i, var, i)
+        for i in range(1, nbShares + 1):
+            content += '    Node & n_%s%d = *v_%s[%d];\n' % (var, i, var, i - 1)
         content += '\n'
     content += '\n'
-    
+
     
     for var in inputVars:
-        for sh in range(nbShares):
+        for sh in range(1, nbShares + 1):
             content += '    HWElement & %s%d = inputGate(n_%s%d);\n' % (var, sh, var, sh)
     content += '\n'
     
 
     
-    for i in range(nbShares):
-        for j in range(i+1, nbShares):
+    for i in range(1, nbShares + 1):
+        for j in range(i+1, nbShares + 1):
             content += '    Node & n_r%d_%d = symbol(\"r%d_%d\", \'M\', bitwidth);\n' % (i, j, i, j)
-            content += '    Node & n_r%d_%d_p = symbol(\"r%d_%d_p\", \'M\', bitwidth);\n' % (i, j, i, j)
     content += '\n'
 
-
-    for i in range(nbShares):
-        for j in range(i+1, nbShares):
-            content += '    HWElement & r%d_%d = inputGate(n_r%d_%d);\n' % (j, i, i, j)
+    for i in range(1, nbShares + 1):
+        for j in range(i + 1, nbShares + 1):
             content += '    HWElement & r%d_%d = inputGate(n_r%d_%d);\n' % (i, j, i, j)
-            content += '    HWElement & r%d_%d_p = inputGate(n_r%d_%d_p);\n' % (j, i, i, j)
-            content += '    HWElement & r%d_%d_p = inputGate(n_r%d_%d_p);\n' % (i, j, i, j)
-    content += '    HWElement & cst1 = inputGate(constant(1, 1));\n'
+            content += '    HWElement & r%d_%d = inputGate(n_r%d_%d);\n' % (j, i, i, j)
     content += '\n'
-   
+
+    for i in range(1, nbShares + 1):
+        for j in range(i + 1, nbShares + 1):
+            content += '    HWElement & r_r%d_%d = Register(r%d_%d);\n' % (i, j, i, j)
+            content += '    HWElement & r_r%d_%d = Register(r%d_%d);\n' % (j, i, j, i)
+    content += '\n'
 
 
-    for i in range(nbShares):
-        for j in range(nbShares):
+    content += '    //---------------HPC2 multiplication-------------------\n'
+
+    for i in range(1, nbShares + 1):
+        for j in range(1, nbShares + 1):
             if(j!=i):
-                content += '    HWElement & u%d_%d = Register(xorGate(%s%d, r%d_%d));\n' % (i, j, inputVars[1], j, i, j)
+                content += '    HWElement & u%d_%d = andGate(notGate(%s%d), r_r%d_%d);\n' % (i, j, inputVars[0], i, i, j)
     content += '\n'
 
-    for i in range(nbShares):
-        for j in range(nbShares):
+    for i in range(1, nbShares + 1):
+        for j in range(1, nbShares + 1):
             if(j!=i):
-                content += '    HWElement & v%d_%d = Register(xorGate(andGate(xorGate(%s%d, cst1), r%d_%d), r%d_%d_p));\n' % (i, j, inputVars[0], i, i, j, i, j)
+                content += '    HWElement & v%d_%d = xorGate(notGate(%s%d), r%d_%d);\n' % (i, j, inputVars[1], j, i, j)
     content += '\n'
 
-    for i in range(nbShares):
-        for j in range(nbShares):
+    for i in range(1, nbShares + 1):
+        for j in range(1, nbShares + 1):
             if(j!=i):
-                content += '    HWElement & w%d_%d = xorGate(andGate(Register(%s%d), u%d_%d), v%d_%d);\n' % (i, j, inputVars[0], i, i, j, i, j)
-    content += '\n'
-
-    for i in range(nbShares):
-        content += '    HWElement & r_%s%d%s%d = Register(andGate(%s%d, %s%d));\n' % (inputVars[0], i,  inputVars[1], i, inputVars[0], i, inputVars[1], i)
-    content += '\n'
-
-    
-    for i in range(nbShares):
-        for j in range(nbShares):
-            if(j!=i):
-                if(j==0 or (i==0 and j==1)):
-                    content += '    HWElement & sum%d_%d = w%d_%d;\n' % (i, j, i, j)
+                content += '    HWElement & xor%d_%d = xorGate(Register(u%d_%d), Register(andGate(%s%d, Register(v%d_%d))));\n' % (i, j, i, j, inputVars[0], i, i, j)
+                if(j==1 or (i==1 and j==2)):
+                    content += '    HWElement & sumXor%d_%d = xor%d_%d;\n' % (i, j, i, j)
                 elif(j==i+1):
-                    content += '    HWElement & sum%d_%d = xorGate(sum%d_%d, w%d_%d);\n' % (i, j, i, j-2, i, j)
+                    content += '    HWElement & sumXor%d_%d = xorGate(sumXor%d_%d, xor%d_%d);\n' % (i, j, i, j-2, i, j)
                 else:
-                    content += '    HWElement & sum%d_%d = xorGate(sum%d_%d, w%d_%d);\n' % (i, j, i, j-1, i, j)
+                    content += '    HWElement & sumXor%d_%d = xorGate(sumXor%d_%d, xor%d_%d);\n' % (i, j, i, j-1, i, j)
                 lastj = j 
-        content += '    HWElement & sum%d = sum%d_%d;\n' % (i, i, lastj)
+        content += '    HWElement & bigXor%d = sumXor%d_%d;\n' % (i, i, lastj)
     content += '\n'
 
+    for i in range(1, nbShares + 1):
+        content += '    HWElement & c%d = xorGate(Register(andGate(%s%d, Register(%s%d))), bigXor%d);\n' % (i, inputVars[0], i, inputVars[1], i, i)
+    content += '\n'
 
+    content += '    //---------------OPINI multiplication------------------\n'
 
     for i in range(nbShares):
-        content += '    HWElement & %s%d = xorGate(r_%s%d%s%d, sum%d);\n' % (outputVar, i, inputVars[0], i, inputVars[1], i, i)
+        content += '    HWElement & d%d = c%d;\n' % (i, i + 1)
     content += '\n'
 
-    
+    for i in range(nbShares - 1):
+        content += '    Node & n_s%d = symbol(\"s%d\", \'M\', bitwidth);\n' % (i, i)
+    content += '\n'
 
+    for i in range(nbShares - 1):
+        content += '    HWElement & s%d = inputGate(n_s%d);\n' % (i, i)
 
-    
+    content += '    HWElement & xorS0 = s0;\n'
+    if(nbShares > 1):
+        for i in range(1, nbShares - 1):
+            content += '    HWElement & xorS%d = xorGate(xorS%d, s%d);\n' % (i, i - 1, i)
+    content += '    HWElement & s%d = xorS%d;\n' % (nbShares - 1, nbShares - 2)
+    content += '\n'
+
+    for i in range(nbShares):
+        content += '    HWElement & %s%d = Register(xorGate(d%d, Register(s%d)));\n' % (outputVar, i, i, i)
+    content += '\n'
+
     content += '\n'
     content += '    if (checkFunctionality) {\n'
     content += '        bool res = compareExpsWithExev(' + ' ^ '.join(['%s%d.getSymbExp()' % (outputVar, i) for i in range(nbShares)]) + ', %s & %s);\n' % (inputVars[0], inputVars[1])
@@ -366,7 +376,7 @@ int32_t hpc3_%d_shares(int32_t * nbCheck) {
 
 
     int32_t nbCheck;
-    int32_t nbLeak = hpc3_%d_shares(&nbCheck);
+    int32_t nbLeak = opini2_mult_%d_shares(&nbCheck);
     std::cout << "# Total Nb. of expressions analysed: " << nbCheck << std::endl;
     std::cout << "# Total Nb. of potential leakages found: " << nbLeak << std::endl;
 
@@ -381,7 +391,7 @@ int32_t hpc3_%d_shares(int32_t * nbCheck) {
 
 
 if __name__ == '__main__':
-    generate_hpc3(*sys.argv[1:])
+    generate_opini2_mult(*sys.argv[1:])
 
 
 

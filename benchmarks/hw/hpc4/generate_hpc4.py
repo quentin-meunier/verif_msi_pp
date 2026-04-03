@@ -15,6 +15,8 @@ noFalsePositive = False
 outfilePrefix = 'hpc4_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
+bitwidth = 1
+
 article = '[1] G. Cassiers, F.-X. Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.'
 
 
@@ -57,6 +59,7 @@ def generate_hpc4(*argv):
     global withGlitches
     global noFalsePositive
     global outfile
+    global bitwidth
 
     idx = 0
     while idx < len(argv):
@@ -132,6 +135,7 @@ def generate_hpc4(*argv):
     content += 'bool dumpCirc = false;\n'
     content += 'bool checkFunctionality = false;\n'
     content += 'const char * circuitFilename = \"circuit.dot\";\n'
+    content += 'int32_t bitwidth = %d;\n' % bitwidth
     content += '\n'
     
     content += '''void usage(const char * argv) {
@@ -171,8 +175,8 @@ int32_t hpc4_%d_shares(int32_t * nbCheck) {
     inputVars = ('x', 'y')
     outputVar = 'z'
     
-    content += '    Node & %s = symbol(\"%s\", \'S\', 1);\n' % (inputVars[0], inputVars[0])
-    content += '    Node & %s = symbol(\"%s\", \'S\', 1);\n' % (inputVars[1], inputVars[1])
+    content += '    Node & %s = symbol(\"%s\", \'S\', bitwidth);\n' % (inputVars[0], inputVars[0])
+    content += '    Node & %s = symbol(\"%s\", \'S\', bitwidth);\n' % (inputVars[1], inputVars[1])
     content += '\n'
     
     
@@ -196,11 +200,11 @@ int32_t hpc4_%d_shares(int32_t * nbCheck) {
     
     for i in range(nbShares):
         for j in range(i+1, nbShares):
-            content += '    Node & n_r%d_%d = symbol(\"r%d_%d\", \'M\', 1);\n' % (i, j, i, j)
-            content += '    Node & n_r%d_%d = symbol(\"r%d_%d\", \'M\', 1);\n' % (j, i, j, i)
-            content += '    Node & n_r%d_%d_p = symbol(\"r%d_%d_p\", \'M\', 1);\n' % (i, j, i, j)
-            content += '    Node & n_r%d_%d_p2 = symbol(\"r%d_%d_p2\", \'M\', 1);\n' % (i, j, i, j)
-            content += '    Node & n_r%d_%d_p3 = symbol(\"r%d_%d_p3\", \'M\', 1);\n' % (i, j, i, j)
+            content += '    Node & n_r%d_%d = symbol(\"r%d_%d\", \'M\', bitwidth);\n' % (i, j, i, j)
+            content += '    Node & n_r%d_%d = symbol(\"r%d_%d\", \'M\', bitwidth);\n' % (j, i, j, i)
+            content += '    Node & n_r%d_%d_p = symbol(\"r%d_%d_p\", \'M\', bitwidth);\n' % (i, j, i, j)
+            content += '    Node & n_r%d_%d_p2 = symbol(\"r%d_%d_p2\", \'M\', bitwidth);\n' % (i, j, i, j)
+            content += '    Node & n_r%d_%d_p3 = symbol(\"r%d_%d_p3\", \'M\', bitwidth);\n' % (i, j, i, j)
     content += '\n'
 
 
