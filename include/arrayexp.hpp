@@ -23,14 +23,14 @@ class ArrayExp {
     int32_t outWidth;
     uint32_t addr;
     int32_t size;
-    std::function<Node &(Node *, Node &)> func;
+    std::function<Node &(Node &)> func;
     void * content;
     int32_t elemSize; // size in bytes of an element in the concrete array
 
     inline static std::map<std::string, ArrayExp *> allArrays;
 
     ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth);
-    ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint32_t addr, int32_t size, std::function<Node &(Node *, Node &)> func, void * content, int32_t elemSize);
+    ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint32_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize);
  
     Node & operator[](Node & child);
     uint64_t getContent(uint64_t idx);

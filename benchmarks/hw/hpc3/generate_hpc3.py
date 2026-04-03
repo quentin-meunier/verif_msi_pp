@@ -16,7 +16,7 @@ outfilePrefix = 'hpc3_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
 
-article = '[1] Knichel, David, and Amir Moradi. Low-latency hardware private circuits. Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security. 2022. https://eprint.iacr.org/2022/507'
+article = '[1] D. Knichel, and A. Moradi. Low-latency hardware private circuits. Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security. 2022. https://eprint.iacr.org/2022/507'
 
 
 def usage():

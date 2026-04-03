@@ -13,7 +13,7 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 
 
-ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint32_t addr, int32_t size, std::function<Node &(Node *, Node &)> func, void * content, int32_t elemSize) {
+ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint32_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize) {
     this->name = name;
     this->inWidth = inWidth;
     this->outWidth = outWidth;
@@ -61,7 +61,7 @@ Node & ArrayExp::operator[](Node & child) {
         return Const(getContent(child.cst[0]), outWidth);
     }
     if (func != NULL) {
-        return func(NULL, child);
+        return func(child);
     }
     Node & nameNode = Str(name);
     return Node::OpNode(ARRAY, {&nameNode, &child});

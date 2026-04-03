@@ -15,7 +15,7 @@ noFalsePositive = False
 outfilePrefix = 'hpc4_gen'
 outfile = None
 currentScript = os.path.basename(__file__)
-article = '[1] Gaëtan Cassiers, François-Xavier Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.'
+article = '[1] G. Cassiers, F.-X. Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.'
 
 
 def usage():

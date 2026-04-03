@@ -32,7 +32,7 @@ bool bitExpEnable() {
 
 
 
-void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node *, Node &)> func, void * content, int32_t elemSize) {
+void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize) {
 
     if (addr != 0) {
         if (registeredArraysByAddr.contains(addr)) {
@@ -87,11 +87,11 @@ int32_t getArraySizeByName(std::string name) {
 }
 
 
-std::function<Node &(Node *, Node &)> getArrayFuncByAddr(uint64_t addr) {
+std::function<Node &(Node &)> getArrayFuncByAddr(uint64_t addr) {
     return registeredArraysByAddr[addr]->func;
 }
 
-std::function<Node &(Node *, Node &)> getArrayFuncByName(std::string name) {
+std::function<Node &(Node &)> getArrayFuncByName(std::string name) {
     return registeredArraysByName[name]->func;
 }
 
