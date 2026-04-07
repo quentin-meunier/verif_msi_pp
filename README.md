@@ -258,18 +258,15 @@ int main() {
 }
 ```
 
-It is also possible to use this functionality to implement a masked sbox access, taking advantage of the fact that we know the expression corresponding to an index. For example, in the Herbst scheme, SBox'[x ^ m] = SBox[x] ^ m' (here using global variables here to pass the masks `m` and `mp`)
+It is also possible to use this functionality to implement a masked sbox access, taking advantage of the fact that we know the expression corresponding to an index. For example, in the Herbst scheme, `SBox'[x ^ m] = SBox[x] ^ m'` (using the function `getSymbolByName()` to get the masks `m` and `mp`)
 
 ```
 #include "verif_msi_pp.hpp"
 
-Node * global_m;
-Node * global_mp;
-
 Node & sboxp_func(Node & idx) {
     ArrayExp & sbox = getArrayByName("sbox");
-    Node & m = *global_m;
-    Node & mp = *global_mp;
+    Node & m = getSymbolByName("m");
+    Node & mp = getSymbolByName("mp");
     return simplify(sbox[idx ^ m] ^ mp);
 }
 
@@ -283,9 +280,6 @@ int main() {
     Node & m = symbol("m", 'M', 8);
     Node & mp = symbol("mp", 'M', 8);
 
-    global_m = &m;
-    global_mp = &mp;
-
     Node & e = sboxp[k ^ pt ^ m];
 
     std::cout << "sboxp[k ^ pt ^ m]: " << e << std::endl; // displays "sboxp[k ^ pt ^ m]: sbox[k ^ pt] ^ mp"
@@ -296,7 +290,7 @@ int main() {
 
 Examples using a function can be found in the `aes_sm` benchmark.
 
-Finally, arrays can also be associated to a base address and a size. The base address represents its memory implantation and the size the size it occupies in memory. This mechanism is useful when verifying assembly code. Combined with a function, if a memory access to the array (detected with the base address and size) has a symbolic part, this part can be used as the parameter of the function called. This allows for example to transform the expression Sbox'[x ^ m] into Sbox[x] ^ m' in a compiled version of the AES Herbst scheme.
+Finally, arrays can also be associated to a base address and a size. The base address represents its memory implantation and the size the size it occupies in memory. This mechanism is useful when verifying assembly code. Combined with a function, if a memory access to the array (detected with the base address and size) has a symbolic part, this part can be used as the parameter of the function called. This allows for example to transform the expression `Sbox'[x ^ m]` into `Sbox[x] ^ m'` in a compiled version of the AES Herbst scheme.
 
 
 ### Concrete Evaluation

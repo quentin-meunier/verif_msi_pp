@@ -23,13 +23,14 @@ ArrayExp & getArrayByAddr(uint64_t addr);
 ArrayExp & getArrayByName(std::string name);
 int32_t getArraySizeByAddr(uint64_t addr);
 int32_t getArraySizeByName(std::string name);
-std::function<Node &(Node &)> getArrayFuncByAddr(uint64_t addr);
-std::function<Node &(Node &)> getArrayFuncByName(std::string name);
+std::function<Node &(Node &)> & getArrayFuncByAddr(uint64_t addr);
+std::function<Node &(Node &)> & getArrayFuncByName(std::string name);
 ArrayExp & getArrayAndOffset(Node & addr, Node ** offset);
 
 void checkResults(Node & res, Node & ref);
 void checkResults(Node & res, Node & ref, bool pei, bool usbv);
-Node & symbol(const char * symb, char symbType, int32_t width);
+Node & symbol(std::string symb, char symbType, int32_t width);
+Node & getSymbolByName(std::string symb);
 Node & constant(int64_t val, int32_t width);
 bool litteralInteger(Node & e, uint64_t * val);
 void checkTpsResult(Node & exp, bool expected);

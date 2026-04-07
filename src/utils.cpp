@@ -23,6 +23,7 @@ std::set<Node *> secretShared;
 std::set<ArrayExp *> registeredArrays;
 std::map<std::string, ArrayExp *> registeredArraysByName;
 std::map<uint64_t, ArrayExp *> registeredArraysByAddr;
+std::map<std::string, Node *> symbolsByName;
 
 
 
@@ -87,11 +88,11 @@ int32_t getArraySizeByName(std::string name) {
 }
 
 
-std::function<Node &(Node &)> getArrayFuncByAddr(uint64_t addr) {
+std::function<Node &(Node &)> & getArrayFuncByAddr(uint64_t addr) {
     return registeredArraysByAddr[addr]->func;
 }
 
-std::function<Node &(Node &)> getArrayFuncByName(std::string name) {
+std::function<Node &(Node &)> & getArrayFuncByName(std::string name) {
     return registeredArraysByName[name]->func;
 }
 
@@ -193,8 +194,15 @@ void checkResults(Node & res, Node & ref, bool pei, bool usbv) {
 }
 
 
-Node & symbol(const char * symb, char symbType, int32_t width) {
-    return Symb(symb, symbType, width, 0, 0, NULL, NULL);
+Node & symbol(std::string symb, char symbType, int32_t width) {
+    Node & s = Symb(symb.c_str(), symbType, width, 0, 0, NULL, NULL);
+    symbolsByName.emplace(symb, &s);
+    return s;
+}
+
+
+Node & getSymbolByName(std::string symb) {
+    return *symbolsByName[symb];
 }
 
 
@@ -297,6 +305,7 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
         }
 
         Node & a = SymbInternal(str, 'A', s.width, nbShares, i, &s, pseudoShares[i]);
+        symbolsByName.emplace(str, &a);
         res.push_back(&a);
     }
     return res;
