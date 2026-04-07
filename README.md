@@ -330,8 +330,6 @@ VerifMSI++ has several configurations options [TODO].
 
 VerifMSI++ can be compiled as a python library, to enable using the C++ implementation from a python VerifMSI program. In order to do so, it is required to change the `from verif_msi import *` in the VerifMSI file to `from verif_msi_pp import *`. In order to enable the compilation of the python library, the flag `BUILD_PYTHON` in the Makefile must be set.
 
-> Note: This feature is currently broken but will be fixed soon.
-
 
 ## Benchmarks
 
