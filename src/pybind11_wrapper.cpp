@@ -1,8 +1,10 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/functional.h>
+#include <pybind11/stl.h>
 #include <verif_msi_pp.hpp>
  
+#include <optional>
 #include <map>
 
 
@@ -97,6 +99,9 @@ py::tuple bindCheckSecurity(int32_t order, bool withGlitches, const std::string 
     else if (secProp == "pini") {
         sp = PINI;
     }
+    else if (secProp == "opini") {
+        sp = OPINI;
+    }
     else {
         std::cout << "*** Error: Unknown security property " << secProp << std::endl;
     }
@@ -105,7 +110,7 @@ py::tuple bindCheckSecurity(int32_t order, bool withGlitches, const std::string 
         cppOutputs.push_back(&py::cast<HWElement &>(o));
     }
     int32_t nbLeak;
-    nbLeak = checkSecurity(order, withGlitches, sp, cppOutputs, &nbCheck);
+    nbLeak = checkSecurity(order, withGlitches, sp, cppOutputs, false, &nbCheck);
     return py::make_tuple(nbLeak, nbCheck);
 }
 
@@ -142,10 +147,34 @@ py::object bindLitteralInteger(Node & e) {
 }
 
 
-void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py::object addr, int32_t size, std::function<Node&(Node *, Node &)> & func, py::list & content) {
+void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py::object addr, int32_t size, std::function<Node&(Node &)> & func, std::optional<py::list> content) {
 
-    int32_t elemSize = size / (int32_t) content.size();
-    assert(size == elemSize * (int32_t) content.size());
+    int32_t elemSize = 0;
+    uint8_t * cppContent = NULL;
+    if (content.has_value()) {
+        elemSize = size / (int32_t) content.value().size();
+        assert(size == elemSize * (int32_t) content.value().size());
+        cppContent = (uint8_t *) malloc(size);
+        int32_t i = 0;
+        for (const auto & v : content.value()) {
+            if (elemSize == 1) {
+                cppContent[i] = py::cast<uint8_t>(v);
+            }
+            else if (elemSize == 2) {
+                ((uint16_t *) cppContent)[i] = py::cast<uint16_t>(v);
+            }
+            else if (elemSize == 4) {
+                ((uint32_t *) cppContent)[i] = py::cast<uint32_t>(v);
+            }
+            else if (elemSize == 8) {
+                ((uint64_t *) cppContent)[i] = py::cast<uint64_t>(v);
+            }
+            else {
+                assert(false);
+            }
+            i += 1;
+        }
+    }
 
     uint64_t cppAddr;
     if (addr.is(py::none())) {
@@ -155,33 +184,7 @@ void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py
         cppAddr = py::cast<uint64_t>(addr);
     }
 
-    uint8_t * cppContent = (uint8_t *) malloc(sizeof(uint8_t) * content.size());
-    int32_t i = 0;
-    for (const auto & v : content) {
-        if (elemSize == 1) {
-            cppContent[i] = py::cast<uint8_t>(v);
-        }
-        else if (elemSize == 2) {
-            ((uint16_t *) cppContent)[i] = py::cast<uint16_t>(v);
-        }
-        else if (elemSize == 4) {
-            ((uint32_t *) cppContent)[i] = py::cast<uint32_t>(v);
-        }
-        else if (elemSize == 8) {
-            ((uint64_t *) cppContent)[i] = py::cast<uint64_t>(v);
-        }
-        else {
-            assert(false);
-        }
-        i += 1;
-    }
-
-    //if (py::cast<py::object>(func) == py::none()) {
-    //    registerArray(name, inWidth, outWidth, NULL, size, func, cppContent, elemSize);
-    //}
-    //else {
-        registerArray(name, inWidth, outWidth, cppAddr, size, func, cppContent, elemSize);
-    //}
+    registerArray(name, inWidth, outWidth, cppAddr, size, func, cppContent, elemSize);
 }
 
 
@@ -222,104 +225,134 @@ HWElement & bindXorGate(py::args & args) {
 
 py::tuple bindCheckTpsVal(Node & e) {
     bool usedBitExp;
-    uint64_t timeRet;
-    bool res = checkTpsVal(e, &usedBitExp, &timeRet);
+    bool res = checkTpsVal(e, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0; // no more implemented in C++
     return retval;
 }
 
 
 py::tuple bindCheckNIVal(Node & e, int maxShareOcc) {
     bool usedBitExp;
-    uint64_t timeRet;
-    bool res = checkNIVal(e, maxShareOcc, &usedBitExp, &timeRet);
+    bool res = checkNIVal(e, maxShareOcc, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0; // no more implemented in C++
     return retval;
 }
 
 
 py::tuple bindCheckRNIVal(Node & e, int diff) {
     bool usedBitExp;
-    uint64_t timeRet;
-    bool res = checkRNIVal(e, diff, &usedBitExp, &timeRet);
+    bool res = checkRNIVal(e, diff, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0; // no more implemented in C++
     return retval;
 }
 
 
-py::tuple bindCheckPINIVal(Node & e, int maxShareOcc, py::args & args) {
+py::tuple bindCheckPINIVal(Node & e, py::args & args) {
     bool usedBitExp;
-    uint64_t timeRet;
+    int32_t maxShareOcc = py::cast<int32_t>(args[0]);
     std::set<int> outputIndexes;
-    for (const auto & arg : args) {
+    for (const auto & arg : args[1]) {
         outputIndexes.insert(py::cast<int>(arg));
     }
-    bool res = checkPINIVal(e, maxShareOcc, outputIndexes, &usedBitExp, &timeRet);
+    bool res = checkPINIVal(e, maxShareOcc, outputIndexes, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0; // no more implemented in C++
+    return retval;
+}
+
+
+py::tuple bindCheckOPINIVal(Node & e, py::args & args) {
+    bool usedBitExp;
+    int32_t maxShareOcc = py::cast<int32_t>(args[0]);
+    std::set<int> outputIndexes;
+    for (const auto & arg : args[1]) {
+        outputIndexes.insert(py::cast<int>(arg));
+    }
+    std::vector<std::vector<Node *>> allOutputLeakages = args[2].cast<std::vector<std::vector<Node *>>>();
+
+    bool res = checkOPINIVal(e, maxShareOcc, outputIndexes, allOutputLeakages, &usedBitExp);
+    py::tuple retval(3);
+    retval[0] = res;
+    retval[1] = usedBitExp;
+    retval[2] = 0; // no more implemented in C++
     return retval;
 }
 
 
 py::tuple bindCheckTpsTrans(Node & e0, Node & e1) {
     bool usedBitExp;
-    uint64_t timeRet;
-    bool res = checkTpsTrans(e0, e1, &usedBitExp, &timeRet);
+    bool res = checkTpsTrans(e0, e1, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0;
     return retval;
 }
 
 
 py::tuple bindCheckNITrans(Node & e0, Node & e1, int maxShareOcc) {
     bool usedBitExp;
-    uint64_t timeRet;
-    bool res = checkNITrans(e0, e1, maxShareOcc, &usedBitExp, &timeRet);
+    bool res = checkNITrans(e0, e1, maxShareOcc, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0;
     return retval;
 }
 
 
 py::tuple bindCheckRNITrans(Node & e0, Node & e1, int diff) {
     bool usedBitExp;
-    uint64_t timeRet;
-    bool res = checkRNITrans(e0, e1, diff, &usedBitExp, &timeRet);
+    bool res = checkRNITrans(e0, e1, diff, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0;
     return retval;
 }
 
 
-py::tuple bindCheckPINITrans(Node & e0, Node & e1, int maxShareOcc, py::args & args) {
+py::tuple bindCheckPINITrans(Node & e0, Node & e1, py::args & args) {
     bool usedBitExp;
-    uint64_t timeRet;
+    int32_t maxShareOcc = py::cast<int32_t>(args[0]);
     std::set<int> outputIndexes;
-    for (const auto & arg : args) {
+    for (const auto & arg : args[1]) {
         outputIndexes.insert(py::cast<int>(arg));
     }
-    bool res = checkPINITrans(e0, e1, maxShareOcc, outputIndexes, &usedBitExp, &timeRet);
+    bool res = checkPINITrans(e0, e1, maxShareOcc, outputIndexes, &usedBitExp);
     py::tuple retval(3);
     retval[0] = res;
     retval[1] = usedBitExp;
-    retval[2] = timeRet;
+    retval[2] = 0;
+    return retval;
+}
+
+
+py::tuple bindCheckOPINITrans(Node & e0, Node & e1, py::args & args) {
+    bool usedBitExp;
+    int32_t maxShareOcc = py::cast<int32_t>(args[0]);
+    std::set<int> outputIndexes;
+    for (const auto & arg : args[1]) {
+        outputIndexes.insert(py::cast<int>(arg));
+    }
+    std::vector<std::vector<Node *>> allOutputLeakages = args[2].cast<std::vector<std::vector<Node *>>>();
+
+    bool res = checkOPINITrans(e0, e1, maxShareOcc, outputIndexes, allOutputLeakages, &usedBitExp);
+    py::tuple retval(3);
+    retval[0] = res;
+    retval[1] = usedBitExp;
+    retval[2] = 0; // no more implemented in C++
     return retval;
 }
 
@@ -330,6 +363,11 @@ bool bindPini(Node & e, int maxShareOcc, py::args & args) {
         outputIndexes.insert(py::cast<int>(arg));
     }
     return pini(e, maxShareOcc, outputIndexes, false);
+}
+
+
+Node & bindGetSymbolByName(std::string & name) {
+    return getSymbolByName(name);
 }
 
 
@@ -376,10 +414,12 @@ PYBIND11_MODULE(verif_msi_pp, m) {
     m.def("checkNIVal", &bindCheckNIVal, "Desc.");
     m.def("checkRNIVal", &bindCheckRNIVal, "Desc.");
     m.def("checkPINIVal", &bindCheckPINIVal, "Desc.");
+    m.def("checkOPINIVal", &bindCheckOPINIVal, "Desc.");
     m.def("checkTpsTrans", &bindCheckTpsTrans, "Desc.");
     m.def("checkNITrans", &bindCheckNITrans, "Desc.");
     m.def("checkRNITrans", &bindCheckRNITrans, "Desc.");
     m.def("checkPINITrans", &bindCheckPINITrans, "Desc.");
+    m.def("checkOPINITrans", &bindCheckOPINITrans, "Desc.");
     
     m.def("compareExpsWithExev", &bindCompareExpsWithExev, "Desc.");
     m.def("compareExpsWithRandev", &bindCompareExpsWithRandev, "Desc.");
@@ -395,9 +435,9 @@ PYBIND11_MODULE(verif_msi_pp, m) {
     m.def("checkSecurity", &bindCheckSecurity, "Desc.");
 
     m.def("getBitDecomposition", &getBitDecomposition, "Desc.", py::return_value_policy::reference);
-    m.def("simplify", &simplify, "Desc.", py::return_value_policy::reference);
+    m.def("simplify", py::overload_cast<Node &, bool, bool>(&simplify), "Desc.", py::arg("Node"), py::arg("propagateExtractInwards") = true, py::arg("useSingleBitVariables") = false, py::return_value_policy::reference);
     m.def("simplifyAndNotPEI", &simplifyAndNotPEI, "Desc.", py::return_value_policy::reference);
-    m.def("simplifyCore", &simplifyCore, "Desc.", py::return_value_policy::reference);
+    //m.def("simplifyCore", &simplifyCore, "Desc.", py::return_value_policy::reference);
     m.def("equivalence", &equivalence, "Desc.");
 
     m.def("tps", py::overload_cast<Node &, bool, bool>(&tps), "Desc.", py::arg("nodeIn"), py::arg("bitDecompose") = false, py::arg("verbose") = false);
@@ -406,6 +446,7 @@ PYBIND11_MODULE(verif_msi_pp, m) {
     m.def("pini", &bindPini, "Desc.");
 
     m.def("symbol", &symbol, "Desc.", py::return_value_policy::reference);
+    m.def("getSymbolByName", &bindGetSymbolByName, "Desc.", py::return_value_policy::reference);
     m.def("constant", &constant, "Desc.", py::return_value_policy::reference);
     m.def("litteralInteger", &bindLitteralInteger, "Desc.");
     m.def("registerArray", &bindRegisterArray, "Desc.");

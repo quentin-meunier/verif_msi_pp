@@ -5,7 +5,7 @@ INC_DIR=include
 SRC_DIR=src
 OBJ_DIR=obj
 
-BUILD_PYTHON ?= 0
+BUILD_PYTHON ?= 1
 
 PYTHONLIB := verif_msi_pp$(shell python3.9-config --extension-suffix)
 
@@ -15,9 +15,8 @@ OBJ_FILES=$(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 
 PYTHON_TARGET :=
-ifeq ($(BUILD_PYTHON),0)
 SRC_FILES := $(filter-out $(SRC_DIR)/pybind11_wrapper.cpp,$(SRC_FILES))
-else
+ifeq ($(BUILD_PYTHON),1)
 PYTHON_TARGET := $(PYTHONLIB)
 endif
 
@@ -38,8 +37,8 @@ libverif_msi_pp.a: $(OBJ_FILES)
 libverif_msi_pp.so: $(OBJ_FILES)
 	g++ $^ -shared -o $@
 
-$(PYTHONLIB): libverif_msi_pp.so pybind11_wrapper.cpp
-	g++ -O3 -Wall -Werror -shared -std=c++20 -fPIC `python3 -m pybind11 --includes` -I. pybind11_wrapper.cpp -o $@ -L. -lverif_msi_pp -Wl,-rpath,$(CUR_DIR)
+$(PYTHONLIB): libverif_msi_pp.so $(SRC_DIR)/pybind11_wrapper.cpp
+	g++ -O3 -Wall -Werror -shared -std=c++20 -fPIC `python3 -m pybind11 --includes` $(INCLUDES) $(SRC_DIR)/pybind11_wrapper.cpp -o $@ -L. -lverif_msi_pp -Wl,-rpath,$(CUR_DIR)
 
 
 $(OBJ_DIR)/SHA256.o: $(SRC_DIR)/SHA256.cpp $(INC_DIR)/SHA256.hpp
