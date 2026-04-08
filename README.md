@@ -11,8 +11,6 @@ Q. L. Meunier and A. Taleb (2023). VerifMSI: Practical Verification of Hardware 
 
 VerifMSI++ is used in the [aLEAKator project](https://github.com/noeamiot/aLEAKator) [19] -- [article](https://eprint.iacr.org/2025/2193)
 
-Currently, the C++ to python binding allowing to call the C++ implementation from a python program is broken, but it should be back in April 2026.
-
 
 
 ## Installation

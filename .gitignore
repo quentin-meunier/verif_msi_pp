@@ -28,6 +28,8 @@ benchmarks/hw/opini2/*.cpp
 benchmarks/hw/otsm/bin
 benchmarks/hw/pini_mult/bin
 benchmarks/hw/pini_mult/*.cpp
+benchmarks/hw/tsm/bin
+benchmarks/hw/tsm_plus/bin
 
 verif_msi_pp.cpython-39-x86_64-linux-gnu.so
 
