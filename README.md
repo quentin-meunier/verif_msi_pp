@@ -22,7 +22,7 @@ VerifMSI++ has only been tested on Linux so far. In order to build it, only a C+
 
 In order to use VerifMSI constructs, the file `verif_msi_pp.hpp' from the `include` directory must be included.
 
-Symbolic variables are created with a function called `symbol()`: the first parameter is the symbol name, the second parameter the symbol type ('S' for secret, 'M' for mask and 'P' for a public variable), and the third parameter the symbol width. Constants values are created with a function called `constant()`, taking as parameters the value and the width in bits.
+Symbolic variables are created with a function called `symbol()`: the first parameter is the symbol name, the second parameter the symbol type ('S' for secret, 'M' for mask and 'P' for a public variable), and the third parameter the symbol width. Constants values are created with a function called `constant()`, taking as parameters the value and the width in bits. These functions, as the different operators, return a reference to a `Node`. The local variables used for storing the result of these calls should thus be aliases: node copy is indeed not possible, since we do not want to deal with different memory instances representing the same expression, which an hypothesis for the implemented cache and expression comparison (also, a deep copy would be required, inducing an additional cost).
 
 Example:
 ```
@@ -55,12 +55,12 @@ int main() {
 }
 ```
 
-> Note: by the way nodes are declared using aliases, and the way C++ works, it is not possible to reaffect a declared variable, as it was with VerifMSI. For example, the following code shall not be written:
+> Note: by the way nodes are declared using aliases, and the way C++ works, it is not possible to reaffect a declared variable, as it was with VerifMSI (copy constructor and operator are deleted). For example, the following code shall not be written:
 > `Node & n0 = e;`
 > `Node & n = k ^ m;`
 > `n = n & n0; // incorrect`
 
-VerifMSI++ also supports hardware constructs (gates and registers) for verifying gadgets implementations. The following code implements the Domain Oriented Masking AND from [1] with two shares. The function `getRealShares()` allows to split a secret into a specified number of shares. In this case, the returned elements are symbols typed as shares, such that the linear recombination (xor) of all the shares is the secret. An alternate function, `getPseudoShares()`, allows to make an explicit sharing based on the secret and dedicated masks. The difference in the secret representation (explicit or shares) determines which security properties can be verified.
+VerifMSI++ also supports hardware constructs (gates and registers) for verifying gadgets implementations. The following code implements the Domain Oriented Masking AND from [1] with two shares. The function `getRealShares()` allows to split a secret into a specified number of shares. In this case, the returned elements are symbols typed as shares, such that the linear recombination (xor) of all the shares is the secret. The share symbols' name are constructing by adding the character `@` followed by the share number. An alternate function, `getPseudoShares()`, allows to make an explicit sharing based on the secret and dedicated masks. The difference in the secret representation (explicit or shares) determines which security properties can be verified.
 
 ```
 #include "verif_msi_pp.hpp"
@@ -136,8 +136,6 @@ VerifMSI supports the verification of 6 security properties:
 * Probe Isolating Non-Interference (PINI) [4], requiring a share representation;
 * Output-PINI (OPINI) [15], requiring a share representation;
 * Relaxed Non-Interference (RNI), requiring a share representation and defined in VerifMSI article.
-NI, SNI, RNI, PINI and OPINI are only defined for gadgets, as they make assumptions on the set of all probes to verify (e.g. probes corresponding to single shares are always accessible)
-[FIXME] / [TODO]: être plus précis / donner des exemples, que se passe-t-il si on appelle NI sur un tuple ?
 
 
 ## Supported operations
@@ -191,12 +189,12 @@ Note: this functionality is temporarily broken and should not be used for now.
 
 ### Bit Decomposition of Expressions
 
-VerifMSI++ can decompose an expression into a concatenation of 1-bit expressions. Although this feature is mostly used in the verification algorithm, it is possible to get the equivalent bit decomposition with the function `getBitDecomposition()`. n-bit symbolic variables are decomposed into n 1-bit variables of the same type.
+VerifMSI++ can decompose an expression into a concatenation of 1-bit expressions. Although this feature is mostly used in the verification algorithm, it is possible to get the equivalent bit decomposition with the function `getBitDecomposition()`. n-bit symbolic variables are decomposed into n 1-bit variables of the same type, using the `#` symbol for the bit number. For example, `getBitDecomposition(symbol("m", 'M', 2)` will produce `Concat(m#1, m#0)`.
 ```
 Node & k = symbol("k", 'S', 4);
 Node & exp = k & constant(0x5, 4);
 Node & bitExp = getBitDecomposition(exp);
-std::cout << "bitExp: " << bitExp << std::endl;
+std::cout << "bitExp: " << bitExp << std::endl; // displays "bitExp: Concat(0x0, k#2, 0x0, k#0)"
 ```
 
 
@@ -286,8 +284,6 @@ int main() {
 }
 ```
 
-Examples using a function can be found in the `aes_sm` benchmark.
-
 Finally, arrays can also be associated to a base address and a size. The base address represents its memory implantation and the size the size it occupies in memory. This mechanism is useful when verifying assembly code. Combined with a function, if a memory access to the array (detected with the base address and size) has a symbolic part, this part can be used as the parameter of the function called. This allows for example to transform the expression `Sbox'[x ^ m]` into `Sbox[x] ^ m'` in a compiled version of the AES Herbst scheme.
 
 
@@ -316,12 +312,23 @@ For gadgets and hardware circuits, the main verification function is `checkSecur
 At a lower level, i.e. for verifying a tuple of expressions, the following function are defined:
 * `tps`, `ni`, `rni`, `pini`, `opini` which verify the corresponding properties, either on a single node, or on a `vector<Node *>`. Note that there is no `sni` function, as it is implemented as making a `ni` verification with a potentially different number of maximum occurrences per share. All of these functions come with a `NoFalsePositive` version, which makes an exhaustive enumeration in case of detected leakage. It is actually useful to perform the exhaustive enumeration just when the verification fails (and not after the verification returns), since the expression which has undergone replacements in the verification process is likely to contain much less symbolic variables due to the replacements which have already occurred.
 
-Finally, functions in the `check_leakage` module (e.g. `checkTPSVal()`) are wrappers for these functions, with heuristics to determine if a bit decomposition should be made, for non bit-decomposed expressions.
+Finally, functions in the `check_leakage` module (e.g. `checkTpsVal()`) are wrappers for these functions, with heuristics to determine if a bit decomposition should be made, for non bit-decomposed expressions.
 
 
 ## Configuration options
 
-VerifMSI++ has several configurations options [TODO].
+VerifMSI++ has several configurations options, in the form of compilation flags, which are the following:
+* `MEMORY_STRATEGY`: either `KEEP_NODES` or `DELETE_NODES`. If the former is selected, all created nodes are kept in memory, while if the latter is selected, temporary nodes created during expression replacements are deleted at the end of the verification. Keeping nodes results in faster execution time, but an increased memory consumption.
+* `PROPAGATE_CST_ON_BUILD`: if activated, expressions whose all children are constant nodes are simplified upon construction as a constant node
+* `BIT_EXP_ENABLE`: if activated, variables (resp. expressions) can be decomposed as a concatenation of single bit variables (resp. expressions) in some verification scenarios. This should be set to `true` in most cases
+* `EXTENDED_SIMPLIFY`: if activated, additional simplification rules are considered. This can result in an slightly increased execution time, but should be activated in most cases.
+* `BIT_SIMPLIFY_PLUS`: if activated, in case of bit decomposition, addition operators will be decomposed using boolean expressions. For example a bit decomposition of the expression ` k + m` on 2 bits will produce `Concat((m#0 & k#0) ^ m#1 ^ k#1, m#0 ^ k#0)` . If this flag is deactivated, the resulting expression will be: `Concat(k#1, k#0) + Concat(m#1, m#0)`. Activating or not this flag depends on the context, but since it produces larger expressions, it should be deactivated when possible.
+* `EXTENDED_MERGE_CONCAT`: if activated, uses additional simplification rules to reconstruct expressions consisting in a concatenation of bitwise operations on the extraction of each bit of symbols or array expressions. This should be activated in most cases.
+* `SEL_MSK_W_NON_MSKNG_OCC`: if activated, allows the selection in the verification algorithm of a mask with non-masking occurrences. For example, in the expression `(m ^ k) | (m & p)`, symbol `m` has two occurrences: a masking one (first occurrence, which masks `k`), and a non masking one. If this flag is activated, `m` can be selected for a replacing the first sub-expression, while it will be ignored if this flag is false. The rationale behind is that in most cases, if masks have non masking occurrences, selecting a masking occurrence of this mask will make the expression grow and will not allow to conclude anyway. The gain brought by deactivating this flag is that it is no more required to precisely track the location of these occurrences in an expression (time + memory).
+* `VERIF_REMOVE_CST_IN_ADD`: if activated, removes constant operands from addition operations in the verification process. The rationale behind is that at the word level, adding constants to an expression does not change its distribution, while allowing more simplifications. However, considering individually the bits at the output of an addition can lead to different results. This flags should thus be enabled when the outputs of all addition are analysed word-wise.
+* `REM_SINGLE_INPUT_PROBES`: if activated, applies the optimisation of removing single input probes for gadget verification with shares. This should be set to `true`.
+* `REM_REDUNDANT_PROBES`:
+* `BARTHE_OPT`:  if activated, tries to reduce the number of verifications made for a VerifMSI++ gadget by considering larger sets of probes than those required, following the approach introduced in [20], and with the error fix explained in the VerifMSI article. From our experience, this optimisation as it is implemented in VerifMSI++ does not bring much, if any, from a performance point of view.
 
 
 ## Python binding
@@ -334,13 +341,13 @@ VerifMSI++ can be compiled as a python library, to enable using the C++ implemen
 The `benchmarks/hw` directory contains hardware gadgets from the literature implemented in VerifMSI++.
 
 These are the following:
-* ISW AND: The logical AND masking scheme from [2]
+* ISW AND: the logical AND masking scheme from [2]
 * ISW AND refresh: A combination of the ISW AND with a circular refresh on one of the input from [5]
-* DOM AND: The Domain Oriented Masking implementation of the AND gate from [1], resistant to glitches;
-* GMS AND: Two implementations of the AND gate using the Generalized Masking Scheme, described in the article, using respectively 3 and 5 shares from [9];
-* PINI Mult: The PINI multiplication scheme from [8];
-* OPINI1: The O-PINI1 gadget from [15]
-* OPINI2: The O-PINI2 gadget from [15]
+* DOM AND: the Domain Oriented Masking implementation of the AND gate from [1], resistant to glitches;
+* GMS AND: two implementations of the AND gate using the Generalized Masking Scheme, described in the article, using respectively 3 and 5 shares from [9];
+* PINI Mult: the PINI multiplication scheme from [8];
+* OPINI1: the O-PINI1 gadget from [15]
+* OPINI2: the O-PINI2 gadget from [15]
 * HPC3: the HPC3 gadget from [16]
 * HPC4: the HPC4 gadget from [17]
 * TSM: the TSM gadget from [18]
@@ -394,4 +401,6 @@ For schemes which are defined for any order, the benchmark file is a generator w
 [18] H. Rahimi & A. Moradi (2026). TSM+ and OTSM-Correct Application of Time Sharing Masking in Round-Based Designs. Cryptology ePrint Archive. https://eprint.iacr.org/2026/004
 
 [19] N. Amiot, Q. Meunier, K. Heydemann & E. Encrenaz. (2025). aLEAKator: HDL Mixed-Domain Simulation for Masked Hardware & Software Formal Verification. Cryptology ePrint Archive. 
+
+[20] G. Barthe, S. Belaïd, F. Dupressoir, P. A. Fouque, B. Grégoire & P. Y. Strub. (2015). Verified proofs of higher-order masking. In Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 457-485). Berlin, Heidelberg: Springer Berlin Heidelberg.
 

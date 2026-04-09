@@ -18,7 +18,6 @@ Author(s): Quentin L. Meunier
 #include <iomanip>
 #include <algorithm>
 
-
 #include "node.hpp"
 #include "config.hpp"
 #include "arrayexp.hpp"
@@ -65,9 +64,9 @@ Node::Node() {
 
 Node::~Node() {
     //std::cout << "# Deleting node: " << *this << std::endl;
-    if (symb != NULL) {
-        std::cout << "# deleting symbol " << *symb << std::endl;
-    }
+    //if (symb != NULL) {
+    //    std::cout << "# deleting symbol " << *symb << std::endl;
+    //}
     delete secretVarOcc;
     delete publicVarOcc;
     delete currentlyMasking;

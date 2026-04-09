@@ -159,6 +159,7 @@ class Node {
 
     Node();
     ~Node();
+    Node(const Node &) = delete;
 
     static Node & SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
     static Node & ConstNode(uint64_t cst, int32_t width, bool extendMSB = false);
@@ -195,6 +196,7 @@ class Node {
     Node & operator>>(Node & other);
     Node & operator>>(int32_t shval);
     Node & operator*(Node & other);
+    Node & operator= (const Node &) = delete;
 
     friend std::ostream& operator<<(std::ostream &, const Node &);
 
@@ -272,7 +274,5 @@ uint64_t glogInt(uint64_t a);
 bool isZero(uint64_t * cst, int32_t width);
 bool isAllOne(uint64_t * cst, int32_t width);
 
-
 #endif
-
 
