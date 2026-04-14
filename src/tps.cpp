@@ -147,7 +147,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
     assert(not noFalsePositive or (secProp == TPS or secProp == NI or secProp == PINI or secProp == OPINI)) ;
 
     int maxShareOcc = 0;
-    int diff;
+    int diff = 0;
     std::set<int> * outputIndexes = NULL;
     std::set<int> * additionalInputIndexes = NULL;
 

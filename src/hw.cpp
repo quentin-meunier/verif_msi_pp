@@ -13,6 +13,7 @@ Author(s): Quentin L. Meunier
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <algorithm>
 
 
 #include "node.hpp"
@@ -253,7 +254,7 @@ static std::string vecExpsStr(std::vector<Node *> & t) {
     return ss.str();
 }
 
-static std::string setExpsStr(std::set<Node *> & t) {
+[[maybe_unused]] static std::string setExpsStr(std::set<Node *> & t) {
     std::ostringstream ss;
     for (bool first{true}; const auto & e : t) {
         ss << (first ? first = false, "" : ", ") << e->toString();

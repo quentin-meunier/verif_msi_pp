@@ -686,7 +686,7 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
                                         xorLeftNode = &Node::OpNode(mulOp, xorLeftChildren);
                                     }
 
-                                    Node * xorNode;
+                                    Node * xorNode = NULL;
                                     if (mulOp == GMUL) {
                                         xorNode = &simplify(*xorLeftNode ^ Const(0x1, width));
                                     }
