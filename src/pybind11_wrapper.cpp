@@ -372,8 +372,8 @@ Node & bindGetSymbolByName(std::string & name) {
 
 
 
-PYBIND11_MODULE(verif_msi_pp, m) {
-    m.doc() = "verif_msi_pp plugin";
+PYBIND11_MODULE(_core, m) {
+    m.doc() = "_core plugin";
     py::class_<Node>(m, "Node")
         .def("__xor__", &Node::operator^, py::return_value_policy::reference)
         .def("__and__", &Node::operator&, py::return_value_policy::reference)

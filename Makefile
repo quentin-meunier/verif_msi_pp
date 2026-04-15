@@ -7,7 +7,7 @@ OBJ_DIR=obj
 
 BUILD_PYTHON ?= 1
 
-PYTHONLIB := verif_msi_pp$(shell python3-config --extension-suffix)
+PYTHONLIB := _core$(shell python3-config --extension-suffix)
 
 
 SRC_FILES=$(wildcard $(SRC_DIR)/*.cpp)
