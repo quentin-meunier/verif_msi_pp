@@ -211,7 +211,7 @@ int32_t hpc3_%d_shares(int32_t * nbCheck) {
             content += '    HWElement & r%d_%d = inputGate(n_r%d_%d);\n' % (i, j, i, j)
             content += '    HWElement & r%d_%d_p = inputGate(n_r%d_%d_p);\n' % (j, i, i, j)
             content += '    HWElement & r%d_%d_p = inputGate(n_r%d_%d_p);\n' % (i, j, i, j)
-    content += '    HWElement & cst1 = inputGate(constant(1, 1));\n'
+    content += '    HWElement & cst1 = inputGate(constant(1, bitwidth));\n'
     content += '\n'
    
 

@@ -110,7 +110,16 @@ HWElement & HWElement::Gate(NodeOp op, std::vector<HWElement *> & inputs) {
     HWElement * e = new HWElement();
     e->nature = GATE;
     e->op = op;
+    int32_t width = inputs[0]->symbExp->width;
     for (const auto & inp : inputs) {
+        if (inp->symbExp->width != width) {
+            std::cerr << "*** Error in Gate constructor: all inputs should have the same width" << std::endl;
+            std::cerr << "    Input Gates are:" << std::endl;
+            for (const auto & in : inputs) {
+                std::cerr << "    " << *in << std::endl;
+            }
+            exit(EXIT_FAILURE);
+        }
         e->inputs.push_back(inp);
     }
     //e->symbExp = &simplify(Node::makeBitwiseNode(op, input0.symbExp, input1.symbExp));
