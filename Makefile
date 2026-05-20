@@ -22,7 +22,7 @@ endif
 
 all: create_objdir libverif_msi_pp.a libverif_msi_pp.so $(PYTHON_TARGET)
 
-CC=g++
+CC ?= g++
 #CFLAGS=-g -std=c++20 -Wall -O0 -fPIC -Wno-vla-cxx-extension
 CFLAGS=-std=c++20 -Wall -O3 -fPIC -Wno-vla-cxx-extension
 INCLUDES=-I$(INC_DIR)
