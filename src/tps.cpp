@@ -423,10 +423,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
 
 static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool noFalsePositive, bool verbose) {
-    Node * n = &simplify(nodeIn);
-    if (bitDecompose) {
-        n = &getBitDecomposition(*n);
-    }
+    Node * n = &simplify(nodeIn, true, bitDecompose);
     Node::setModeTemporaryNodes();
     bool res = checkProperty(*n, secProp, params, noFalsePositive, verbose);
     Node::setModePermanentNodes();
@@ -437,14 +434,7 @@ static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropPa
 static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool noFalsePositive, bool verbose) {
     std::vector<Node *> nodes;
     for (const auto & n : nodesIn) {
-        nodes.push_back(&simplify(*n));
-    }
-    if (bitDecompose) {
-        std::vector<Node *> nodesBE;
-        for (const auto & n : nodes) {
-            nodesBE.push_back(&getBitDecomposition(*n));
-        }
-        nodes = nodesBE;
+        nodes.push_back(&simplify(*n, true, bitDecompose));
     }
 
     Node::setModeTemporaryNodes();
@@ -583,8 +573,7 @@ bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<
 }
 
 
-static bool opini_internal(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose, bool noFalsePositive) {
-    piniValidity(nodeIn);
+static bool opini_internal(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose, bool noFalsePositive) {
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes;
@@ -593,7 +582,7 @@ static bool opini_internal(Node & nodeIn, int maxShareOcc, std::set<int> & outpu
     pp.additionalInputIndexes = &additionalInputIndexes;
 
     std::vector<Node *> probesLeakagesWithNewOutputs;
-    probesLeakagesWithNewOutputs.push_back(&nodeIn);
+    probesLeakagesWithNewOutputs = nodes;
     while (true) {
         bool res = checkPropertyWrapper(probesLeakagesWithNewOutputs, OPINI, pp, bitDecompose, noFalsePositive, verbose);
         if (!res) {
@@ -616,7 +605,9 @@ static bool opini_internal(Node & nodeIn, int maxShareOcc, std::set<int> & outpu
 
 
 bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
-    return opini_internal(nodeIn, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, false);
+    std::vector<Node *> nodes;
+    nodes.push_back(&nodeIn);
+    return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, false);
 }
 
 
@@ -624,13 +615,14 @@ bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputI
     for (const auto & n : nodes) {
         piniValidity(*n);
     }
-    Node & c = simplify(Concat(nodes));
-    return opini_internal(c, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, false);
+    return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, false);
 }
 
 
 bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
-    return opini_internal(nodeIn, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
+    std::vector<Node *> nodes;
+    nodes.push_back(&nodeIn);
+    return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
 }
 
 
@@ -638,8 +630,7 @@ bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set
     for (const auto & n : nodes) {
         piniValidity(*n);
     }
-    Node & c = simplify(Concat(nodes));
-    return opini_internal(c, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
+    return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
 }
 
 

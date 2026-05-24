@@ -948,28 +948,25 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
             bool res;
             if (secProp == TPS) {
-                Node & conc = Concat(*std::get<0>(t));
                 if (noFalsePositive) {
-                    res = tpsNoFalsePositive(conc, true);
+                    res = tpsNoFalsePositive(*std::get<0>(t), true);
                 }
                 else {
-                    res = tps(conc, true);
+                    res = tps(*std::get<0>(t), true);
                 }
             }
             else if (secProp == NI) {
                 //std::cout << "# checking NI for exps " << vecExpsStr(*std::get<0>(t)) << " and maxShareOcc = " << std::get<1>(t)->size() << std::endl;
-                Node & conc = Concat(*std::get<0>(t));
                 if (noFalsePositive) {
-                    res = niNoFalsePositive(conc, std::get<1>(t)->size(), true);
+                    res = niNoFalsePositive(*std::get<0>(t), std::get<1>(t)->size(), true);
                 }
                 else {
-                    res = ni(conc, std::get<1>(t)->size(), true);
+                    res = ni(*std::get<0>(t), std::get<1>(t)->size(), true);
                 }
             }
             else if (secProp == RNI) {
                 //std::cout << "# checking RNI for exps " << vecExpsStr(*std::get<0>(t)) << " and maxShareOcc = (nbShares - 1) - " << (order - std::get<1>(t)->size()) << std::endl;
-                Node & conc = Concat(*std::get<0>(t));
-                res = checkRNIVal(conc, (order - std::get<1>(t)->size()));
+                res = rni(*std::get<0>(t), (order - std::get<1>(t)->size()));
             }
             else if (secProp == SNI) {
                 int32_t nbOutputProbes = 0;
@@ -978,12 +975,11 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
                         nbOutputProbes += 1;
                     }
                 }
-                Node & conc = Concat(*std::get<0>(t));
                 if (noFalsePositive) {
-                    res = niNoFalsePositive(conc, std::get<1>(t)->size() - nbOutputProbes, true);
+                    res = niNoFalsePositive(*std::get<0>(t), std::get<1>(t)->size() - nbOutputProbes, true);
                 }
                 else {
-                    res = ni(conc, std::get<1>(t)->size() - nbOutputProbes, true);
+                    res = ni(*std::get<0>(t), std::get<1>(t)->size() - nbOutputProbes, true);
                 }
             }
             else {
@@ -1048,22 +1044,21 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
             bool res;
             std::set<int32_t> outputIndexes = std::get<3>(t);
-            Node & conc = Concat(*std::get<0>(t));
             if (secProp == PINI) {
                 if (noFalsePositive) {
-                    res = piniNoFalsePositive(conc, std::get<2>(t), outputIndexes, true);
+                    res = piniNoFalsePositive(*std::get<0>(t), std::get<2>(t), outputIndexes, true);
                 }
                 else {
-                    res = pini(conc, std::get<2>(t), outputIndexes, true);
+                    res = pini(*std::get<0>(t), std::get<2>(t), outputIndexes, true);
                 }
             }
             else {
                 assert(secProp == OPINI);
                 if (noFalsePositive) {
-                    res = opiniNoFalsePositive(conc, std::get<2>(t), outputIndexes, allOutputLeakages, true);
+                    res = opiniNoFalsePositive(*std::get<0>(t), std::get<2>(t), outputIndexes, allOutputLeakages, true);
                 }
                 else {
-                    res = opini(conc, std::get<2>(t), outputIndexes, allOutputLeakages, true);
+                    res = opini(*std::get<0>(t), std::get<2>(t), outputIndexes, allOutputLeakages, true);
                 }
             }
 

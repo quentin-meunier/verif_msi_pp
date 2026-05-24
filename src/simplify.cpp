@@ -562,24 +562,7 @@ static Node & getBitDecompositionVar(Node & node) {
 
 
 Node & getBitDecomposition(Node & node) {
-    if (node.nature == CONST or node.nature == STR) {
-        return node;
-    }
-    if (node.simpEqUsbv != NULL) {
-        return *node.simpEqUsbv;
-    }
-    if (node.nature == SYMB) {
-        // shortcut, not necessary
-        return getBitDecompositionVar(node);
-    }
-
-    std::vector<Node *> l;
-    for (int32_t b = 0; b < node.width; b += 1) {
-        l.push_back(&Extract(b, b, node));
-    }
-    Node & conc = Concat(l);
-    Node & simpConc = simplifyCore(conc, true, true);
-    return simpConc;
+    return simplifyCore(node, true, true);
 }
 
 
@@ -734,9 +717,6 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
 
 Node & simplify(Node & node, bool propagateExtractInwards, bool useSingleBitVariables) {
     assert(not useSingleBitVariables or propagateExtractInwards);
-    if (propagateExtractInwards and useSingleBitVariables) {
-        return getBitDecomposition(node);
-    }
     return simplifyCore(node, propagateExtractInwards, useSingleBitVariables);
 }
 
