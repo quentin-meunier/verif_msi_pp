@@ -13,7 +13,7 @@ Author(s): Quentin L. Meunier
 #define DELETE_NODES 1
 #define KEEP_NODES   2
 
-#define MEMORY_STRATEGY         KEEP_NODES
+#define MEMORY_STRATEGY         DELETE_NODES
 
 #define PROPAGATE_CST_ON_BUILD  true
 #define BIT_EXP_ENABLE          true

@@ -1143,10 +1143,35 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
     }
     else if (op == CONCAT) {
         std::string res = "Concat(";
-        for (int32_t i = children->size() - 1; i > 0; i -= 1) {
-            res += children->at(i)->expPrint(false, verbatim) + ", ";
+        bool first = true;
+        int i = children->size() - 1;
+        std::vector<Node *> v;
+        while (i >= 0) {
+            while (i != -1 and children->at(i)->nature == CONST) {
+                v.push_back(children->at(i));
+                i -= 1;
+            }
+            if (v.size() != 0) {
+                std::reverse(v.begin(), v.end());
+                Node & cst = Concat(v);
+                v.clear();
+                if (!first) {
+                    res += ", ";
+                }
+                first = false;
+                res += cst.expPrint(false, verbatim);
+            }
+            if (i == -1) {
+                break;
+            }
+            if (!first) {
+                res += ", ";
+            }
+            first = false;
+            res += children->at(i)->expPrint(false, verbatim);
+            i -= 1;
         }
-        res += children->at(0)->expPrint(false, verbatim) + ")";
+        res += ")";
         return res;
     }
     else if (op == EXTRACT) {
