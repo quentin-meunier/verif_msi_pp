@@ -451,13 +451,15 @@ static Node & defaultNode(Node & node, NodeOp op, const std::vector<Node *> & ne
 
 
 
-static Node & getBitDecompositionCst(Node & node) {
-    if (Node::cst2bitDecomp.contains(&node)) {
-        return *Node::cst2bitDecomp[&node];
+static void bitDecomposeCst(Node & node) {
+    if (node.extractBit != NULL) {
+        return;
     }
+    node.extractBit = new Node * [node.width];
     std::vector<Node *> children;
     Node & cst0 = Const(0, 1);
     Node & cst1 = Const(1, 1);
+    int32_t idx = 0;
     for (int32_t limb = 0; limb < node.nlimbs; limb += 1) {
         int32_t limit = 64;
         if (limb != node.nlimbs && (node.width % 64) != 0) {
@@ -465,23 +467,14 @@ static Node & getBitDecompositionCst(Node & node) {
         }
         for (int32_t b = 0; b < limit; b += 1) {
             if (((node.cst[limb] >> b) & 1) == 0) {
-                children.push_back(&cst0);
+                node.extractBit[idx] = &cst0;
             }
             else {
-                children.push_back(&cst1);
+                node.extractBit[idx] = &cst1;
             }
+            idx += 1;
         }
     }
-    Node & result = Node::OpNode(CONCAT, children);
-    // Updating cst field since it is a sort of constant node
-    int32_t nlimbs = node.nlimbs;
-    result.nlimbs = nlimbs;
-    result.cst = new uint64_t[nlimbs];
-    for (int32_t i = 0; i < nlimbs; i += 1) {
-        result.cst[i] = node.cst[i];
-    }
-    Node::cst2bitDecomp[&node] = &result;
-    return result;
 }
 
 
@@ -729,12 +722,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         return node;
     }
     if (node.nature == CONST) {
-        if (useSingleBitVariables and node.width != 1) {
-            return getBitDecompositionCst(node);
-        }
-        else {
-            return node;
-        }
+        return node;
     }
 
     if (useSingleBitVariables) {
@@ -2135,22 +2123,56 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 return setSimpEqAndReturn(node, gChild << (sh0.cst[0] + sh1.cst[0]));
             }
             else if (exp.op == CONCAT) {
-                bool allChildren1bit = true;
+                bool singleBitOrCstChildren = true;
                 for (const auto & gChild : *exp.children) {
-                    if (gChild->width != 1) {
-                        allChildren1bit = false;
+                    if (gChild->width != 1 and gChild->nature != CONST) {
+                        singleBitOrCstChildren = false;
                         break;
                     }
                 }
-                if (allChildren1bit) {
+                if (singleBitOrCstChildren) {
+                    std::vector<Node *> singleBitChildren;
+                    for (const auto & gChild : *exp.children) {
+                        if (gChild->nature == CONST) {
+                            bitDecomposeCst(*gChild);
+                            for (int32_t i = 0; i < gChild->width; i += 1) {
+                                singleBitChildren.push_back(gChild->extractBit[i]);
+                            }
+                        }
+                        else {
+                            singleBitChildren.push_back(gChild);
+                        }
+                    }
+
                     std::vector<Node *> newChildrenShifted;
                     for (int32_t i = 0; i < (int32_t) sh0.cst[0]; i += 1) {
                         newChildrenShifted.push_back(&Const(0, 1));
                     }
-                    for (int32_t i = 0; i < exp.width - (int32_t) sh0.cst[0]; i += 1) {
-                        newChildrenShifted.push_back(exp.children->at(i));
+                    for (int32_t i = 0; i < (int32_t) singleBitChildren.size() - (int32_t) sh0.cst[0]; i += 1) {
+                        newChildrenShifted.push_back(singleBitChildren[i]);
                     }
-                    return setSimpEqAndReturn(node, Node::OpNode(CONCAT, newChildrenShifted));
+                    // Merging adjacent constants
+                    std::vector<Node *> newChildrenMerged;
+                    int i = 0;
+                    std::vector<Node *> v;
+                    int32_t size = (int32_t) newChildrenShifted.size();
+                    while (i < size) {
+                        while (i != size and newChildrenShifted[i]->nature == CONST) {
+                            v.push_back(newChildrenShifted[i]);
+                            i += 1;
+                        }
+                        if (v.size() != 0) {
+                            std::reverse(v.begin(), v.end());
+                            newChildrenMerged.push_back(&Concat(v));
+                            v.clear();
+                        }
+                        if (i == size) {
+                            break;
+                        }
+                        newChildrenMerged.push_back(newChildrenShifted[i]);
+                        i += 1;
+                    }
+                    return setSimpEqAndReturn(node, Node::OpNode(CONCAT, newChildrenMerged));
                 }
             }
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
@@ -2171,22 +2193,56 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 return setSimpEqAndReturn(node, gChild >> (sh0.cst[0] + sh1.cst[0]));
             }
             else if (exp.op == CONCAT) {
-                bool allChildren1bit = true;
+                bool singleBitOrCstChildren = true;
                 for (const auto & gChild : *exp.children) {
-                    if (gChild->width != 1) {
-                        allChildren1bit = false;
+                    if (gChild->width != 1 and gChild->nature != CONST) {
+                        singleBitOrCstChildren = false;
                         break;
                     }
                 }
-                if (allChildren1bit) {
+                if (singleBitOrCstChildren) {
+                    std::vector<Node *> singleBitChildren;
+                    for (const auto & gChild : *exp.children) {
+                        if (gChild->nature == CONST) {
+                            bitDecomposeCst(*gChild);
+                            for (int32_t i = 0; i < gChild->width; i += 1) {
+                                singleBitChildren.push_back(gChild->extractBit[i]);
+                            }
+                        }
+                        else {
+                            singleBitChildren.push_back(gChild);
+                        }
+                    }
+
                     std::vector<Node *> newChildrenShifted;
-                    for (int32_t i = (int32_t) sh0.cst[0]; i < exp.width; i += 1) {
-                        newChildrenShifted.push_back(exp.children->at(i));
+                    for (int32_t i = (int32_t) sh0.cst[0]; i < (int32_t) singleBitChildren.size(); i += 1) {
+                        newChildrenShifted.push_back(singleBitChildren[i]);
                     }
                     for (int32_t i = 0; i < (int32_t) sh0.cst[0]; i += 1) {
-                        newChildrenShifted.push_back(exp.children->at(exp.children->size() - 1));
+                        newChildrenShifted.push_back(singleBitChildren[singleBitChildren.size() - 1]);
                     }
-                    return setSimpEqAndReturn(node, Node::OpNode(CONCAT, newChildrenShifted));
+                    // Merging adjacent constants
+                    std::vector<Node *> newChildrenMerged;
+                    int i = 0;
+                    std::vector<Node *> v;
+                    int32_t size = (int32_t) newChildrenShifted.size();
+                    while (i < size) {
+                        while (i != size and newChildrenShifted[i]->nature == CONST) {
+                            v.push_back(newChildrenShifted[i]);
+                            i += 1;
+                        }
+                        if (v.size() != 0) {
+                            std::reverse(v.begin(), v.end());
+                            newChildrenMerged.push_back(&Concat(v));
+                            v.clear();
+                        }
+                        if (i == size) {
+                            break;
+                        }
+                        newChildrenMerged.push_back(newChildrenShifted[i]);
+                        i += 1;
+                    }
+                    return setSimpEqAndReturn(node, Node::OpNode(CONCAT, newChildrenMerged));
                 }
             }
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));
@@ -2207,22 +2263,56 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 return setSimpEqAndReturn(node, LShR(gChild, sh0.cst[0] + sh1.cst[0]));
             }
             else if (exp.op == CONCAT) {
-                bool allChildren1bit = true;
+                bool singleBitOrCstChildren = true;
                 for (const auto & gChild : *exp.children) {
-                    if (gChild->width != 1) {
-                        allChildren1bit = false;
+                    if (gChild->width != 1 and gChild->nature != CONST) {
+                        singleBitOrCstChildren = false;
                         break;
                     }
                 }
-                if (allChildren1bit) {
+                if (singleBitOrCstChildren) {
+                    std::vector<Node *> singleBitChildren;
+                    for (const auto & gChild : *exp.children) {
+                        if (gChild->nature == CONST) {
+                            bitDecomposeCst(*gChild);
+                            for (int32_t i = 0; i < gChild->width; i += 1) {
+                                singleBitChildren.push_back(gChild->extractBit[i]);
+                            }
+                        }
+                        else {
+                            singleBitChildren.push_back(gChild);
+                        }
+                    }
+
                     std::vector<Node *> newChildrenShifted;
-                    for (int32_t i = (int32_t) sh0.cst[0]; i < exp.width; i += 1) {
-                        newChildrenShifted.push_back(exp.children->at(i));
+                    for (int32_t i = (int32_t) sh0.cst[0]; i < (int32_t) singleBitChildren.size(); i += 1) {
+                        newChildrenShifted.push_back(singleBitChildren[i]);
                     }
                     for (int32_t i = 0; i < (int32_t) sh0.cst[0]; i += 1) {
                         newChildrenShifted.push_back(&Const(0, 1));
                     }
-                    return setSimpEqAndReturn(node, Node::OpNode(CONCAT, newChildrenShifted));
+                    // Merging adjacent constants
+                    std::vector<Node *> newChildrenMerged;
+                    int i = 0;
+                    std::vector<Node *> v;
+                    int32_t size = (int32_t) newChildrenShifted.size();
+                    while (i < size) {
+                        while (i != size and newChildrenShifted[i]->nature == CONST) {
+                            v.push_back(newChildrenShifted[i]);
+                            i += 1;
+                        }
+                        if (v.size() != 0) {
+                            std::reverse(v.begin(), v.end());
+                            newChildrenMerged.push_back(&Concat(v));
+                            v.clear();
+                        }
+                        if (i == size) {
+                            break;
+                        }
+                        newChildrenMerged.push_back(newChildrenShifted[i]);
+                        i += 1;
+                    }
+                    return setSimpEqAndReturn(node, Node::OpNode(CONCAT, newChildrenMerged));
                 }
             }
             return setSimpEqAndReturn(node, defaultNode(node, op, newChildren, modified));

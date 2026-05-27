@@ -41,6 +41,7 @@ Node::Node() {
     nlimbs = 0;
     cst = NULL;
     strn = NULL;
+    extractBit = NULL;
 
     simpEq = NULL;
     simpEqUsbv = NULL;
@@ -127,8 +128,9 @@ Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, in
     n->symb = new std::string(symb);
     n->symbType = symbType;
     n->width = width;
+    n->extractBit = new Node * [width];
     for (int32_t i = 0; i < width; i += 1) {
-        n->extractBit.push_back(NULL);
+        n->extractBit[i] = NULL;
     }
     n->nbShares = nbShares;
     n->shareNum = shareNum;
@@ -365,8 +367,9 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         exit(EXIT_FAILURE);
     }
 
+    n->extractBit = new Node * [n->width];
     for (int32_t i = 0; i < n->width; i += 1) {
-        n->extractBit.push_back(NULL);
+        n->extractBit[i] = NULL;
     }
 
     n->setVarsOccurrences();
@@ -1143,35 +1146,10 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
     }
     else if (op == CONCAT) {
         std::string res = "Concat(";
-        bool first = true;
-        int i = children->size() - 1;
-        std::vector<Node *> v;
-        while (i >= 0) {
-            while (i != -1 and children->at(i)->nature == CONST) {
-                v.push_back(children->at(i));
-                i -= 1;
-            }
-            if (v.size() != 0) {
-                std::reverse(v.begin(), v.end());
-                Node & cst = Concat(v);
-                v.clear();
-                if (!first) {
-                    res += ", ";
-                }
-                first = false;
-                res += cst.expPrint(false, verbatim);
-            }
-            if (i == -1) {
-                break;
-            }
-            if (!first) {
-                res += ", ";
-            }
-            first = false;
-            res += children->at(i)->expPrint(false, verbatim);
-            i -= 1;
+        for (int32_t i = children->size() - 1; i > 0; i -= 1) {
+            res += children->at(i)->expPrint(false, verbatim) + ", ";
         }
-        res += ")";
+        res += children->at(0)->expPrint(false, verbatim) + ")";
         return res;
     }
     else if (op == EXTRACT) {
