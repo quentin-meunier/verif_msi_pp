@@ -28,25 +28,25 @@ Author(s): Quentin L. Meunier
 
 int32_t getSymbolicBitsNum(Node & n) {
     std::set<Node *> allVars;
-    for (const auto & [k, v] : *n.maskingMaskOcc) {
+    for (const auto & [k, v] : n.maskingMaskOcc) {
         allVars.insert(k);
     }
     #if SEL_MSK_W_NON_MSKNG_OCC
-    for (const auto & [k, v] : *n.otherMaskOcc) {
+    for (const auto & [k, v] : n.otherMaskOcc) {
         allVars.insert(k);
     }
     #else
-    for (const auto & m : *n.otherMaskOcc) {
+    for (const auto & m : n.otherMaskOcc) {
         allVars.insert(m);
     }
     #endif
-    for (const auto & k : *n.secretVarOcc) {
+    for (const auto & k : n.secretVarOcc) {
         allVars.insert(k);
     }
-    for (const auto & k : *n.publicVarOcc) {
+    for (const auto & k : n.publicVarOcc) {
         allVars.insert(k);
     }
-    for (const auto & [k, v] : *n.shareOcc) {
+    for (const auto & [k, v] : n.shareOcc) {
         for (const auto & [l, w] : *v) {
             allVars.insert(l);
         }
@@ -62,25 +62,25 @@ int32_t getSymbolicBitsNum(Node & n) {
 
 int32_t getMaxSymbVarWidth(Node & n) {
     std::set<Node *> allVars;
-    for (const auto & [k, v] : *n.maskingMaskOcc) {
+    for (const auto & [k, v] : n.maskingMaskOcc) {
         allVars.insert(k);
     }
     #if SEL_MSK_W_NON_MSKNG_OCC
-    for (const auto & [k, v] : *n.otherMaskOcc) {
+    for (const auto & [k, v] : n.otherMaskOcc) {
         allVars.insert(k);
     }
     #else
-    for (const auto & m : *n.otherMaskOcc) {
+    for (const auto & m : n.otherMaskOcc) {
         allVars.insert(m);
     }
     #endif
-    for (const auto & k : *n.secretVarOcc) {
+    for (const auto & k : n.secretVarOcc) {
         allVars.insert(k);
     }
-    for (const auto & k : *n.publicVarOcc) {
+    for (const auto & k : n.publicVarOcc) {
         allVars.insert(k);
     }
-    for (const auto & [k, v] : *n.shareOcc) {
+    for (const auto & [k, v] : n.shareOcc) {
         for (const auto & [l, w] : *v) {
             allVars.insert(l);
         }
@@ -103,25 +103,25 @@ int32_t getMaxSymbVarWidth(Node & n) {
 static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVarsVec) {
     std::set<Node *> allVars;
     for (const auto & e : exps) {
-        for (const auto & [k, v] : *e->maskingMaskOcc) {
+        for (const auto & [k, v] : e->maskingMaskOcc) {
             allVars.insert(k);
         }
         #if SEL_MSK_W_NON_MSKNG_OCC
-        for (const auto & [k, v] : *e->otherMaskOcc) {
+        for (const auto & [k, v] : e->otherMaskOcc) {
             allVars.insert(k);
         }
         #else
-        for (const auto & m : *e->otherMaskOcc) {
+        for (const auto & m : e->otherMaskOcc) {
             allVars.insert(m);
         }
         #endif
-        for (const auto & k : *e->secretVarOcc) {
+        for (const auto & k : e->secretVarOcc) {
             allVars.insert(k);
         }
-        for (const auto & k : *e->publicVarOcc) {
+        for (const auto & k : e->publicVarOcc) {
             allVars.insert(k);
         }
-        for (const auto & [k, v] : *e->shareOcc) {
+        for (const auto & [k, v] : e->shareOcc) {
             for (const auto & [l, w] : *v) {
                 allVars.insert(l);
             }

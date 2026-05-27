@@ -132,25 +132,25 @@ class Node {
     Node * origSecret; // For share nodes: original secret from which the share is derived
     Node * pseudoShareEq; // Pseudo-share equivalent
 
-    std::set<Node *> * secretVarOcc;
-    std::set<Node *> * publicVarOcc;
+    std::set<Node *> secretVarOcc;
+    std::set<Node *> publicVarOcc;
     
     // currentlyMasking: Masks masking current node, value is ctrBase
-    std::map<Node *, Node *> * currentlyMasking;
+    std::map<Node *, Node *> currentlyMasking;
 
     // maskingMaskOcc[mask][ctrBase][ctr] = {count, height}
     // count  : number of occurrences
     // height : height of ctr starting from ctrBase (0 for ctrBase)
-    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > * maskingMaskOcc;
+    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > maskingMaskOcc;
 
     #if SEL_MSK_W_NON_MSKNG_OCC
     // otherMaskOcc[mask] = set() containing all parents in sub-expression
-    std::map<Node *, std::set<Node *> * > * otherMaskOcc;
+    std::map<Node *, std::set<Node *> * > otherMaskOcc;
     #else
-    std::set<Node *> * otherMaskOcc;
+    std::set<Node *> otherMaskOcc;
     #endif
 
-    std::map<Node *, std::map<Node *, int32_t> * > * shareOcc;
+    std::map<Node *, std::map<Node *, int32_t> * > shareOcc;
  
     // preservedMask: bijection of a mask, can mask if a maskingNode is encountered. tuple if not None: (mask, parent)
     std::pair<Node *, Node *> preservedMask;

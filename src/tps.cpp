@@ -61,7 +61,7 @@ static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToRep
             children.push_back(&selMask);
             continue;
         }
-        if (child->maskingMaskOcc->contains(&selMask) || child->otherMaskOcc->contains(&selMask)) {
+        if (child->maskingMaskOcc.contains(&selMask) || child->otherMaskOcc.contains(&selMask)) {
             Node & newChild = getReplacedGraphRec(*child, selMask, childToReplace, m);
             children.push_back(&newChild);
         }
@@ -184,7 +184,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         cpt += 1;
 
         if (secProp == TPS) {
-            if (node->secretVarOcc->size() == 0) {
+            if (node->secretVarOcc.size() == 0) {
                 if (verbose) {
                     std::cout << "# No more secret" << std::endl;
                 }
@@ -193,7 +193,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         }
         else if (secProp == NI) {
             bool isNI = true;
-            for (const auto & [s, val] : *node->shareOcc) {
+            for (const auto & [s, val] : node->shareOcc) {
                 // val is node->shareOcc->at(s)
                 //std::cout << "origSecret: " << *s << std::endl;
                 //std::cout << "val->size : " << val->size() << " - maxShareOcc : " << maxShareOcc << std::endl;
@@ -208,7 +208,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         }
         else if (secProp == RNI) {
             bool isRNI = true;
-            for (const auto & [s, shares] : *node->shareOcc) {
+            for (const auto & [s, shares] : node->shareOcc) {
                 // share is node->shareOcc->at(s)
                 int nbShares = -1;
                 for (const auto & [anyOcc, val] : *shares) {
@@ -227,7 +227,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         else if (secProp == PINI) {
             //print('# outputIndexes: %s' % ' '.join(map(lambda x: '%d' % x, outputIndexes)))
             std::set<int32_t> internalSharesIndexes;
-            for (const auto & [s, shares] : *node->shareOcc) {
+            for (const auto & [s, shares] : node->shareOcc) {
                 for (const auto & [sh, val] : *shares) {
                     int32_t num = sh->shareNum;
                     if (not outputIndexes->contains(num)) {
@@ -240,7 +240,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             }
         }
 
-        if (node->currentlyMasking->size() != 0) {
+        if (node->currentlyMasking.size() != 0) {
             if (verbose) {
                 std::cout << "# At least one node is currently masking" << std::endl;
             }
@@ -252,11 +252,11 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // - For this m, choose CTR Base with the highest count
         // - For this CTR Base, choose the CTR with the max height for the same count
         // FIXME: change map copies to an alias, check that this is ok
-        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > & maskingMaskOcc = *node->maskingMaskOcc;
+        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > & maskingMaskOcc = node->maskingMaskOcc;
         #if SEL_MSK_W_NON_MSKNG_OCC
-        std::map<Node *, std::set<Node *> * > & otherMaskOcc = *node->otherMaskOcc;
+        std::map<Node *, std::set<Node *> * > & otherMaskOcc = node->otherMaskOcc;
         #else
-        std::set<Node *> & otherMaskOcc = *node->otherMaskOcc;
+        std::set<Node *> & otherMaskOcc = node->otherMaskOcc;
         #endif
         int32_t minOtherOcc = 1000000;
         int32_t minMaskingOcc = 1000000;
@@ -304,7 +304,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             // Making the maximum number of replacements for OPINI
             if (secProp == OPINI) {
                 std::set<int32_t> internalSharesIndexes;
-                for (const auto & [s, shares] : *node->shareOcc) {
+                for (const auto & [s, shares] : node->shareOcc) {
                     for (const auto & [sh, val] : *shares) {
                         int32_t num = sh->shareNum;
                         if (not outputIndexes->contains(num)) {

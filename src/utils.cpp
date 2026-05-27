@@ -338,7 +338,7 @@ static Node & replaceSharesWithSecretsAndMasksRec(Node & node, std::map<Node *, 
             children.push_back(m[child]);
             continue;
         }
-        if (child->shareOcc->size() != 0) {
+        if (child->shareOcc.size() != 0) {
             Node & newChild = replaceSharesWithSecretsAndMasksRec(*child, m);
             children.push_back(&newChild);
             continue;
@@ -353,7 +353,7 @@ static Node & replaceSharesWithSecretsAndMasksRec(Node & node, std::map<Node *, 
 
 Node & replaceSharesWithSecretsAndMasks(Node & e) {
     std::map<Node *, Node *> m;
-    for (const auto & [s, v] : *e.shareOcc) {
+    for (const auto & [s, v] : e.shareOcc) {
         for (const auto & [sh, w] : *v) {
             m[sh] = sh->pseudoShareEq;
         }

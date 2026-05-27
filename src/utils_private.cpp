@@ -12,7 +12,7 @@ Author(s): Quentin L. Meunier
 
 
 void tpsValidity(Node & n) {
-    if (n.shareOcc->size() != 0) {
+    if (n.shareOcc.size() != 0) {
         std::cerr << "*** Error: Threshold Probing verification should not use a share representation but explicit secret variables and masks" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -20,7 +20,7 @@ void tpsValidity(Node & n) {
 
 
 void niValidity(Node & n) {
-    if (n.secretVarOcc->size() != 0) {
+    if (n.secretVarOcc.size() != 0) {
         std::cerr << "*** Error: NI verification should use a share representation and not explicit secret variables" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -28,7 +28,7 @@ void niValidity(Node & n) {
 
 
 void rniValidity(Node & n) {
-    if (n.secretVarOcc->size() != 0) {
+    if (n.secretVarOcc.size() != 0) {
         std::cerr << "*** Error: RNI verification should use a share representation and not explicit secret variables" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -36,7 +36,7 @@ void rniValidity(Node & n) {
 
 
 void piniValidity(Node & n) {
-    if (n.secretVarOcc->size() != 0) {
+    if (n.secretVarOcc.size() != 0) {
         std::cerr << "*** Error: PINI verification should use a share representation and not explicit secret variables" << std::endl;
         exit(EXIT_FAILURE);
     }

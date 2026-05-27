@@ -717,14 +717,14 @@ static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify) {
 
     for (const auto & g : gatesToVerifyVec) {
         bool moreThanOneShare = false;
-        for (const auto & [secret, val] : *g->symbExp->shareOcc) {
+        for (const auto & [secret, val] : g->symbExp->shareOcc) {
             if (val->size() > 1) {
                 moreThanOneShare = true;
                 break;
             }
         }
 
-        if (!moreThanOneShare && g->symbExp->maskingMaskOcc->size() + g->symbExp->otherMaskOcc->size() == 0) {
+        if (!moreThanOneShare && g->symbExp->maskingMaskOcc.size() + g->symbExp->otherMaskOcc.size() == 0) {
             std::cout << "# Removing gate " << g->num << ": " << *g->symbExp << std::endl;
             gatesToVerify.erase(g);
         }
@@ -751,7 +751,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
         }
 
         bool verifyGate = true;
-        if (g->symbExp->otherMaskOcc->size() == 0 || (g->symbExp->nature == SYMB && g->symbExp->symbType == 'M')) {
+        if (g->symbExp->otherMaskOcc.size() == 0 || (g->symbExp->nature == SYMB && g->symbExp->symbType == 'M')) {
             for (const auto & h : gatesToVerifyVec) {
                 if (g == h) {
                     continue;
@@ -761,24 +761,24 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
                 }
 
                 std::set<Node *> gShares;
-                for (const auto & [secret, val] : *g->symbExp->shareOcc) {
+                for (const auto & [secret, val] : g->symbExp->shareOcc) {
                     for (const auto & [sh, num] : *val) {
                         gShares.insert(sh);
                     }
                 }
                 std::set<Node *> hShares;
-                for (const auto & [secret, val] : *h->symbExp->shareOcc) {
+                for (const auto & [secret, val] : h->symbExp->shareOcc) {
                     for (const auto & [sh, num] : *val) {
                         hShares.insert(sh);
                     }
                 }
 
-                if (h->symbExp->otherMaskOcc->size() == 0) {
+                if (h->symbExp->otherMaskOcc.size() == 0) {
                     //std::cout << "# test of gate " << g->num << " with gate " << h->num << std::endl;
                     std::set<Node *> gMasks;
                     std::set<Node *> hMasks;
-                    std::transform(g->symbExp->maskingMaskOcc->begin(), g->symbExp->maskingMaskOcc->end(), std::inserter(gMasks, gMasks.end()), [](auto pair){ return pair.first; });
-                    std::transform(h->symbExp->maskingMaskOcc->begin(), h->symbExp->maskingMaskOcc->end(), std::inserter(hMasks, hMasks.end()), [](auto pair){ return pair.first; });
+                    std::transform(g->symbExp->maskingMaskOcc.begin(), g->symbExp->maskingMaskOcc.end(), std::inserter(gMasks, gMasks.end()), [](auto pair){ return pair.first; });
+                    std::transform(h->symbExp->maskingMaskOcc.begin(), h->symbExp->maskingMaskOcc.end(), std::inserter(hMasks, hMasks.end()), [](auto pair){ return pair.first; });
                     if (gMasks == hMasks && std::includes(hShares.begin(), hShares.end(), gShares.begin(), gShares.end())) {
                         //std::cout << "# Shares of g: " << setExpsStr(gShares) << std::endl;
                         //std::cout << "# Shares of h: " << setExpsStr(hShares) << std::endl;
@@ -786,7 +786,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
                         verifyGate = false;
                         break;
                     }
-                    else if (g->symbExp->nature == SYMB && g->symbExp->symbType == 'M' && h->symbExp->maskingMaskOcc->size() == 1 && h->symbExp->maskingMaskOcc->count(g->symbExp) == 1) {
+                    else if (g->symbExp->nature == SYMB && g->symbExp->symbType == 'M' && h->symbExp->maskingMaskOcc.size() == 1 && h->symbExp->maskingMaskOcc.count(g->symbExp) == 1) {
                         //if (set([g.symbExp]) == set(h.symbExp.maskingMaskOcc.keys()))
                         //std::cout << "# Larger Gate for " << *g->symbExp << ": " << h->num << ": " << *h->symbExp << std::endl;
                         verifyGate = false;
