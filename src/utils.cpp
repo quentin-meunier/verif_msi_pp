@@ -367,6 +367,32 @@ int32_t width(Node & e) {
     return e.width;
 }
 
+void printStats() {
+    std::cout << "# Number of nodes per nature:" << std::endl;
+    std::map<NodeOp, int64_t> m;
+    for (const auto & n : Node::opNodes) {
+        if (m.contains(n->op)) {
+            m[n->op] += 1;
+        }
+        else {
+            m[n->op] = 1;
+        }
+        //if (n->op == EXTRACT || n->op == CONCAT) {
+        //    std::cout << "#     " << *n << std::endl;
+        //}
+    }
+    int nbCstNodes = 0;
+    for (const auto & [w, m] : Node::cst2node) {
+        nbCstNodes += m.size();
+    }
+
+    std::cout << "# Symb: " << Node::symb2node.size() << std::endl;
+    std::cout << "# Cst: " << nbCstNodes << std::endl;
+    for (const auto & [e, v] : m) {
+        std::cout << "# " << Node::op2strOp(e) << ": " << v << std::endl;
+    }
+}
+
 
 void verifMSICleanup() {
     for (const auto & hwe : HWElement::allHWElements) {

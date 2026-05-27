@@ -464,6 +464,7 @@ PYBIND11_MODULE(_core, m) {
     m.def("getPseudoShares", &bindGetPseudoShares, "Desc.");
     m.def("getRealShares", &bindGetRealShares, "Desc.");
 
+    m.def("printStats", &printStats, "Desc.");
 }
 
 

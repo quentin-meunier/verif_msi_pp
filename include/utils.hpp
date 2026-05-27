@@ -45,6 +45,7 @@ Node & replaceSharesWithSecretsAndMasks(Node & e);
 
 int32_t width(Node & e);
 
+void printStats();
 void verifMSICleanup();
 void dumpConfig(std::ostream & os = std::cout);
 

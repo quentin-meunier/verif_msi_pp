@@ -101,6 +101,9 @@ Node::~Node() {
     if (cst != NULL) {
         delete [] cst;
     }
+    if (extractBit != NULL) {
+        delete [] extractBit;
+    }
 }
 
 
