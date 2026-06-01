@@ -252,7 +252,7 @@ HWElement & genericGmul(HWElement & child0, HWElement & child1) {
     def verifFunctionality(self, content, exps, exev):
         content += '\n'
         content += '    if (checkFunctionality) {\n'
-        content += '        bool res = compareExpsWithExev(' + exps + ', ' + exev + ');'
+        content += '        bool res = compareExpsWithExev(' + exps + ', ' + exev + ');\n'
         content += '        if (res) {\n'
         content += '            std::cout << "# Functionality (exhaustive evaluation): [OK]" << std::endl;\n'
         content += '        }\n'
