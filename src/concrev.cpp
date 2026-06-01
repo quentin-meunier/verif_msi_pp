@@ -241,7 +241,7 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
                 intRes[nlimbs - 1] = (1ULL << (width % 64)) - 1;
             }
         }
-        else if (op == IMUL) {
+        else if (op == IMUL || op == GMUL) {
             intRes[0] = 1;
         }
         else {
@@ -287,6 +287,10 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
             else if (op == IMUL) {
                 assert(nlimbs == 1);
                 intRes[0] = width == 64 ? (intRes[0] * child->cst[0]) : (intRes[0] * child->cst[0]) & ((1ULL << width) - 1);
+            }
+            else if (op == GMUL) {
+                assert(width == 8);
+                intRes[0] = gmulInt(intRes[0], child->cst[0]);
             }
             else {
                 assert(false);

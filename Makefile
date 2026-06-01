@@ -76,6 +76,9 @@ $(OBJ_DIR)/simp_rules.o: $(SRC_DIR)/simp_rules.cpp $(INC_DIR)/simp_rules.hpp $(I
 $(OBJ_DIR)/utils_private.o: $(SRC_DIR)/utils_private.cpp $(INC_DIR)/utils_private.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
 	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
+$(OBJ_DIR)/circuit.o: $(SRC_DIR)/circuit.cpp $(INC_DIR)/circuit.hpp
+	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
+
 
 
 clean:

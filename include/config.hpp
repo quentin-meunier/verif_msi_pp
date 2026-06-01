@@ -25,6 +25,7 @@ Author(s): Quentin L. Meunier
 #define VERIF_REMOVE_CST_IN_ADD true
 
 
+extern bool verbose;
 
 
 #define REM_SINGLE_INPUT_PROBES true

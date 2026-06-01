@@ -359,6 +359,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         n->extractBit[i] = NULL;
     }
 
+    
     n->setVarsOccurrences();
 
     // Examples to have in mind

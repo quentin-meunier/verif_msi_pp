@@ -110,7 +110,7 @@ py::tuple bindCheckSecurity(int32_t order, bool withGlitches, const std::string 
         cppOutputs.push_back(&py::cast<HWElement &>(o));
     }
     int32_t nbLeak;
-    nbLeak = checkSecurity(order, withGlitches, sp, cppOutputs, false, &nbCheck);
+    nbLeak = checkSecurity(order, withGlitches, sp, cppOutputs, false, 1, false, &nbCheck);
     return py::make_tuple(nbLeak, nbCheck);
 }
 

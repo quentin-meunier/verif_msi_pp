@@ -18,6 +18,7 @@ Author(s): Quentin L. Meunier
 #include "check_leakage.hpp"
 #include "tps.hpp"
 #include "config.hpp"
+#include "utils.hpp"
 
 
 typedef enum _HWElementNature {
@@ -66,13 +67,18 @@ class HWElement {
 HWElement & andGate(HWElement & child0, HWElement & child1);
 HWElement & orGate(HWElement & child0, HWElement & child1);
 HWElement & xorGate(HWElement & child0, HWElement & child1);
+HWElement & LShLGate(HWElement & child, int32_t shval);
+HWElement & LShRGate(HWElement & child, int32_t shval);
+HWElement & extractGate(int32_t msb, int32_t lsb, HWElement & child);
 HWElement & notGate(HWElement & child);
 HWElement & inputGate(Node & child);
 HWElement & Register(HWElement & child);
+HWElement & gmulGadget(HWElement & n0, HWElement & n1);
 
 HWElement & andGate(std::vector<HWElement *> & children);
 HWElement & orGate(std::vector<HWElement *> & children);
 HWElement & xorGate(std::vector<HWElement *> & children);
+HWElement & concatGate(std::vector<HWElement *> & children);
 
 
 void dumpCircuit(const char * filename, std::vector<HWElement *> & outputs);

@@ -10,6 +10,7 @@ Author(s): Quentin L. Meunier
 #ifndef _verif_msi_pp_hpp_
 #define _verif_msi_pp_hpp_
 
+#include "config.hpp"
 #include "node.hpp"
 #include "simplify.hpp"
 #include "utils.hpp"
@@ -19,6 +20,7 @@ Author(s): Quentin L. Meunier
 #include "check_leakage.hpp"
 #include "hw.hpp"
 #include "simp_rules.hpp"
+#include "circuit.hpp"
 
 
 #endif

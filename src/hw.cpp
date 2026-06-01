@@ -55,6 +55,18 @@ static void dumpCircuitGates(const char * filename, std::set<HWElement *> & hwEl
             else if (hwe->op == BNOT) {
                 s = std::string("NOT Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
             }
+            else if (hwe->op == EXTRACT) {
+                s = std::string("EXTRACT Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
+            }
+            else if (hwe->op == CONCAT) {
+                s = std::string("CONCAT Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
+            }
+            else if (hwe->op == LSHL) {
+                s = std::string("LSHL Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
+            }
+            else if (hwe->op == LSHR) {
+                s = std::string("LSHR Gate (") + std::to_string(hwe->num) + ")\n/" + std::to_string(hwe->symbExp->width) + "/";
+            }
             else if (hwe->op == INPUT) {
                 Node & n = *hwe->symbExp;
                 if (n.nature == SYMB) {
@@ -127,7 +139,7 @@ HWElement & HWElement::Gate(NodeOp op, std::vector<HWElement *> & inputs) {
     for (const auto & inp : inputs) {
         symbExps.push_back(inp->symbExp);
     }
-    e->symbExp = &simplify(Node::OpNode(op, symbExps));
+    e->symbExp = &simplify(Node::OpNode(op, symbExps), true, true);
     for (const auto & inp : e->inputs) {
         for (const auto & lo : inp->leakageOut) {
             e->leakageOut.insert(lo);
@@ -135,6 +147,8 @@ HWElement & HWElement::Gate(NodeOp op, std::vector<HWElement *> & inputs) {
     }
     return *e;
 }
+
+
 
 
 HWElement & HWElement::Register(HWElement & input) {
@@ -202,6 +216,11 @@ HWElement & xorGate(std::vector<HWElement *> & children) {
 }
 
 
+HWElement & concatGate(std::vector<HWElement *> & children) {
+    return HWElement::Gate(CONCAT, children);
+}
+
+
 HWElement & andGate(HWElement & child0, HWElement & child1) {
     std::vector<HWElement *> children {&child0, &child1};
     return HWElement::Gate(BAND, children);
@@ -225,6 +244,105 @@ HWElement & notGate(HWElement & child) {
     return HWElement::Gate(BNOT, children);
 }
 
+
+HWElement & LShLGate(HWElement & child, int32_t shval) {
+    HWElement * e = new HWElement();
+    e->nature = GATE;
+    e->op = LSHL;
+    e->inputs.push_back(&child);
+
+    e->symbExp = &simplify(*child.symbExp << shval, true, true);
+    for (const auto & inp : e->inputs) {
+        for (const auto & lo : inp->leakageOut) {
+            e->leakageOut.insert(lo);
+        }
+    }
+    return *e;
+}
+
+
+HWElement & LShRGate(HWElement & child, int32_t shval) {
+    HWElement * e = new HWElement();
+    e->nature = GATE;
+    e->op = LSHR;
+    e->inputs.push_back(&child);
+
+    e->symbExp = &simplify(LShR(*child.symbExp, shval), true, true);
+    for (const auto & inp : e->inputs) {
+        for (const auto & lo : inp->leakageOut) {
+            e->leakageOut.insert(lo);
+        }
+    }
+    return *e;
+}
+
+
+HWElement & AShRGate(HWElement & child, int32_t shval) {
+    HWElement * e = new HWElement();
+    e->nature = GATE;
+    e->op = ASHR;
+    e->inputs.push_back(&child);
+
+    e->symbExp = &simplify(*child.symbExp >> shval, true, true);
+    for (const auto & inp : e->inputs) {
+        for (const auto & lo : inp->leakageOut) {
+            e->leakageOut.insert(lo);
+        }
+    }
+    return *e;
+}
+
+
+HWElement & extractGate(int32_t msb, int32_t lsb, HWElement & child) {
+    HWElement * e = new HWElement();
+    e->nature = GATE;
+    e->op = EXTRACT;
+    e->inputs.push_back(&child);
+
+    e->symbExp = &simplify(Extract(msb, lsb, *child.symbExp), true, true);
+    for (const auto & inp : e->inputs) {
+        for (const auto & lo : inp->leakageOut) {
+            e->leakageOut.insert(lo);
+        }
+    }
+    return *e;
+}
+
+
+HWElement & gmulGadget(HWElement & n0, HWElement & n1) {
+
+    HWElement & cstgfIrr = inputGate(constant(Node::gfIrr, 8));
+    HWElement * aExt = &n0;
+    HWElement * bExt = &n1;
+    HWElement * pExt = &inputGate(constant(0, 8));
+
+    for (int i = 0; i < 8; i += 1) {
+        HWElement & a = *aExt;
+        HWElement & b = *bExt;
+        HWElement & p = *pExt;
+
+        HWElement & b0 = extractGate(0, 0, b);
+        std::vector<HWElement *> b0WordVect {&b0, &b0, &b0, &b0, &b0, &b0, &b0, &b0};
+        HWElement & b0Word = concatGate(b0WordVect);
+        HWElement & a0 = andGate(a, b0Word);
+        HWElement & newP = xorGate(a0, p);
+
+        HWElement & a7 = extractGate(7, 7, a);
+        std::vector<HWElement *> a7WordVect {&a7, &a7, &a7, &a7, &a7, &a7, &a7, &a7};
+        HWElement & a7Word = concatGate(a7WordVect);
+        HWElement & a1 = LShLGate(a, 1);
+        HWElement & newA = xorGate(a1, andGate(a7Word, cstgfIrr));
+
+        if (i != 7) {
+            HWElement & newB = LShRGate(b, 1);
+            aExt = &newA;
+            bExt = &newB;
+        }
+        pExt = &newP;
+   }
+    
+    return *pExt;
+}
 
 
 // Useless but for homogeneity
@@ -692,6 +810,11 @@ static void removeProbesWithGlitches(std::set<HWElement *> & gatesToVerify) {
             if (g == gate) {
                 continue;
             }
+            
+            if (toRemove.contains(g)) {
+                continue;
+            }
+
             // if (gate->leakageOut.issubset(g->leakageOut))
             if (std::includes(g->leakageOut.begin(), g->leakageOut.end(), gate->leakageOut.begin(), gate->leakageOut.end())) {
                 toRemove.insert(gate);
@@ -725,7 +848,9 @@ static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify) {
         }
 
         if (!moreThanOneShare && g->symbExp->maskingMaskOcc.size() + g->symbExp->otherMaskOcc.size() == 0) {
-            std::cout << "# Removing gate " << g->num << ": " << *g->symbExp << std::endl;
+            if (verbose) {
+                std::cout << "# Removing gate " << g->num << ": " << *g->symbExp << std::endl;
+            }
             gatesToVerify.erase(g);
         }
     }
@@ -797,7 +922,9 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
         }
 
         if (!verifyGate) {
-            std::cout << "# Removing gate " << g->num << ": " << *g->symbExp << std::endl;
+            if (verbose) {
+                std::cout << "# Removing gate " << g->num << ": " << *g->symbExp << std::endl;
+            }
             gatesToVerify.erase(g);
             withdrawnGates.insert(g);
         }
@@ -805,9 +932,8 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
 }
 
 
-int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, int32_t * nbCheck) {
-    std::cout << "# Checking Security at order " << order << " (" << (withGlitches ? "with glitches" : "no glitches") << ", " << secProp2str(secProp) << " property, no False Positive: " << (noFalsePositive ? "Yes" : "No") << ")" << std::endl;
 
+int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, int32_t * nbCheck) {
 
     std::set<HWElement *> outputs;
     for (const auto & v : outputList) {
@@ -821,7 +947,9 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         getReachableGates(gate, gatesToVerify);
     }
 
-    std::cout << "# Reachable gates (" << gatesToVerify.size() << "): " << setGatesNumStr(gatesToVerify) << std::endl;
+    if (verbose) {
+        std::cout << "# Reachable gates (" << gatesToVerify.size() << "): " << setGatesNumStr(gatesToVerify) << std::endl;
+    }
 
     bool doRemSingleInputProbesOpt;
     if (withGlitches) {
@@ -840,22 +968,26 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         }
         
         //print(' '.join(map(lambda x: '%s' % x.symbExp.symb, reachableInputShares)))
-        std::cout << "# Reachable Input Shares: ";
-        for (const auto & n : reachableInputShares) {
-            std::cout << *n->symb << " ";
+        if (verbose) {
+            std::cout << "# Reachable Input Shares: ";
+            for (const auto & n : reachableInputShares) {
+                std::cout << *n->symb << " ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
 
         std::set<std::tuple<Node *, int32_t>> reachableInputSharesSecrets;
         for (const auto & n : reachableInputShares) {
             reachableInputSharesSecrets.insert({n->origSecret, n->nbShares});
         }
         //print(' '.join(map(lambda x: '%s' % x[0].symb, reachableInputSharesSecrets)))
-        std::cout << "# Reachable Input Shares Secrets: ";
-        for (const auto & tup : reachableInputSharesSecrets) {
-            std::cout << *std::get<0>(tup)->symb << " ";
+        if (verbose) {
+            std::cout << "# Reachable Input Shares Secrets: ";
+            for (const auto & tup : reachableInputSharesSecrets) {
+                std::cout << *std::get<0>(tup)->symb << " ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
 
         bool allInputShares = true;
         for (const auto & t : reachableInputSharesSecrets) {
@@ -873,14 +1005,18 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
         doRemSingleInputProbesOpt = HWElement::remSingleInputProbesOpt && allInputShares;
         if (doRemSingleInputProbesOpt) {
-            std::cout << "# Removing Probes with at most 1 share / input and no random" << std::endl;
+            if (verbose) {
+                std::cout << "# Removing Probes with at most 1 share / input and no random" << std::endl;
+            }
             removeSingleInputProbes(gatesToVerify);
         }
 
 
         bool doRemRedundantProbesOpt = HWElement::remRedundantProbesOpt;
         if (doRemRedundantProbesOpt) {
-            std::cout << "# Removing Redundant Probes" << std::endl;
+            if (verbose) {
+                std::cout << "# Removing Redundant Probes" << std::endl;
+            }
             removeRedundantProbes(gatesToVerify, secProp, outputs);
         } // doRemRedundantProbesOpt
     } // secProp
@@ -896,36 +1032,38 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         return a->num < b->num;
     });
 
-    std::cout << "# Reduced gates (" << gates.size() << "):   " << vecGatesNumStr(gates) << std::endl;
-    if (withGlitches) {
-        std::cout << "# (in curly braces the leakage)" << std::endl;
-    }
-    for (const auto & gate : gates) {
-        std::cout << "# Gate " << gate->num << ": " << *gate->symbExp;
+    if (verbose) {
+        std::cout << "# Reduced gates (" << gates.size() << "):   " << vecGatesNumStr(gates) << std::endl;
         if (withGlitches) {
-            bool first = true;
-            std::cout << " { ";
-            for (const auto & n : gate->leakageOut) {
-                if (!first) {
-                    std::cout << ", ";
+            std::cout << "# (in curly braces the leakage)" << std::endl;
+        }
+        for (const auto & gate : gates) {
+            std::cout << "# Gate " << gate->num << ": " << *gate->symbExp;
+            if (withGlitches) {
+                bool first = true;
+                std::cout << " { ";
+                for (const auto & n : gate->leakageOut) {
+                    if (!first) {
+                        std::cout << ", ";
+                    }
+                    first = false;
+                    std::cout << *n;
                 }
-                first = false;
-                std::cout << *n;
+                std::cout << " }";
             }
-            std::cout << " }";
+            std::cout << std::endl;
+        }
+
+        std::cout << "# Outputs: ";
+        for (const auto & output : outputList) {
+            std::cout << "[ ";
+            for (const auto & outputShare : output) {
+                std::cout << outputShare->num << " ";
+            }
+            std::cout << "] ";
         }
         std::cout << std::endl;
     }
-
-    std::cout << "# Outputs: ";
-    for (const auto & output : outputList) {
-        std::cout << "[ ";
-        for (const auto & outputShare : output) {
-            std::cout << outputShare->num << " ";
-        }
-        std::cout << "] ";
-    }
-    std::cout << std::endl;
 
 
     if ((secProp == NI || secProp == TPS) && HWElement::bartheOpt) {
@@ -935,13 +1073,17 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
     std::vector<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *>> leakingHwe;
 
-    std::cout << "# Starting tuple enumeration" << std::endl;
+    if (verbose) {
+        std::cout << "# Starting tuple enumeration" << std::endl;
+    }
 
     if (secProp != PINI && secProp != OPINI) {
         std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> tuples;
         tupleEnum(gates, order, withGlitches, doRemSingleInputProbesOpt, tuples);
 
-        std::cout << "# Number of tuples: " << tuples.size() << std::endl;
+        if (verbose) {
+            std::cout << "# Number of tuples: " << tuples.size() << std::endl;
+        }
 
         for (const auto & t : tuples) {
             //std::cout << "# Checking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
@@ -987,7 +1129,9 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             }
 
             if (!res) {
-                std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
+                if (verbose) {
+                    std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
+                }
                 leakingHwe.push_back(t);
             }
             else {
@@ -1037,7 +1181,9 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             }
         }
 
-        std::cout << "# Number of tuples: " << tuples.size() << std::endl;
+        if (verbose) {
+            std::cout << "# Number of tuples: " << tuples.size() << std::endl;
+        }
 
         for (const auto & t : tuples) {
             //std::cout << "# Checking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
@@ -1063,7 +1209,9 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             }
 
             if (!res) {
-                std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
+                if (verbose) {
+                    std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
+                }
                 std::tuple<std::vector<Node *> *, std::vector<HWElement *> * > subTuple = { std::get<0>(t), std::get<1>(t) };
                 leakingHwe.push_back(subTuple);
             }

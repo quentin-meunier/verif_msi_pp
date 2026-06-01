@@ -9,50 +9,17 @@
 
 #include "verif_msi_pp.hpp"
 
-int32_t order = 2; // Shouldn't be changed
-SecurityProperty secProp = TPS;
-bool withGlitches = false;
-bool noFalsePositive = false;
-bool dumpCirc = false;
-bool checkFunctionality = false;
-const char * circuitFilename = "circuit.dot";
-std::string article = "[1] Reparaz, O., Bilgin, B., Nikova, S., Gierlichs, B., & Verbauwhede, I. (2015). Consolidating masking schemes. 35th Annual Cryptology Conference, 2015. Springer Berlin Heidelberg.";
 
-void usage(const char * argv) {
-    std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-    std::cout << "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the GMS scheme with 5 shares from [1]." << std::endl;
-    std::cout << "   This file was generated using the script generate_dom_and.py" << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << "-o,   --order <n>              : Set the order of the verification to (default: " << order << ")" << std::endl;
-    std::cout << "-p,   --prop                   : Set security property to verify: either \'ni\' (Non-Interference), \'sni\' (Strong Non-Interference) \'rni\' (Relaxed Non-Interference), \'pini\' (Probe-Isolating Non-Interference), \'opini\' (Output-PINI) or \'tps\' (Treshold Probing Security). NI, SNI, RNI and PINI use a share description for the inputs, while TPS uses a secrets + masks description (default: '" << secProp2str(secProp) << "')" << std::endl;
-    std::cout << "-g,   --with-glitches          : Consider glitch propagation throughout gates (defaut: " << (withGlitches ? "Yes" : "No") << ")" << std::endl;
-    std::cout << "-ng,  --without-glitches       : Do not consider glitch propagation throughout gates (defaut: " << (withGlitches ? "No" : "Yes") << ")" << std::endl;
-    std::cout << "-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positives (defaut: " << (noFalsePositive ? "No" : "Yes") << ")" << std::endl;
-    std::cout << "-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: " << (noFalsePositive ? "Yes" : "No") << ")" << std::endl;
-    std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \"" << circuitFilename << "\" (default: " << (dumpCircuit ? "Yes" : "No") << ")" << std::endl;
-    std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (checkFunctionality ? "Yes" : "No") << ")" << std::endl;
-    std::cout << std::endl;
-    std::cout << article << std::endl;
-}
-
-    
-std::vector<Node *> getShares(Node & s, int32_t nbShares) {
-    if (secProp == TPS) {
-        return getPseudoShares(s, nbShares);
-    }
-    else {
-        return getRealShares(s, nbShares);
-    }
-}
+bool verbose = false;
 
 
-int32_t dom_and_5_shares(int32_t * nbCheck) {
+int32_t dom_and_5_shares(GadgetParams & params, int32_t * nbCheck) {
 
-    Node & a = symbol("a", 'S', 1);
-    Node & b = symbol("b", 'S', 1);
+    Node & a = symbol("a", 'S', params.bitwidth);
+    Node & b = symbol("b", 'S', params.bitwidth);
 
-    std::vector<Node *> v_a = getShares(a, 5);
-    std::vector<Node *> v_b = getShares(b, 5);
+    std::vector<Node *> v_a = getShares(params, a, 5);
+    std::vector<Node *> v_b = getShares(params, b, 5);
 
     Node & n_a0 = *v_a[0];
     Node & n_a1 = *v_a[1];
@@ -67,16 +34,16 @@ int32_t dom_and_5_shares(int32_t * nbCheck) {
     Node & n_b4 = *v_b[4];
 
 
-    Node & n_z12 = symbol("z12", 'M', 1);
-    Node & n_z13 = symbol("z13", 'M', 1);
-    Node & n_z14 = symbol("z14", 'M', 1);
-    Node & n_z15 = symbol("z15", 'M', 1);
-    Node & n_z23 = symbol("z23", 'M', 1);
-    Node & n_z24 = symbol("z24", 'M', 1);
-    Node & n_z25 = symbol("z25", 'M', 1);
-    Node & n_z34 = symbol("z34", 'M', 1);
-    Node & n_z35 = symbol("z35", 'M', 1);
-    Node & n_z45 = symbol("z45", 'M', 1);
+    Node & n_z12 = symbol("z12", 'M', params.bitwidth);
+    Node & n_z13 = symbol("z13", 'M', params.bitwidth);
+    Node & n_z14 = symbol("z14", 'M', params.bitwidth);
+    Node & n_z15 = symbol("z15", 'M', params.bitwidth);
+    Node & n_z23 = symbol("z23", 'M', params.bitwidth);
+    Node & n_z24 = symbol("z24", 'M', params.bitwidth);
+    Node & n_z25 = symbol("z25", 'M', params.bitwidth);
+    Node & n_z34 = symbol("z34", 'M', params.bitwidth);
+    Node & n_z35 = symbol("z35", 'M', params.bitwidth);
+    Node & n_z45 = symbol("z45", 'M', params.bitwidth);
     
     HWElement & a0 = inputGate(n_a0);
     HWElement & a1 = inputGate(n_a1);
@@ -102,31 +69,31 @@ int32_t dom_and_5_shares(int32_t * nbCheck) {
 
 
     // Non linear layer
-    HWElement & a0b0 = andGate(a0, b0);
-    HWElement & a0b1 = andGate(a0, b1);
-    HWElement & a0b2 = andGate(a0, b2);
-    HWElement & a0b3 = andGate(a0, b3);
-    HWElement & a0b4 = andGate(a0, b4);
-    HWElement & a1b0 = andGate(a1, b0);
-    HWElement & a1b1 = andGate(a1, b1);
-    HWElement & a1b2 = andGate(a1, b2);
-    HWElement & a1b3 = andGate(a1, b3);
-    HWElement & a1b4 = andGate(a1, b4);
-    HWElement & a2b0 = andGate(a2, b0);
-    HWElement & a2b1 = andGate(a2, b1);
-    HWElement & a2b2 = andGate(a2, b2);
-    HWElement & a2b3 = andGate(a2, b3);
-    HWElement & a2b4 = andGate(a2, b4);
-    HWElement & a3b0 = andGate(a3, b0);
-    HWElement & a3b1 = andGate(a3, b1);
-    HWElement & a3b2 = andGate(a3, b2);
-    HWElement & a3b3 = andGate(a3, b3);
-    HWElement & a3b4 = andGate(a3, b4);
-    HWElement & a4b0 = andGate(a4, b0);
-    HWElement & a4b1 = andGate(a4, b1);
-    HWElement & a4b2 = andGate(a4, b2);
-    HWElement & a4b3 = andGate(a4, b3);
-    HWElement & a4b4 = andGate(a4, b4);
+    HWElement & a0b0 = genericGmul(params, a0, b0);
+    HWElement & a0b1 = genericGmul(params, a0, b1);
+    HWElement & a0b2 = genericGmul(params, a0, b2);
+    HWElement & a0b3 = genericGmul(params, a0, b3);
+    HWElement & a0b4 = genericGmul(params, a0, b4);
+    HWElement & a1b0 = genericGmul(params, a1, b0);
+    HWElement & a1b1 = genericGmul(params, a1, b1);
+    HWElement & a1b2 = genericGmul(params, a1, b2);
+    HWElement & a1b3 = genericGmul(params, a1, b3);
+    HWElement & a1b4 = genericGmul(params, a1, b4);
+    HWElement & a2b0 = genericGmul(params, a2, b0);
+    HWElement & a2b1 = genericGmul(params, a2, b1);
+    HWElement & a2b2 = genericGmul(params, a2, b2);
+    HWElement & a2b3 = genericGmul(params, a2, b3);
+    HWElement & a2b4 = genericGmul(params, a2, b4);
+    HWElement & a3b0 = genericGmul(params, a3, b0);
+    HWElement & a3b1 = genericGmul(params, a3, b1);
+    HWElement & a3b2 = genericGmul(params, a3, b2);
+    HWElement & a3b3 = genericGmul(params, a3, b3);
+    HWElement & a3b4 = genericGmul(params, a3, b4);
+    HWElement & a4b0 = genericGmul(params, a4, b0);
+    HWElement & a4b1 = genericGmul(params, a4, b1);
+    HWElement & a4b2 = genericGmul(params, a4, b2);
+    HWElement & a4b3 = genericGmul(params, a4, b3);
+    HWElement & a4b4 = genericGmul(params, a4, b4);
 
     // Linear Layer
     HWElement & l0 = xorGate(a1b3, a3b1);
@@ -176,15 +143,9 @@ int32_t dom_and_5_shares(int32_t * nbCheck) {
     HWElement & c3 = xorGate(c30, c31);
     HWElement & c4 = xorGate(c40, c41);
  
-    if (checkFunctionality) {
-        bool res = compareExpsWithExev(c0.getSymbExp() ^ c1.getSymbExp() ^ c2.getSymbExp() ^ c3.getSymbExp() ^ c4.getSymbExp(), a & b);
-        if (res) {
-            std::cout << "# Functionality (exhaustive evaluation): [OK]" << std::endl;
-        }
-        else {
-            std::cout << "# Functionality (exhaustive evaluation): [KO]" << std::endl;
-        }
-    }
+    
+    Node & exps = c0.getSymbExp() ^ c1.getSymbExp() ^ c2.getSymbExp() ^ c3.getSymbExp() ^ c4.getSymbExp();
+    Node & exev = a & b;
 
     std::vector<HWElement *> outputs; // only c shares for gms_and
 
@@ -196,86 +157,37 @@ int32_t dom_and_5_shares(int32_t * nbCheck) {
 
     std::vector<std::vector<HWElement *>> outputList;
     outputList.push_back(outputs);
-    if (dumpCirc) {
-        dumpCircuit(circuitFilename, outputs);
-    }
-    //int32_t nbLeak = checkSecurity(order, withGlitches, secProp, c0, c1, c2, c3, c4)
-    int32_t nbLeak = checkSecurity(order, withGlitches, secProp, outputs, noFalsePositive, nbCheck);
+
+    int32_t nbLeak = verification(params, exps, exev, outputs, nbCheck);
     return nbLeak;
 }
 
 
 int main(int argc, const char ** argv) {
 
-    int32_t idx = 1;
-    while (idx < argc) {
-        const char * arg = argv[idx];
-        if (strcmp(arg, "-h") == 0 or strcmp(arg, "--help") == 0) {
-            usage(argv[0]);
-            exit(0);
-        }
-        else if (strcmp(arg, "-o") == 0 or strcmp(arg, "--order") == 0) {
-            idx += 1;
-            order = atoi(argv[idx]);
-        }
-        else if (strcmp(arg, "-p") == 0 or strcmp(arg, "--prop") == 0) {
-            idx += 1;
-            const char * prop = argv[idx];
-            if (strcmp(prop, "tps") == 0) {
-                secProp = TPS;
-            }
-            else if (strcmp(prop, "ni") == 0) {
-                secProp = NI;
-            }
-            else if (strcmp(prop, "sni") == 0) {
-                secProp = SNI;
-            }
-            else if (strcmp(prop, "rni") == 0) {
-                secProp =  RNI;
-            }
-            else if (strcmp(prop, "pini") == 0) {
-                secProp = PINI;
-            }
-            else if (strcmp(prop, "opini") == 0) {
-                secProp = OPINI;
-            }
-            else {
-                std::cerr << "*** Error: Unknown security property: ";
-                std::cerr << "    Valid values are: \'ni\' (Non-Interference), \'sni\' (Strong Non-Interference), \'rni\' (Relaxed Non-Interference), \'pini\' (Probe-Isolating Non-Interference), \'opini\' (Output-PINI) and \'tps\' (Treshold Probing Security)" << std::endl;
-                exit(1);
-            }
-        }
-        else if (strcmp(arg, "-g") == 0 or strcmp(arg, "--with-glitches") == 0) {
-            withGlitches = true;
-        }
-        else if (strcmp(arg, "-ng") == 0 or strcmp(arg, "--without-glitches") == 0) {
-            withGlitches = false;
-        }
-        else if (strcmp(arg, "-d") == 0 or strcmp(arg, "--dump-circuit") == 0) {
-            dumpCirc = true;
-        }
-        else if (strcmp(arg, "-c") == 0 or strcmp(arg, "--check-functionality") == 0) {
-            checkFunctionality = true;
-        }
-        else {
-            std::cerr << "*** Error: unrecognized option: " << arg << std::endl;
-            usage(argv[0]);
-            exit(1);
-        }
-        idx += 1;
-    }
+    // Initialisation
+    GadgetParams params;
+    defaultParams(params);
+
+    params.order = 2; // Shouldn't be changed, designed for order 2 security
+    params.secProp = RNI; // defined as "probing" but matches the RNI definition
+    params.specifiedOrder = 2;
+    params.description = "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the GMS scheme with 5 shares from [1], designed for order 2 security, using the RNI property with glitches.";
+    params.article = "[1] Reparaz, O., Bilgin, B., Nikova, S., Gierlichs, B., & Verbauwhede, I. (2015). Consolidating masking schemes. 35th Annual Cryptology Conference, 2015. Springer Berlin Heidelberg.";
     
-    
-    if (order >= 3) {
-        std::cerr << "*** Error: the order of verification should be 2 for this gadget" << std::endl;
-        exit(1);
-    } 
+    parseArgs(params, argc, argv);
+    displayConfig(params, "gms_and", 5);
 
 
     int32_t nbCheck;
-    int32_t nbLeak = dom_and_5_shares(&nbCheck);
+    int32_t nbLeak = dom_and_5_shares(params, &nbCheck);
     std::cout << "# Total Nb. of expressions analysed: " << nbCheck << std::endl;
     std::cout << "# Total Nb. of potential leakages found: " << nbLeak << std::endl;
+
+    if (params.backup != nullptr) {
+        std::cout.rdbuf(params.backup);
+        params.file.close();
+    }
 
     return 0;
 }
