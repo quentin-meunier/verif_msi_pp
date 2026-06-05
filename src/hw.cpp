@@ -24,6 +24,7 @@ Author(s): Quentin L. Meunier
 #include "tps.hpp"
 
 
+
 HWElement::HWElement() {
     num = nodeNum;
     nodeNum += 1;
@@ -631,22 +632,22 @@ static bool bartheOpt(std::set<HWElement *> & gatesToVerify, int32_t order, bool
 
 
 // checkSecurity functions
-int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<HWElement *> & outputs, bool noFalsePositive) {
+int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<HWElement *> & outputs, bool noFalsePositive, bool verbose) {
     int32_t nbCheck;
-    return checkSecurity(order, withGlitches, secProp, outputs, noFalsePositive, &nbCheck);
+    return checkSecurity(order, withGlitches, secProp, outputs, noFalsePositive, &nbCheck, verbose);
 }
 
 
-int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive) {
+int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, bool verbose) {
     int32_t nbCheck;
-    return checkSecurity(order, withGlitches, secProp, outputList, noFalsePositive, &nbCheck);
+    return checkSecurity(order, withGlitches, secProp, outputList, noFalsePositive, &nbCheck, verbose);
 }
 
 
-int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<HWElement *> & outputs, bool noFalsePositive, int32_t * nbCheck) {
+int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<HWElement *> & outputs, bool noFalsePositive, int32_t * nbCheck, bool verbose) {
     std::vector<std::vector<HWElement *>> outputList;
     outputList.push_back(outputs);
-    return checkSecurity(order, withGlitches, secProp, outputList, noFalsePositive, nbCheck);
+    return checkSecurity(order, withGlitches, secProp, outputList, noFalsePositive, nbCheck, verbose);
 }
 
 
@@ -829,7 +830,7 @@ static void removeProbesWithGlitches(std::set<HWElement *> & gatesToVerify) {
 
 
 // Remove the gate / probe if it contains at most one share per input and no random
-static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify) {
+static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify, bool verbose) {
     // QM : FIXME: why sorting?
     // Copy in another container is necessary because we remove elements while traversing them
 
@@ -859,7 +860,7 @@ static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify) {
 
 
 // Remove the gate / probe if it has no non-masking randoms, exactly the same masking randoms and the same or a subset of the input shares of another gate
-static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, SecurityProperty secProp, std::set<HWElement *> & outputs) {
+static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, SecurityProperty secProp, std::set<HWElement *> & outputs, bool verbose) {
     // FIXME: why sorting? the only interest would be not to make all cross comparisons, based on the fact that children nodes are traversed first
     //        i.e. for h, we can start at index j = i + 1 if i is the index of g
     // However, the copy in another container is necessary because we remove elements while traversing them
@@ -933,7 +934,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
 
 
 
-int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, int32_t * nbCheck) {
+int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, int32_t * nbCheck, bool verbose) {
 
     std::set<HWElement *> outputs;
     for (const auto & v : outputList) {
@@ -1008,7 +1009,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             if (verbose) {
                 std::cout << "# Removing Probes with at most 1 share / input and no random" << std::endl;
             }
-            removeSingleInputProbes(gatesToVerify);
+            removeSingleInputProbes(gatesToVerify, verbose);
         }
 
 
@@ -1017,7 +1018,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             if (verbose) {
                 std::cout << "# Removing Redundant Probes" << std::endl;
             }
-            removeRedundantProbes(gatesToVerify, secProp, outputs);
+            removeRedundantProbes(gatesToVerify, secProp, outputs, verbose);
         } // doRemRedundantProbesOpt
     } // secProp
 

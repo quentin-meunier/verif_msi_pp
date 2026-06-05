@@ -26,6 +26,7 @@ typedef struct _GadgetParams {
     bool dumpCirc;
     bool checkFunctionality;
     bool multMode;
+    bool verbose;
     int32_t bitwidth;
     const char * circuitFilename;
     const char * outputTarget;

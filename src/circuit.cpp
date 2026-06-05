@@ -22,6 +22,7 @@ void defaultParams(GadgetParams & params) {
     params.circuitFilename = "circuit.dot";
     params.outputTarget = "terminal";
     params.backup = nullptr;
+    params.verbose = false;
 }
 
 
@@ -39,8 +40,8 @@ void usage(GadgetParams & params, const char * programName) {
     std::cout << "-ng,  --without-glitches       : Do not consider glitch propagation throughout gates (defaut: " << (params.withGlitches ? "No" : "Yes") << ")" << std::endl;
     std::cout << "-fp,  --with-false-positive    : Perform symbolic verification only, can lead to false positives (defaut: " << (params.noFalsePositive ? "No" : "Yes") << ")" << std::endl;
     std::cout << "-nfp, --without-false-positive : Perform symbolic verification, then enumerate if symbolic verification failed (defaut: " << (params.noFalsePositive ? "Yes" : "No") << ")" << std::endl;
-    std::cout << "-v,   --verbose                : Display more details about the computation (defaut: " << (verbose ? "Yes" : "No") << ")" << std::endl;
-    std::cout << "-nv,  --no-verbose             : Display less details about the computation (defaut: " << (verbose ? "No" : "Yes") << ")" << std::endl;
+    std::cout << "-v,   --verbose                : Display more details about the computation (defaut: " << (params.verbose ? "Yes" : "No") << ")" << std::endl;
+    std::cout << "-nv,  --no-verbose             : Display less details about the computation (defaut: " << (params.verbose ? "No" : "Yes") << ")" << std::endl;
     std::cout << "-t,   --output-target <f>      : Display the output in the terminal ('terminal') or in the file <f> (default: " << params.outputTarget << ")" << std::endl;
     std::cout << "-d,   --dump-circuit           : Dump the circuit in dot format in a file named \"" << params.circuitFilename << "\" (default: " << (params.dumpCirc ? "Yes" : "No") << ")" << std::endl;
     std::cout << "-c,   --check-functionality    : Check the circuit functionality via exhaustive evaluation (default: " << (params.checkFunctionality ? "Yes" : "No") << ")" << std::endl;
@@ -103,7 +104,7 @@ int32_t verification(GadgetParams & params, Node & exps, Node & exev, std::vecto
     }
 
 
-    int32_t nbLeak = checkSecurity(params.order, params.withGlitches, params.secProp, outputs, params.noFalsePositive, nbCheck);
+    int32_t nbLeak = checkSecurity(params.order, params.withGlitches, params.secProp, outputs, params.noFalsePositive, nbCheck, params.verbose);
 
     return nbLeak;
 }
@@ -178,10 +179,10 @@ void parseArgs(GadgetParams & params, int cmpt, const char ** tabArgs) {
             params.noFalsePositive = true;
         }
         else if (strcmp(arg, "-v") == 0 or strcmp(arg, "--verbose") == 0) {
-            verbose = true;
+            params.verbose = true;
         }
         else if (strcmp(arg, "-nv") == 0 or strcmp(arg, "--verbose") == 0) {
-            verbose = false;
+            params.verbose = false;
         }
         else if (strcmp(arg, "-t") == 0 or strcmp(arg, "--output-target") == 0) {
             idx += 1;
