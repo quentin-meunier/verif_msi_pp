@@ -936,8 +936,8 @@ Node & Node::operator<<(Node & other) {
 
 
 Node & Node::operator<<(int32_t shval) {
-    if (shval >= width) {
-        std::cout << "*** Warning: shift value (" << shval << ") >= bit width of expression (" << width << ")" << std::endl;
+    if (shval > width) {
+        std::cout << "*** Warning: shift value (" << shval << ") > bit width of expression (" << width << ")" << std::endl;
     }
 
     if (propagateCstOnBuild() && nature == CONST) {
@@ -990,8 +990,8 @@ Node & Node::operator>>(Node & other) {
 
 Node & Node::operator>>(int32_t shval) {
     // Arith Shift Right
-    if (shval >= width) {
-        std::cout << "*** Warning: shift value (" << shval << ") >= bit width of expression (" << width << ")" << std::endl;
+    if (shval > width) {
+        std::cout << "*** Warning: shift value (" << shval << ") > bit width of expression (" << width << ")" << std::endl;
     }
 
     if (propagateCstOnBuild() && nature == CONST) {
@@ -1002,7 +1002,7 @@ Node & Node::operator>>(int32_t shval) {
         if (limb_rem == 0) {
             for (int32_t i = 0; i < nlimbs; i += 1) {
                 if (i + limb_shift >= nlimbs) {
-                    uint64_t w = (int64_t) (cst[nlimbs - 1] << (64 - limb_rem)) >> 63;
+                    uint64_t w = ((int64_t) cst[nlimbs - 1]) >> 63;
                     res[i] = w;
                 }
                 else {
@@ -1046,6 +1046,80 @@ Node & Node::operator>>(int32_t shval) {
     Node & sh = Const((uint64_t) shval, bit_width((uint64_t) shval));
     return Node::OpNode(ASHR, {this, &sh});
 }
+
+
+Node & LShR(Node & child, Node & shval) {
+    if (shval.nature != CONST) {
+        return Node::OpNode(SLSHR, {&child, &shval});
+    }
+    return LShR(child, shval.cst[0]);
+}
+
+
+Node & LShR(Node & child, int32_t shval) {
+    int32_t width = child.width;
+    if (shval > width) {
+        std::cout << "*** Warning: shift value (" << shval << ") > bit width of expression (" << width << ")" << std::endl;
+    }
+
+    if (propagateCstOnBuild() && child.nature == CONST) {
+        int32_t nlimbs = child.nlimbs;
+        uint64_t res[nlimbs];
+        int32_t limb_shift = shval / 64;
+        int32_t limb_rem = shval % 64;
+        if (limb_rem == 0) {
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i + limb_shift >= nlimbs) {
+                    res[i] = 0ULL;
+                }
+                else {
+                    res[i] = child.cst[i + limb_shift];
+                }
+            }
+        }
+        else {
+            for (int32_t i = 0; i < nlimbs; i += 1) {
+                if (i + limb_shift >= nlimbs) {
+                    res[i] = 0ULL;
+                }
+                else if (i + limb_shift == nlimbs - 1) {
+                    res[i] = child.cst[nlimbs - 1] >> limb_rem;
+                }
+                else {
+                    res[i] = child.cst[i + limb_shift] >> limb_rem | child.cst[i + limb_shift + 1] << (64 - limb_rem);
+                }
+            }
+        }
+        if (width % 64 != 0) {
+            res[nlimbs - 1] = res[nlimbs - 1] & ((1ULL << (width % 64)) - 1);
+        }
+        return Const(res, nlimbs, width);
+    }
+
+    Node & sh = Const((uint64_t) shval, bit_width((uint64_t) shval));
+
+    return Node::OpNode(LSHR, {&child, &sh});
+}
+
+
+Node & RotateRight(Node & child, Node & shval) {
+    if (shval.nature != CONST) {
+        std::cerr << "***Error: Second operand of a RotateRight operation can only be a constant" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return RotateRight(child, shval.cst[0]);
+}
+
+
+Node & RotateRight(Node & child, int32_t shval) {
+    int32_t width = child.width;
+    if (shval >= width) {
+        std::cout << "*** Warning: shift value (" << shval << ") >= bit width of expression (" << width << ")" << std::endl;
+    }
+
+    return Concat(Extract(shval - 1, 0, child), Extract(width - 1, shval, child));
+}
+
 
 
 Node & Node::operator*(Node & other) {
@@ -1328,79 +1402,6 @@ Node & Str(const std::string & s) {
         Node::str2node[s] = &n;
         return n;
     }
-}
-
-
-Node & LShR(Node & child, Node & shval) {
-    if (shval.nature != CONST) {
-        return Node::OpNode(SLSHR, {&child, &shval});
-    }
-    return LShR(child, shval.cst[0]);
-}
-
-
-Node & LShR(Node & child, int32_t shval) {
-    int32_t width = child.width;
-    if (shval >= width) {
-        std::cout << "*** Warning: shift value (" << shval << ") >= bit width of expression (" << width << ")" << std::endl;
-    }
-
-    if (propagateCstOnBuild() && child.nature == CONST) {
-        int32_t nlimbs = child.nlimbs;
-        uint64_t res[nlimbs];
-        int32_t limb_shift = shval / 64;
-        int32_t limb_rem = shval % 64;
-        if (limb_rem == 0) {
-            for (int32_t i = 0; i < nlimbs; i += 1) {
-                if (i + limb_shift >= nlimbs) {
-                    res[i] = 0ULL;
-                }
-                else {
-                    res[i] = child.cst[i + limb_shift];
-                }
-            }
-        }
-        else {
-            for (int32_t i = 0; i < nlimbs; i += 1) {
-                if (i + limb_shift >= nlimbs) {
-                    res[i] = 0ULL;
-                }
-                else if (i + limb_shift == nlimbs - 1) {
-                    res[i] = child.cst[nlimbs - 1] >> limb_rem;
-                }
-                else {
-                    res[i] = child.cst[i + limb_shift] >> limb_rem | child.cst[i + limb_shift + 1] << (64 - limb_rem);
-                }
-            }
-        }
-        if (width % 64 != 0) {
-            res[nlimbs - 1] = res[nlimbs - 1] & ((1ULL << (width % 64)) - 1);
-        }
-        return Const(res, nlimbs, width);
-    }
-
-    Node & sh = Const((uint64_t) shval, bit_width((uint64_t) shval));
-
-    return Node::OpNode(LSHR, {&child, &sh});
-}
-
-
-Node & RotateRight(Node & child, Node & shval) {
-    if (shval.nature != CONST) {
-        std::cerr << "***Error: Second operand of a RotateRight operation can only be a constant" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return RotateRight(child, shval.cst[0]);
-}
-
-
-Node & RotateRight(Node & child, int32_t shval) {
-    int32_t width = child.width;
-    if (shval >= width) {
-        std::cout << "*** Warning: shift value (" << shval << ") >= bit width of expression (" << width << ")" << std::endl;
-    }
-
-    return Concat(Extract(shval - 1, 0, child), Extract(width - 1, shval, child));
 }
 
 

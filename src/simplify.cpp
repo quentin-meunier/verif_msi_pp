@@ -2483,6 +2483,12 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
             if (isZero(val.cst, val.width)) {
                 return setSimpEqAndReturn(node, val);
             }
+            else if (isAllOne(val.cst, val.width) && (1 << shval.width) <= val.width) {
+                int32_t maxShiftedValue = (1 << shval.width) - 1;
+                int32_t allOneWidth = val.width - maxShiftedValue;
+                Node & result = Concat(Const(-1, allOneWidth, true), Const(-1, val.width - allOneWidth, true) << shval);
+                return setSimpEqAndReturn(node, result);
+            }
         }
         if (shval.nature == CONST) {
             if (isZero(shval.cst, shval.width)) {
@@ -2508,6 +2514,12 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         if (val.nature == CONST) {
             if (isZero(val.cst, val.width)) {
                 return setSimpEqAndReturn(node, val);
+            }
+            else if (isAllOne(val.cst, val.width) && (1 << shval.width) <= val.width) {
+                int32_t maxShiftedValue = (1 << shval.width) - 1;
+                int32_t allOneWidth = val.width - maxShiftedValue;
+                Node & result = Concat(LShR(Const(-1, val.width - allOneWidth, true), shval), Const(-1, allOneWidth, true));
+                return setSimpEqAndReturn(node, result);
             }
         }
         if (shval.nature == CONST) {
