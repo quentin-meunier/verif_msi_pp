@@ -86,7 +86,7 @@ int32_t opini2_mult_%d_shares(int32_t * nbCheck) {
     for i in range(1, gadget.nbShares + 1):
         for j in range(1, gadget.nbShares + 1):
             if(j!=i):
-                content += '    HWElement & v%d_%d = xorGate(notGate(%s%d), r%d_%d);\n' % (i, j, inputVars[1], j, i, j)
+                content += '    HWElement & v%d_%d = xorGate(%s%d, r%d_%d);\n' % (i, j, inputVars[1], j, i, j)
     content += '\n'
 
     for i in range(1, gadget.nbShares + 1):
@@ -134,6 +134,8 @@ int32_t opini2_mult_%d_shares(int32_t * nbCheck) {
 
     exps =  ' ^ '.join(['%s%d.getSymbExp()' % (outputVar, i) for i in range(gadget.nbShares)])
     exev =  '%s & %s' % (inputVars[0], inputVars[1])
+
+    content = gadget.verifFunctionality(content, exps, exev)
     
     content += '    std::vector<HWElement *> outputs;\n'
     content += '\n'

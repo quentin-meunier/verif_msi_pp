@@ -71,11 +71,11 @@ class Gadget:
         assert(False)
 
 
-    def parseArgs(self): # parseArgs
+    def parseArgs(self):
 
         idx = 0
         modifOrder = False
-        checkBitwidth = False;
+        checkBitwidth = False
         argv = sys.argv[1:]
         while idx < len(argv):
             arg = argv[idx]
@@ -85,7 +85,6 @@ class Gadget:
             elif arg == '-f' or arg == '--outfile':
                 idx += 1
                 self.outfile = argv[idx]
-                print(self.outfile)
             elif arg == '-n' or arg == '--nb-shares':
                 idx += 1
                 self.nbShares = int(argv[idx])

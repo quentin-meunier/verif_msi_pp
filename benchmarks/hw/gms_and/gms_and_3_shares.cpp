@@ -98,6 +98,7 @@ int main(int argc, const char ** argv) {
 
     params.order = 1; // Shouldn't be changed, designed for order 1 security
     params.secProp = RNI; // defined as "probing" but matches the RNI definition
+    params.specifiedOrder = 1;
     params.description = "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the GMS scheme with 3 shares from [1], designed for order 1 security, using the RNI property with glitches.";
     params.article = "[1] Reparaz, O., Bilgin, B., Nikova, S., Gierlichs, B., & Verbauwhede, I. (2015). Consolidating masking schemes. 35th Annual Cryptology Conference, 2015. Springer Berlin Heidelberg.";
     

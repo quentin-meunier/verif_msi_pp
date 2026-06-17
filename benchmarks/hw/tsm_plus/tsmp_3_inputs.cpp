@@ -13,7 +13,7 @@
 bool verbose = false;
 
 
-int32_t tsmp_3_inputs(GadgetParams params, int32_t * nbCheck) {
+int32_t tsmp_3_inputs(GadgetParams & params, int32_t * nbCheck) {
 
     Node & k1 = symbol("k1", 'S', params.bitwidth);
     Node & k2 = symbol("k2", 'S', params.bitwidth);
