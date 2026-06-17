@@ -13,8 +13,7 @@ int main() {
 
     Node & res = SignExt(24, k ^ p ^ m);
 
-
-    checkResults(n, res, true, false);
+    checkResults(n, res);
 
     return 0;
 }

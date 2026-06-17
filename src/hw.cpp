@@ -140,7 +140,7 @@ HWElement & HWElement::Gate(NodeOp op, std::vector<HWElement *> & inputs) {
     for (const auto & inp : inputs) {
         symbExps.push_back(inp->symbExp);
     }
-    e->symbExp = &simplify(Node::OpNode(op, symbExps), true, true);
+    e->symbExp = &simplify(Node::OpNode(op, symbExps), true);
     for (const auto & inp : e->inputs) {
         for (const auto & lo : inp->leakageOut) {
             e->leakageOut.insert(lo);
@@ -252,7 +252,7 @@ HWElement & LShLGate(HWElement & child, int32_t shval) {
     e->op = LSHL;
     e->inputs.push_back(&child);
 
-    e->symbExp = &simplify(*child.symbExp << shval, true, true);
+    e->symbExp = &simplify(*child.symbExp << shval, true);
     for (const auto & inp : e->inputs) {
         for (const auto & lo : inp->leakageOut) {
             e->leakageOut.insert(lo);
@@ -268,7 +268,7 @@ HWElement & LShRGate(HWElement & child, int32_t shval) {
     e->op = LSHR;
     e->inputs.push_back(&child);
 
-    e->symbExp = &simplify(LShR(*child.symbExp, shval), true, true);
+    e->symbExp = &simplify(LShR(*child.symbExp, shval), true);
     for (const auto & inp : e->inputs) {
         for (const auto & lo : inp->leakageOut) {
             e->leakageOut.insert(lo);
@@ -284,7 +284,7 @@ HWElement & AShRGate(HWElement & child, int32_t shval) {
     e->op = ASHR;
     e->inputs.push_back(&child);
 
-    e->symbExp = &simplify(*child.symbExp >> shval, true, true);
+    e->symbExp = &simplify(*child.symbExp >> shval, true);
     for (const auto & inp : e->inputs) {
         for (const auto & lo : inp->leakageOut) {
             e->leakageOut.insert(lo);
@@ -300,7 +300,7 @@ HWElement & extractGate(int32_t msb, int32_t lsb, HWElement & child) {
     e->op = EXTRACT;
     e->inputs.push_back(&child);
 
-    e->symbExp = &simplify(Extract(msb, lsb, *child.symbExp), true, true);
+    e->symbExp = &simplify(Extract(msb, lsb, *child.symbExp), true);
     for (const auto & inp : e->inputs) {
         for (const auto & lo : inp->leakageOut) {
             e->leakageOut.insert(lo);

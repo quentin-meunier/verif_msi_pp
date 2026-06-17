@@ -168,15 +168,15 @@ void checkResults(Node & res, Node & ref) {
 }
 
 
-void checkResults(Node & res, Node & ref, bool pei, bool usbv) {
+void checkResults(Node & res, Node & ref, bool usbv) {
     int32_t nbBits = ref.width;
     
     if (nbBits != res.width) {
         std::cout << "KO (nbBits on res: " << res.width << " -- expected " << nbBits << ")" << std::endl;
     }
 
-    Node & res_s = simplify(res, pei, usbv);
-    Node & ref_s = simplify(ref, pei, usbv);
+    Node & res_s = simplify(res, usbv);
+    Node & ref_s = simplify(ref, usbv);
 
     std::cout << "res : " << res_s << " [" << std::dec << res_s.width << "]" << std::endl;
     std::cout << "ref : " << ref_s << " [" << std::dec << ref_s.width << "]" << std::endl;

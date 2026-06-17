@@ -14,7 +14,7 @@ int main() {
     Node & e0 = simplify(Extract(0, 0, pb));
     Node & res = Concat(e1, e0, constant(0, 6));
 
-    checkResults(n1, res, true, true);
+    checkResults(n1, res, true);
 
     return 0;
 }

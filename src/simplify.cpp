@@ -20,7 +20,7 @@ Author(s): Quentin L. Meunier
 
 
 
-static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBitVariables);
+static Node & simplifyCore(Node & node, bool useSingleBitVariables);
 
 
 /*
@@ -33,7 +33,7 @@ static int offset = 0;
 #endif
 
 
-static Node & simplifyCoreWrapper(Node & node, bool pei, bool usbv) {
+static Node & simplifyCoreWrapper(Node & node, bool usbv) {
     #ifdef DEBUG
         for (int i = 0; i < offset; i += 1) {
             std::cout << "   ";
@@ -41,7 +41,7 @@ static Node & simplifyCoreWrapper(Node & node, bool pei, bool usbv) {
         offset += 1;
         std::cout << "Simplifying node: " << node.verbatimPrint() << std::endl;
     #endif
-    Node & res = simplifyCore(node, pei, usbv);
+    Node & res = simplifyCore(node, usbv);
     #ifdef DEBUG
         offset -= 1;
         for (int i = 0; i < offset; i += 1) {
@@ -117,7 +117,7 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
                 // removing the outer Concat
                 std::vector<Node *> l;
                 for (int32_t b = 0; b < children[i]->width; b += 1) {
-                    l.push_back(&simplifyCore(Extract(b, b, *children[i]), true, true));
+                    l.push_back(&simplifyCore(Extract(b, b, *children[i]), true));
                 }
                 children[i] = &Concat(l);
 
@@ -310,21 +310,20 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
                     }
                 }
 
-                // QM FIXME: why simplify and not simplifyCore(., ?? , usbv) ?
                 Node * cstNode = NULL;
                 Node * opNode = NULL;
                 if (cstChildren.size() == 1) {
                     cstNode = cstChildren[0];
                 }
                 else if (cstChildren.size() > 1) {
-                    cstNode = &simplify(Node::OpNode(op, cstChildren));
+                    cstNode = &simplifyCore(Node::OpNode(op, cstChildren), usbv);
                     assert(cstNode->nature == CONST);
                 }
                 if (otherChildren.size() == 1) {
                     opNode = otherChildren[0];
                 }
                 else if (otherChildren.size() > 1) {
-                    opNode = &simplify(Node::OpNode(op, otherChildren));
+                    opNode = &simplifyCore(Node::OpNode(op, otherChildren), usbv);
                 }
                 if (cstNode == NULL) {
                     concatChildren.push_back(opNode);
@@ -333,7 +332,7 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
                     concatChildren.push_back(cstNode);
                 }
                 else {
-                    concatChildren.push_back(&simplify(Node::OpNode(op, {cstNode, opNode})));
+                    concatChildren.push_back(&simplifyCore(Node::OpNode(op, {cstNode, opNode}), usbv));
                 }
             }
 
@@ -345,7 +344,7 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
             }
             else {
                 *newOp = op;
-                Node & concatNode = simplify(Node::OpNode(CONCAT, concatChildren));
+                Node & concatNode = simplifyCore(Node::OpNode(CONCAT, concatChildren), usbv);
                 children = newChildren;
                 children.push_back(&concatNode);
                 return true;
@@ -490,7 +489,7 @@ static Node & getBitDecompositionVarSingleBit(Node & node, int32_t bit) {
     std::string s = *node.symb + "#" + std::to_string(bit);
     Node * res;
     if (node.symbType == 'A') {
-        res = &SymbInternal(s, 'A', 1, node.nbShares, node.shareNum, &getBitDecompositionVar(*node.origSecret, bit, bit), &simplifyCore(Extract(bit, bit, *node.pseudoShareEq), true, true));
+        res = &SymbInternal(s, 'A', 1, node.nbShares, node.shareNum, &getBitDecompositionVar(*node.origSecret, bit, bit), &simplifyCore(Extract(bit, bit, *node.pseudoShareEq), true));
     }
     else {
         res = &SymbInternal(s, node.symbType, 1);
@@ -532,11 +531,11 @@ static Node & getBitDecompositionVar(Node & node) {
 
 
 Node & getBitDecomposition(Node & node) {
-    return simplifyCore(node, true, true);
+    return simplifyCore(node, true);
 }
 
 
-bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, int32_t width) {
+bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, int32_t width, bool usbv) {
     bool hasChanged = true;
     bool modified = false;
     while (hasChanged) {
@@ -586,25 +585,24 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
                                         xorRighNode = &Node::OpNode(mulOp, xorRighChildren);
                                     }
 
-                                    // QM FIXME: what if usbv is used ?
                                     Node * xorNode = NULL;
                                     if (mulOp == GMUL) {
                                         assert(addOp == BXOR);
-                                        xorNode = &simplify(*xorLeftNode ^ *xorRighNode);
+                                        xorNode = &simplifyCore(*xorLeftNode ^ *xorRighNode, usbv);
                                     }
                                     else if (mulOp == IMUL) {
                                         assert(addOp == PLUS);
-                                        xorNode = &simplify(*xorLeftNode + *xorRighNode);
+                                        xorNode = &simplifyCore(*xorLeftNode + *xorRighNode, usbv);
                                     }
                                     else if (mulOp == BOR) {
                                         assert(addOp == BAND);
-                                        xorNode = &simplify(*xorLeftNode & *xorRighNode);
+                                        xorNode = &simplifyCore(*xorLeftNode & *xorRighNode, usbv);
                                     }
                                     else if (mulOp == BAND && addOp == BOR) {
-                                        xorNode = &simplify(*xorLeftNode | *xorRighNode);
+                                        xorNode = &simplifyCore(*xorLeftNode | *xorRighNode, usbv);
                                     }
                                     else if (mulOp == BAND && addOp == BXOR) {
-                                        xorNode = &simplify(*xorLeftNode ^ *xorRighNode);
+                                        xorNode = &simplifyCore(*xorLeftNode ^ *xorRighNode, usbv);
                                     }
                                     newGrandChildren = new std::vector<Node *>{factor, xorNode};
                                     break;
@@ -641,10 +639,10 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
 
                                     Node * xorNode = NULL;
                                     if (mulOp == GMUL) {
-                                        xorNode = &simplify(*xorLeftNode ^ Const(0x1, width));
+                                        xorNode = &simplifyCore(*xorLeftNode ^ Const(0x1, width), usbv);
                                     }
                                     else if (mulOp == IMUL) {
-                                        xorNode = &simplify(*xorLeftNode + Const(0x1, width));
+                                        xorNode = &simplifyCore(*xorLeftNode + Const(0x1, width), usbv);
                                     }
                                     hasChanged = true;
                                     newGrandChildren = new std::vector<Node *>{factor, xorNode};
@@ -665,7 +663,7 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
                     if (hasChanged && newGrandChildren != NULL) {
                         newChildren.erase(newChildren.begin() + std::max(i, j));
                         newChildren.erase(newChildren.begin() + std::min(i, j));
-                        Node * mulNode = &simplify(Node::OpNode(mulOp, *newGrandChildren));
+                        Node * mulNode = &simplifyCore(Node::OpNode(mulOp, *newGrandChildren), usbv);
                         delete newGrandChildren;
                         newChildren.push_back(mulNode);
                         modified = true;
@@ -685,22 +683,12 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
 
 
 
-Node & simplify(Node & node, bool propagateExtractInwards, bool useSingleBitVariables) {
-    assert(not useSingleBitVariables or propagateExtractInwards);
-    return simplifyCore(node, propagateExtractInwards, useSingleBitVariables);
+Node & simplify(Node & node, bool useSingleBitVariables) {
+    return simplifyCore(node, useSingleBitVariables);
 }
 
 
-Node & simplifyAndNotPEI(Node & node) {
-    return simplifyCore(node, false, false);
-}
-
-Node & simplifyUSBV(Node & node) {
-    return getBitDecomposition(node);
-}
-
-static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSingleBitVariables) {
-    assert(not useSingleBitVariables or propagateExtractInwards);
+static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
 
     auto setSimpEqAndReturn = [useSingleBitVariables](Node & node, Node & simpEquiv) -> Node & {
         Node & simpEq = getEquiv(simpEquiv);
@@ -761,7 +749,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         //std::cout << "# Child of Extract to propagate inwards: " << child << std::endl;
         
         // At the end of this while loop, the current node (defined by op and newChildren0)
-        // must not be an Extract node if propagateExtractInwards is True
+        // must not be an Extract node
         while (true) {
             assert(op == EXTRACT);
             //   child is the expression from which the extract occurs.
@@ -1028,7 +1016,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 }
             }
 
-            else if (propagateExtractInwards && Node::bitwiseOps.contains(child->op)) {
+            else if (Node::bitwiseOps.contains(child->op)) {
+                // Note: previously conditioned by propagateExtractInwards
                 // Extract(m, l, e & f) -> Extract(m, l, e) & Extract(m, l, f)
                 newChildren0.clear();
                 for (const auto & gchild : *child->children) {
@@ -1039,7 +1028,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 break;
             }
 
-            else if (propagateExtractInwards && child->op == BNOT) {
+            else if (child->op == BNOT) {
+                // Note: previously conditioned by propagateExtractInwards
                 Node & gchild = *child->children->at(0);
                 Node & newExtractNode = Extract(*msbNode, *lsbNode, gchild);
                 newChildren0 = {&newExtractNode};
@@ -1048,7 +1038,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
             }
 
             #if BIT_SIMPLIFY_PLUS
-            else if (propagateExtractInwards && child->op == PLUS) {
+            else if (child->op == PLUS) {
+                // Note: previously conditioned by propagateExtractInwards
                 if (msb == lsb) {
                     int32_t idx = 0;
                     Node & child0 = *child->children->at(0);
@@ -1112,7 +1103,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 break;
             }
 
-            else if (propagateExtractInwards && child->op == UMINUS) {
+            else if (child->op == UMINUS) {
+                // Note: previously conditioned by propagateExtractInwards
                 if (msb == lsb) {
                     Node * ci = &Const(1, 1);
                     Node * ai = NULL;
@@ -1147,7 +1139,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
             }
             #endif
 
-            else if (propagateExtractInwards && (child->op == GEXP || child->op == GLOG) && msb == 7 && lsb == 0) {
+            else if ((child->op == GEXP || child->op == GLOG) && msb == 7 && lsb == 0) {
+                // Note: previously conditioned by propagateExtractInwards
                 // Extract(7, 0, GExp(e)) -> GExp(Extract(7, 0, e))
                 // Condition could be more precise / different: child.children[0]).op == 'C', len(child.children[0]) == 2, child.children[0].children[0].cst == 0, child.width > 8, etc.
                 // This is to deal with the case Extract(m, l, GExp(Concat(0, e))) -> GExp(e)
@@ -1181,7 +1174,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         }
         else {
             for (const auto & child : *node.children) {
-                newChildren.push_back(&simplifyCore(*child, propagateExtractInwards, useSingleBitVariables));
+                newChildren.push_back(&simplifyCore(*child, useSingleBitVariables));
             }
         }
 
@@ -1193,6 +1186,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         }
     }
     else {
+        // FIXME: two loops are equivalent?
         if (useSingleBitVariables and Node::wordOps.contains(op)) {
             for (const auto & child : newChildren0) {
                 newChildren.push_back(&getBitDecomposition(*child));
@@ -1200,7 +1194,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
         }
         else {
             for (const auto & child : newChildren0) {
-                newChildren.push_back(&simplifyCore(*child, propagateExtractInwards, useSingleBitVariables));
+                newChildren.push_back(&simplifyCore(*child, useSingleBitVariables));
             }
         }
     }
@@ -1384,7 +1378,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
             // = b * (a ^ c) ^ a * c
             // = c * (a ^ b) ^ a * b
             if (node.hasWordOp) {
-                bool m = factorize(GMUL, BXOR, newChildren, width);
+                bool m = factorize(GMUL, BXOR, newChildren, width, useSingleBitVariables);
                 modified = modified || m;
                 modifiedByFactorization = modifiedByFactorization || m;
             }
@@ -1394,7 +1388,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
             //    std::cout << nc->verbatimPrint() << ", ";
             //}
             //std::cout << "]" << std::endl;
-            bool m = factorize(BAND, BXOR, newChildren, width);
+            bool m = factorize(BAND, BXOR, newChildren, width, useSingleBitVariables);
             modified = modified || m;
             modifiedByFactorization = modifiedByFactorization || m;
             // NOTE: do-while loop here because it is possible here to have a const(0) among newChildren, or identical children, after factorization
@@ -1434,9 +1428,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                         }
                         i += 1;
                     }
-                    // QM FIXME: what if usbv is used?
-                    Node & newAddNode = simplify(Node::OpNode(BXOR, powChildren));
-                    Node & newPowNode = simplify(GPow(newAddNode, *exp));
+                    Node & newAddNode = simplifyCore(Node::OpNode(BXOR, powChildren), useSingleBitVariables);
+                    Node & newPowNode = simplifyCore(GPow(newAddNode, *exp), useSingleBitVariables);
                     newChildren.push_back(&newPowNode);
                 }
             }
@@ -1541,7 +1534,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
 
         // Factorization
         if (node.hasWordOp) {
-            bool m = factorize(IMUL, PLUS, newChildren, width);
+            bool m = factorize(IMUL, PLUS, newChildren, width, useSingleBitVariables);
             modified = modified || m;
 
             // GLog(x) + GLog(y) -> GLog(GMul(x, y))
@@ -1565,9 +1558,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                     }
                     i += 1;
                 }
-                // QM FIXME: what if usbv is used?
-                Node & mulNode = simplify(Node::OpNode(GMUL, logChildren));
-                Node & logNode = simplify(GLog(mulNode));
+                Node & mulNode = simplifyCore(Node::OpNode(GMUL, logChildren), useSingleBitVariables);
+                Node & logNode = simplifyCore(GLog(mulNode), useSingleBitVariables);
                 newChildren.push_back(&logNode);
             }
         }
@@ -2034,7 +2026,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
             }
 
             // Factorization
-            bool m = factorize(op1, op, newChildren, width);
+            bool m = factorize(op1, op, newChildren, width, useSingleBitVariables);
             modified = modified || m;
 
             if ((op == BAND && isZero(constVal, width)) || (op == BOR && isAllOne(constVal, width))) {
@@ -2075,7 +2067,7 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                     // call to simplify here because changing BAND to BOR can create possibilities for merging with children
                     // Also, if the result of the OpNode call is a constant, we need to simplify the '~' in the constant
                     // QM FIXME: what if usbv is used?
-                    Node & op1Node = simplify(~Node::OpNode(op1, newGrandChildren));
+                    Node & op1Node = simplifyCore(~Node::OpNode(op1, newGrandChildren), useSingleBitVariables);
                     return setSimpEqAndReturn(node, op1Node);
                 }
             }
@@ -2328,7 +2320,6 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 return setSimpEqAndReturn(node, newNode);
             }
             else {
-                // QM FIXME: what if usbv is used?
                 return setSimpEqAndReturn(node, simplifyExtract(newNode));
             }
         }
@@ -2625,9 +2616,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                     }
                     i += 1;
                 }
-                // QM FIXME: what if usbv is used?
-                Node & newAddNode = simplify(Node::OpNode(PLUS, expChildren));
-                Node & newExpNode = simplify(GExp(newAddNode));
+                Node & newAddNode = simplifyCore(Node::OpNode(PLUS, expChildren), useSingleBitVariables);
+                Node & newExpNode = simplifyCore(GExp(newAddNode), useSingleBitVariables);
                 newChildren.push_back(&newExpNode);
             }
 
@@ -2651,9 +2641,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                         }
                         i += 1;
                     }
-                    // QM FIXME: what if usbv is used?
-                    Node & newAddNode = simplify(Node::OpNode(PLUS, powChildren));
-                    Node & newPowNode = simplify(GPow(*exp, newAddNode));
+                    Node & newAddNode = simplifyCore(Node::OpNode(PLUS, powChildren), useSingleBitVariables);
+                    Node & newPowNode = simplifyCore(GPow(*exp, newAddNode), useSingleBitVariables);
                     newChildren.push_back(&newPowNode);
                 }
             }
@@ -2680,9 +2669,8 @@ static Node & simplifyCore(Node & node, bool propagateExtractInwards, bool useSi
                 }
             }
             if (cstChild != -1 && logChild != -1) {
-                // QM FIXME: what if usbv is used?
-                Node & newPowNode = simplify(GPow(*newChildren[logChild]->children->at(0), *newChildren[cstChild]));
-                Node & newLogNode = simplify(GLog(newPowNode));
+                Node & newPowNode = simplifyCore(GPow(*newChildren[logChild]->children->at(0), *newChildren[cstChild]), useSingleBitVariables);
+                Node & newLogNode = simplifyCore(GLog(newPowNode), useSingleBitVariables);
                 newChildren.erase(newChildren.begin() + std::max(cstChild, logChild));
                 newChildren.erase(newChildren.begin() + std::min(cstChild, logChild));
                 newChildren.push_back(&newLogNode);

@@ -83,7 +83,7 @@ bool checkOPINIVal(Node & e, int maxShareOcc, std::set<int> & outputIndexes, std
     bool res;                                                  \
                                                                \
     for (int32_t i = 0; i < e.width; i += 1) {                 \
-        Node & b = simplifyUSBV(Extract(i, i, e));             \
+        Node & b = simplify(Extract(i, i, e), true);           \
         res = check_call;                                      \
         if (!res) {                                            \
             break;                                             \

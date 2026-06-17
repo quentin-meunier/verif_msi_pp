@@ -435,8 +435,7 @@ PYBIND11_MODULE(_core, m) {
     m.def("checkSecurity", &bindCheckSecurity, "Desc.");
 
     m.def("getBitDecomposition", &getBitDecomposition, "Desc.", py::return_value_policy::reference);
-    m.def("simplify", py::overload_cast<Node &, bool, bool>(&simplify), "Desc.", py::arg("Node"), py::arg("propagateExtractInwards") = true, py::arg("useSingleBitVariables") = false, py::return_value_policy::reference);
-    m.def("simplifyAndNotPEI", &simplifyAndNotPEI, "Desc.", py::return_value_policy::reference);
+    m.def("simplify", py::overload_cast<Node &, bool>(&simplify), "Desc.", py::arg("Node"), py::arg("useSingleBitVariables") = false, py::return_value_policy::reference);
     //m.def("simplifyCore", &simplifyCore, "Desc.", py::return_value_policy::reference);
     m.def("equivalence", &equivalence, "Desc.");
 

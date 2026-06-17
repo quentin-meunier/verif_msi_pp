@@ -423,7 +423,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
 
 static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool noFalsePositive, bool verbose) {
-    Node * n = &simplify(nodeIn, true, bitDecompose);
+    Node * n = &simplify(nodeIn, bitDecompose);
     Node::setModeTemporaryNodes();
     bool res = checkProperty(*n, secProp, params, noFalsePositive, verbose);
     Node::setModePermanentNodes();
@@ -434,7 +434,7 @@ static bool checkPropertyWrapper(Node & nodeIn, SecurityProperty secProp, PropPa
 static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty secProp, PropParams & params, bool bitDecompose, bool noFalsePositive, bool verbose) {
     std::vector<Node *> nodes;
     for (const auto & n : nodesIn) {
-        nodes.push_back(&simplify(*n, true, bitDecompose));
+        nodes.push_back(&simplify(*n, bitDecompose));
     }
 
     Node::setModeTemporaryNodes();
