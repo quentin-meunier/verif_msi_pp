@@ -164,7 +164,7 @@ ArrayExp & getArrayAndOffset(Node & addr, Node ** offset) {
 
 
 void checkResults(Node & res, Node & ref) {
-    return checkResults(res, ref, true, false);
+    return checkResults(res, ref, false);
 }
 
 

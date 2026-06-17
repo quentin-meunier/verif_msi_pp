@@ -28,7 +28,7 @@ std::function<Node &(Node &)> & getArrayFuncByName(std::string name);
 ArrayExp & getArrayAndOffset(Node & addr, Node ** offset);
 
 void checkResults(Node & res, Node & ref);
-void checkResults(Node & res, Node & ref, bool pei, bool usbv);
+void checkResults(Node & res, Node & ref, bool usbv);
 Node & symbol(std::string symb, char symbType, int32_t width);
 Node & getSymbolByName(std::string symb);
 Node & constant(int64_t val, int32_t width);

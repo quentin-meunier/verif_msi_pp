@@ -456,7 +456,7 @@ PYBIND11_MODULE(_core, m) {
     m.def("getArrayAndOffset", &bindGetArrayAndOffset);
 
     m.def("checkResults", py::overload_cast<Node &, Node &>(&checkResults), "Desc.");
-    m.def("checkResults", py::overload_cast<Node &, Node &, bool, bool>(&checkResults), "Desc.");
+    m.def("checkResults", py::overload_cast<Node &, Node &, bool>(&checkResults), "Desc.");
 
     m.def("checkTpsResult", &checkTpsResult, "Desc.");
     m.def("checkNIResult", &checkNIResult, "Desc.");
