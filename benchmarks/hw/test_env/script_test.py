@@ -343,7 +343,7 @@ if __name__ == '__main__':
         print("### Error: max_order must be greater or egal than 1")
         sys.exit(1)
 
-    '''if os.path.exists(FILE):
+    if os.path.exists(FILE):
         os.remove(FILE)
 
     # touch $FILE + initialisation des en-têtes
@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
     existingFile = True
     withoutGliches(max_order, generateFiles)
-    withGliches(max_order, generateFiles)'''
+    withGliches(max_order, generateFiles)
     createCompFile(max_order)
 
 
