@@ -11,7 +11,7 @@ import os
 
 class Gadget:
 
-    def __init__(self, nbShares = 3, order = 2, prop = 'ni', withGlitches = False, noFalsePositive = False, benchmark = None, outfile = None, currentScript = None, bitwidth = 1, multMode = False, withAdditionalRand = False, outputTarget = 'terminal', article = None, description_generator = None, description_file = None, verbose = False):
+    def __init__(self, nbShares = 3, order = 2, prop = 'ni', withGlitches = False, noFalsePositive = False, benchmark = None, outfile = None, currentScript = None, bitwidth = 1, multMode = False, withAdditionalRand = False, outputTarget = 'terminal', article = None, descriptionGenerator = None, descriptionFile = None, verbose = False):
         self.nbShares = nbShares
         self.order = order
         self.prop = prop
@@ -25,14 +25,14 @@ class Gadget:
         self.withAdditionalRand = withAdditionalRand    # only used for isw_and
         self.outputTarget = outputTarget
         self.article = article
-        self.description_generator = description_generator
-        self.description_file = description_file
+        self.descriptionGenerator = descriptionGenerator
+        self.descriptionFile = descriptionFile
         self.verbose = verbose
 
 
     def usage(self):
         print('Usage: %s [options]' % self.currentScript)
-        print('%s' % self.description_generator)
+        print('%s' % self.descriptionGenerator)
         print('Options:')
         print('-f,   --outfile <file>         : Set the name of the generated output file to <file> (default: %s_gen_<n>_shares)' % self.benchmark)
         print('-n,   --nb-shares <n>          : Set the number of shares in the scheme to <n> (default: %d)' % self.nbShares)
@@ -243,7 +243,7 @@ HWElement & genericGmul(HWElement & child0, HWElement & child1) {
         return andGate(child0, child1);
     }
 }
-    ''' % (self.description_file, self.currentScript, self.article)
+    ''' % (self.descriptionFile, self.currentScript, self.article)
     
         return content
 

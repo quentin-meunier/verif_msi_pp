@@ -15,9 +15,9 @@ from init_generator import Gadget
 
 def generate_hpc4(*argv):
 
-    gadget = Gadget(prop = 'opini', benchmark = 'hpc4', currentScript = os.path.basename(__file__), article = '[1] G. Cassiers, F.-X. Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.', description_generator = '   This script generates a VerifMSI++ file describing a circuit implementing the HPC4 gadget from [1].')
+    gadget = Gadget(prop = 'opini', benchmark = 'hpc4', currentScript = os.path.basename(__file__), article = '[1] G. Cassiers, F.-X. Standaert and Corentin Verhamme (2024). Low-Latency Masked Gadgets Robust against Physical Defaults with Application to Ascon. IACR Transactions on Cryptographic Hardware and Embedded Systems, 2024(3), 603-633.', descriptionGenerator = '   This script generates a VerifMSI++ file describing a circuit implementing the HPC4 gadget from [1].')
 
-    gadget.description_file = "   This script contains a VerifMSI++ description of a circuit implementing the HPC4 gadget from [1] with %d shares." % (gadget.nbShares)
+    gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the HPC4 gadget from [1] with %d shares." % (gadget.nbShares)
     
     gadget.parseArgs()
     

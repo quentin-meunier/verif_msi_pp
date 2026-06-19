@@ -15,9 +15,9 @@ from init_generator import Gadget
 
 def generate_hpc3(*argv):
 
-    gadget = Gadget(order = 1, prop = 'pini', benchmark = 'hpc3', currentScript = os.path.basename(__file__), article = '[1] D. Knichel, and A. Moradi. Low-latency hardware private circuits. Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security. 2022. https://eprint.iacr.org/2022/507', description_generator = '   This script generates a VerifMSI++ file describing a circuit implementing the HPC3 gadget from [1].')
+    gadget = Gadget(order = 1, prop = 'pini', benchmark = 'hpc3', currentScript = os.path.basename(__file__), article = '[1] D. Knichel, and A. Moradi. Low-latency hardware private circuits. Proceedings of the 2022 ACM SIGSAC Conference on Computer and Communications Security. 2022. https://eprint.iacr.org/2022/507', descriptionGenerator = '   This script generates a VerifMSI++ file describing a circuit implementing the HPC3 gadget from [1].')
 
-    gadget.description_file = "   This script contains a VerifMSI++ description of a circuit implementing the HPC3 gadget from [1] with %d shares." % (gadget.nbShares)
+    gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the HPC3 gadget from [1] with %d shares." % (gadget.nbShares)
 
     gadget.parseArgs()
     
