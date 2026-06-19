@@ -22,8 +22,10 @@ CHECK_FONCTIONALITY = ""
 PROP = ["tps ", "ni  ", "sni ", "rni ", "pini", "opini"]
 
 # list of (bench, folder)
-BENCHMARK_GEN = [("dom_and", "dom_and"), ("hpc3", "hpc3"), ("hpc4", "hpc4"), ("isw_and", "isw_and"), ("isw_and_refresh", "isw_and_refresh"), ("opini1_mult", "opini1"), ("opini2_mult", "opini2"), ("pini1", "pini1"), ("pini_mult", "pini_mult")]
-BENCHMARK_NO_GEN = [("otsm", "otsm"), ("tsm", "tsm"), ("tsmp_2_inputs", "tsm_plus"), ("tsmp_3_inputs", "tsm_plus"), ("gms_and_3_shares", "gms_and"), ("gms_and_5_shares", "gms_and")]
+#BENCHMARK_GEN = [("dom_and", "dom_and"), ("hpc3", "hpc3"), ("hpc4", "hpc4"), ("isw_and", "isw_and"), ("isw_and_refresh", "isw_and_refresh"), ("opini1_mult", "opini1"), ("opini2_mult", "opini2"), ("pini1", "pini1"), ("pini_mult", "pini_mult")]
+#BENCHMARK_NO_GEN = [("otsm", "otsm"), ("tsm", "tsm"), ("tsmp_2_inputs", "tsm_plus"), ("tsmp_3_inputs", "tsm_plus"), ("gms_and_3_shares", "gms_and"), ("gms_and_5_shares", "gms_and")]
+BENCHMARK_GEN = []
+BENCHMARK_NO_GEN = []
 
 
 
@@ -37,6 +39,49 @@ def usage(generateFiles):
     print('-g,   --generation             : Generate files to test(default: %s)' % (generateFiles and 'Yes' or 'No'))
     print('-ng,   --no-generation         : Do not generate files to test(default: %s)' % (generateFiles and 'No' or 'Yes'))
     
+
+
+def createBenchList(generateFiles):
+    os.chdir("..")
+    res = subprocess.run("ls", capture_output = True, text = True)
+    list_ls = res.stdout.splitlines()
+    #print(list_ls)
+    list_folder = []
+
+    for folder in list_ls:
+        if os.path.isdir(folder):
+            list_folder.append(folder)
+
+    list_folder.remove("test_env")
+    list_folder.remove("__pycache__")
+
+    for folder in list_folder:
+        os.chdir(f"{folder}")
+        res = subprocess.run("ls", capture_output = True, text = True)
+        list_ls = res.stdout
+        bench = ""
+
+        if ".py" in list_ls:
+            list_file = list_ls.splitlines()
+            for f in list_file:
+                if generateFiles and "generate" in f:
+                    subprocess.run(["python3", f"{f}", "-n", "2" ])
+                if "2_shares.cpp" in f:
+                    bench = f.replace("_gen_2_shares.cpp", '')
+                    BENCHMARK_GEN.append((bench, folder))
+
+        else:
+            list_file = list_ls.splitlines()
+            for f in list_file:
+                if ".cpp" in f:
+                    bench = f.replace(".cpp", '')
+                    BENCHMARK_NO_GEN.append((bench, folder))
+
+        os.chdir("..")
+
+    os.chdir("test_env")
+            
+                    
 
 
 
@@ -92,7 +137,7 @@ def checkResult(res, bench, g, p):
 
 
 
-def withoutGliches(max_order, existingFile):
+def withoutGliches(max_order, generateFiles):
     global CHECK_FONCTIONALITY
 
     for i in range(0, len(BENCHMARK_GEN)):
@@ -176,7 +221,7 @@ def withoutGliches(max_order, existingFile):
     existingFile = True
     
     
-def withGliches(max_order, existingFile):
+def withGliches(max_order, generateFiles):
     global CHECK_FONCTIONALITY
 
     for i in range(0, len(BENCHMARK_GEN)):
@@ -307,8 +352,6 @@ def createCompFile(max_order):
 
 if __name__ == '__main__':
 
-    generateFiles = True
-
     if len(sys.argv) < 2:
         print('*** Error: need argument <max_order>', file = sys.stderr)
         usage(generateFiles)
@@ -320,6 +363,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     max_order = int(sys.argv[1])
+    generateFiles = True
 
     idx = 0
     argv = sys.argv[2:]
@@ -354,7 +398,8 @@ if __name__ == '__main__':
                 f.write(f"        {PROP[j]} order {i}")
         f.write("       check fonctionality\n\n")
 
-    existingFile = True
+
+    createBenchList(generateFiles)
     withoutGliches(max_order, generateFiles)
     withGliches(max_order, generateFiles)
     createCompFile(max_order)

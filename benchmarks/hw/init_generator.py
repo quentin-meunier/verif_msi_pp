@@ -271,7 +271,7 @@ HWElement & genericGmul(HWElement & child0, HWElement & child1) {
         content += '    }\n'
         content += '\n'
         
-        content += '    int32_t nbLeak = checkSecurity(order, withGlitches, secProp, outputs, noFalsePositive, nbCheck);\n'
+        content += '    int32_t nbLeak = checkSecurity(order, withGlitches, secProp, outputs, noFalsePositive, nbCheck, verbose);\n'
         content += '    return nbLeak;\n'
         content += '}\n'
         content += '\n'

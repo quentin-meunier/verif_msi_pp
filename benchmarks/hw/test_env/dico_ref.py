@@ -166,7 +166,7 @@ refResult = {
         "no g": {
             "tps": "✔",
             "ni": "✔",
-            "sni": "✘",
+            "sni": "✔",
             "rni": "✔",
             "pini": "✔",
             "opini": "✘",
