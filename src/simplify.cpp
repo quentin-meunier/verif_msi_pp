@@ -113,8 +113,9 @@ static bool mergeConcatChildren(NodeOp op, std::vector<Node *> & children, NodeO
         bool modified = false;
         for (int i = 0; i < (int) children.size(); i += 1) {
             if (children[i]->op == ARRAY or children[i]->op == SLSHR or children[i]->op == SLSHL or children[i]->op == SASHR or children[i]->op == PLUS or children[i]->op == EXTRACT) {
-                // Not using getBitDecomposition because an array node will be simplified to the array node itself,
-                // removing the outer Concat
+                // FIXME: check this part in detail now that getBitDecomposition is an alias to simplify
+                // Previous comment was:
+                // Not using getBitDecomposition because an array node will be simplified to the array node itself, removing the outer Concat
                 std::vector<Node *> l;
                 for (int32_t b = 0; b < children[i]->width; b += 1) {
                     l.push_back(&simplifyCore(Extract(b, b, *children[i]), true));
@@ -1167,15 +1168,8 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
     if (not modified) {
         std::vector<Node *> & oldChildren = *node.children;
 
-        if (useSingleBitVariables and Node::wordOps.contains(op)) {
-            for (const auto & child : *node.children) {
-                newChildren.push_back(&getBitDecomposition(*child));
-            }
-        }
-        else {
-            for (const auto & child : *node.children) {
-                newChildren.push_back(&simplifyCore(*child, useSingleBitVariables));
-            }
+        for (const auto & child : *node.children) {
+            newChildren.push_back(&simplifyCore(*child, useSingleBitVariables));
         }
 
         for (int32_t i = 0; i < (int32_t) oldChildren.size(); i += 1) {
@@ -1186,16 +1180,8 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
         }
     }
     else {
-        // FIXME: two loops are equivalent?
-        if (useSingleBitVariables and Node::wordOps.contains(op)) {
-            for (const auto & child : newChildren0) {
-                newChildren.push_back(&getBitDecomposition(*child));
-            }
-        }
-        else {
-            for (const auto & child : newChildren0) {
-                newChildren.push_back(&simplifyCore(*child, useSingleBitVariables));
-            }
+        for (const auto & child : newChildren0) {
+            newChildren.push_back(&simplifyCore(*child, useSingleBitVariables));
         }
     }
 
@@ -1391,14 +1377,71 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
             bool m = factorize(BAND, BXOR, newChildren, width, useSingleBitVariables);
             modified = modified || m;
             modifiedByFactorization = modifiedByFactorization || m;
+
+#if EXTENDED_SIMPLIFY
+            // FIXME: if it is costly, add a flag field "nodeHasBNot" in node? in order to skip all this...
+            // (~p & x) ^ (p & y) -> x ^ (p & (x ^ y))
+            // To do after factorisation, to avoid having to deal with multiple "p" or "~p" occurrences
+            // The resulting child "x" cannot be (a priori) a constant, but can be equivalent to another child of the xor node, so
+            // we set modifiedByFactorization to true
+            // We limit the number of children of the BAND nodes to be 2, because otherwise the size of the expression would grow, and never bring any interesting form a priori
+            // Similarly, the possible nature/ops for the nodes x and y are limited to BOXR nodes and symbols, otherwise this rule may be applied in uncontrolled ways,
+            // and result in unwanted/growing expressions
+            // Note: I did not find a test case in which it was necessary to put modifiedByFactorization to true, but I am letting it in case...
+            for (int32_t i0 = 0; i0 < (int32_t) newChildren.size(); i0 += 1) {
+                Node & childi0 = *newChildren[i0];
+                if (childi0.op == BAND and childi0.children->size() == 2) {
+                    bool replacement = false;
+                    for (int32_t j0 = 0; j0 < 2; j0 += 1) {
+                        Node & childj0 = *childi0.children->at(j0);
+                        Node & nodeX = *childi0.children->at(1 - j0);
+                        if (childj0.op == BNOT and (nodeX.op == BXOR or nodeX.nature == SYMB)) {
+                            for (int32_t i1 = 0; i1 < (int32_t) newChildren.size(); i1 += 1) {
+                                if (i0 == i1) {
+                                    continue;
+                                }
+                                Node & childi1 = *newChildren[i1];
+                                if (childi1.op == BAND and childi1.children->size() == 2) {
+                                    replacement = false;
+                                    for (int32_t j1 = 0; j1 < 2; j1 += 1) {
+                                        Node & childj1 = *childi1.children->at(j1);
+                                        Node & nodeY = *childi1.children->at(1 - j1);
+                                        if (equivalence(*childj0.children->at(0), childj1)) {
+                                            Node & xorNode = simplifyCore(nodeX ^ nodeY, useSingleBitVariables);
+                                            Node & andNode = simplifyCore(xorNode & childj1, useSingleBitVariables);
+
+                                            newChildren[i0] = &nodeX;
+                                            newChildren[i1] = &andNode;
+
+                                            modified = true;
+                                            //modifiedByFactorization = true;
+                                            replacement = true;
+                                            break;
+                                        }
+                                    }
+                                    if (replacement) {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (replacement) {
+                            break;
+                        }
+                    }
+                    if (replacement) {
+                        continue;
+                    }
+                }
+            }
+#endif
             // NOTE: do-while loop here because it is possible here to have a const(0) among newChildren, or identical children, after factorization
         } while (modifiedByFactorization);
-
 
         // GPow(a, n) ^ GPow(b, n) and n is a power of 2 -> GPow(a ^ b, n)
         if (node.hasWordOp) {
             std::map<Node *, int32_t> nbPowChildren;
-            for (int32_t i = 0; i < (int32_t) newChildren.size(); i += 1){
+            for (int32_t i = 0; i < (int32_t) newChildren.size(); i += 1) {
                 Node & child = *newChildren[i];
                 if (child.op == GPOW) {
                     Node * gchild = child.children->at(1);
@@ -2066,7 +2109,6 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                     }
                     // call to simplify here because changing BAND to BOR can create possibilities for merging with children
                     // Also, if the result of the OpNode call is a constant, we need to simplify the '~' in the constant
-                    // QM FIXME: what if usbv is used?
                     Node & op1Node = simplifyCore(~Node::OpNode(op1, newGrandChildren), useSingleBitVariables);
                     return setSimpEqAndReturn(node, op1Node);
                 }
