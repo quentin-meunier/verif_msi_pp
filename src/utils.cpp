@@ -292,6 +292,7 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
         exit(EXIT_FAILURE);
     }
     secretShared.insert(&s);
+    s.nbShares = nbShares;
     std::vector<Node *> pseudoShares = getPseudoSharesInternal(s, nbShares);
     std::vector<Node *> res;
     for (int32_t i = 0; i < nbShares; i += 1) {

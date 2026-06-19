@@ -19,6 +19,7 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
 bool getDistribWithExev(Node & e, bool * rud);
 bool isTPSWithExev(Node & e);
 bool isNIWithExev(Node & e, int32_t maxShareOcc);
+bool isRNIWithExev(Node & e, int32_t diff);
 bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes);
 bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes, std::set<int> & additionalInputIndexes);
 Node & getExpValue(Node & node, std::map<Node *, Node *> & m);

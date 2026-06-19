@@ -343,9 +343,10 @@ The `benchmarks/hw` directory contains hardware gadgets from the literature impl
 These are the following:
 * ISW AND: the logical AND masking scheme from [2]
 * ISW AND refresh: A combination of the ISW AND with a circular refresh on one of the input from [5]
-* DOM AND: the Domain Oriented Masking implementation of the AND gate from [1], resistant to glitches;
-* GMS AND: two implementations of the AND gate using the Generalized Masking Scheme, described in the article, using respectively 3 and 5 shares from [9];
-* PINI Mult: the PINI multiplication scheme from [8];
+* DOM AND: the Domain Oriented Masking implementation of the AND gate from [1], resistant to glitches
+* GMS AND: two implementations of the AND gate using the Generalized Masking Scheme, described in the article, using respectively 3 and 5 shares from [9]
+* PINI1: the PINI1 gadget from [4]
+* PINI Mult: the PINI multiplication scheme from [8]
 * OPINI1: the O-PINI1 gadget from [15]
 * OPINI2: the O-PINI2 gadget from [15]
 * HPC3: the HPC3 gadget from [16]
@@ -353,6 +354,7 @@ These are the following:
 * TSM: the TSM gadget from [18]
 * TSM+: the TSM+ gadget from [18], for 2 and 3 inputs
 * OTSM: the OTSM gadget from [18]
+
 For schemes which are defined for any order, the benchmark file is a generator which creates the benchmark file for the specified order.
 
 

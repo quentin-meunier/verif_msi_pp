@@ -209,13 +209,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         else if (secProp == RNI) {
             bool isRNI = true;
             for (const auto & [s, shares] : node->shareOcc) {
-                // share is node->shareOcc->at(s)
-                int nbShares = -1;
-                for (const auto & [anyOcc, val] : *shares) {
-                    nbShares = anyOcc->nbShares;
-                    break;
-                }
-                if ((int32_t) shares->size() >= nbShares - diff) {
+                // shares is node->shareOcc[s]
+                int nbTotalShares = s->nbShares;
+                if ((int32_t) shares->size() + diff >= nbTotalShares) {
                     isRNI = false;
                     break;
                 }
@@ -349,6 +345,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 }
                 else if (secProp == PINI) {
                     return isPINIWithExev(*node, maxShareOcc, *outputIndexes);
+                }
+                else if (secProp == RNI) {
+                    return isRNIWithExev(*node, diff);
                 }
             }
             return false;

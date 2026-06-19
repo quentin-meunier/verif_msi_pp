@@ -797,6 +797,112 @@ bool isNIWithExev(Node & e, int32_t maxShareOcc) {
 }
 
 
+bool isRNIWithExev(Node & e, int32_t diff) {
+    assert(e.width <= 64);
+
+    rniValidity(e);
+    Node & e0 = getBitDecomposition(e);
+    
+    std::vector<Node *> allVarsVec;
+    std::vector<Node *> exp {&e0};
+    getVarsList(exp, allVarsVec);
+
+    std::vector<Node *> shareVarsOrig;
+    std::vector<Node *> shareVars;
+    std::vector<Node *> publicVars;
+    std::vector<Node *> maskVars;
+    std::set<Node *> secretVars;
+
+    for (const auto & v : allVarsVec) {
+        if (v->symbType == 'A') {
+            shareVarsOrig.push_back(v);
+        }
+        else if (v->symbType == 'P') {
+            publicVars.push_back(v);
+        }
+        else {
+            assert(v->symbType == 'M');
+            maskVars.push_back(v);
+        }
+    }
+    for (const auto & v : shareVarsOrig) {
+        secretVars.insert(v->origSecret);
+    }
+
+    for (const auto & v : secretVars) {
+        int32_t nbUsedShares = 0;
+        int32_t nbTotalShares = v->nbShares;
+
+        for (const auto & sh : shareVarsOrig) {
+            if (sh->origSecret == v) {
+                nbUsedShares += 1;
+            }
+        }
+        assert(nbUsedShares == (int32_t) e0.shareOcc[v]->size());
+        if (nbUsedShares + diff >= nbTotalShares) {
+            for (const auto & sh : shareVarsOrig) {
+                if (sh->origSecret == v) {
+                    shareVars.push_back(sh);
+                }
+            }
+        }
+        else {
+            // shares whose number for the same ariable in the expression is less than maxShareOcc are regarded as public variables
+            for (const auto & sh : shareVarsOrig) {
+                if (sh->origSecret == v) {
+                    publicVars.push_back(sh);
+                }
+            }
+        }
+    }
+
+    //std::cout << "# isRNIWithExev:" << std::endl;
+    //std::cout << "#     Expression: " << e << std::endl;
+    //std::cout << "#     Modified expression: " << e0 << std::endl;
+    //std::cout << "#     Public Vars or irrelevant shares: ";
+    //for (const auto & v : publicVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << "#     Share Vars: ";
+    //for (const auto & v : shareVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+    //std::cout << "#     Mask Vars: ";
+    //for (const auto & v : maskVars) {
+    //    std::cout << *v << " (" << v->width << " bits), ";
+    //}
+    //std::cout << std::endl;
+
+    //std::cout << "#     Enumerating on " << publicVars.size() + shareVars.size() + maskVars.size() << " bits in total" << std::endl;
+
+    std::map<Node *, Node *> m;
+    std::set<Node *> effectiveShares;
+    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
+    for (const auto & s : secretVars) {
+        int32_t nbTotalShares = s->nbShares;
+        int32_t nbEffectiveShares = 0;
+        //std::cout << "# Effective shares for " << *s << ": ";
+        for (const auto & sh : shareVars) {
+            if (sh->origSecret == s and effectiveShares.contains(sh)) {
+                //std::cout << *sh << ", ";
+                nbEffectiveShares += 1;
+            }
+        }
+        //std::cout << std::endl;
+        //std::cout << std::endl << "# Total: " << nbEffectiveShares << std::endl;
+        if (nbEffectiveShares + diff >= nbTotalShares) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+
+
+
 bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes) {
     assert(e.width <= 64);
 
