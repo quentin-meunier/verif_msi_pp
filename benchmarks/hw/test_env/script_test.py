@@ -16,13 +16,13 @@ SMALLSPACE = " " * 10
 MEDSPACE = " " * 16
 HUGESPACE = " " * 18
 
-FILE = "result.txt"
-CHECK_FONCTIONALITY = ""
+resultFile = "result.txt"
+checkFunctionality = ""
 
-PROP = ["tps ", "ni  ", "sni ", "rni ", "pini", "opini"]
+secProps = ["tps ", "ni  ", "sni ", "rni ", "pini", "opini"]
 
 # list of (bench, folder)
-#BENCHMARK_GEN = [("dom_and", "dom_and"), ("hpc3", "hpc3"), ("hpc4", "hpc4"), ("isw_and", "isw_and"), ("isw_and_refresh", "isw_and_refresh"), ("opini1_mult", "opini1"), ("opini2_mult", "opini2"), ("pini1", "pini1"), ("pini_mult", "pini_mult")]
+#BENCHMARK_GEN = [("dom_and", "dom_and"), ("hpc3", "hpc3"), ("hpc4", "hpc4"), ("isw_and", "isw_and"), ("isw_and_refresh", "isw_and_refresh"), ("opini1", "opini1"), ("opini2", "opini2"), ("pini1", "pini1"), ("pini_mult", "pini_mult")]
 #BENCHMARK_NO_GEN = [("otsm", "otsm"), ("tsm", "tsm"), ("tsmp_2_inputs", "tsm_plus"), ("tsmp_3_inputs", "tsm_plus"), ("gms_and_3_shares", "gms_and"), ("gms_and_5_shares", "gms_and")]
 BENCHMARK_GEN = []
 BENCHMARK_NO_GEN = []
@@ -44,26 +44,26 @@ def usage(generateFiles):
 def createBenchList(generateFiles):
     os.chdir("..")
     res = subprocess.run("ls", capture_output = True, text = True)
-    list_ls = res.stdout.splitlines()
-    #print(list_ls)
-    list_folder = []
+    lsList = res.stdout.splitlines()
+    #print(lsList)
+    listFolder = []
 
-    for folder in list_ls:
+    for folder in lsList:
         if os.path.isdir(folder):
-            list_folder.append(folder)
+            listFolder.append(folder)
 
-    list_folder.remove("test_env")
-    list_folder.remove("__pycache__")
+    listFolder.remove("test_env")
+    listFolder.remove("__pycache__")
 
-    for folder in list_folder:
+    for folder in listFolder:
         os.chdir(f"{folder}")
         res = subprocess.run("ls", capture_output = True, text = True)
-        list_ls = res.stdout
+        lsList = res.stdout
         bench = ""
 
-        if ".py" in list_ls:
-            list_file = list_ls.splitlines()
-            for f in list_file:
+        if ".py" in lsList:
+            fileList = lsList.splitlines()
+            for f in fileList:
                 if generateFiles and "generate" in f:
                     subprocess.run(["python3", f"{f}", "-n", "2" ])
                 if "2_shares.cpp" in f:
@@ -71,8 +71,8 @@ def createBenchList(generateFiles):
                     BENCHMARK_GEN.append((bench, folder))
 
         else:
-            list_file = list_ls.splitlines()
-            for f in list_file:
+            fileList = lsList.splitlines()
+            for f in fileList:
                 if ".cpp" in f:
                     bench = f.replace(".cpp", '')
                     BENCHMARK_NO_GEN.append((bench, folder))
@@ -94,10 +94,9 @@ def writeLineHeader(line):
 
 
 def runSetup(bench, prop, order, glitches, firstTime):
-    global CHECK_FONCTIONALITY
-    res = ""
+    global checkFunctionality
 
-    if CHECK_FONCTIONALITY == "":
+    if checkFunctionality == "":
         cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches, "-c"]
     elif firstTime:
         cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches]
@@ -116,29 +115,24 @@ def runSetup(bench, prop, order, glitches, firstTime):
         if line[:15] == "# Functionality":
             words = line.split()
             if words[-1] == "[OK]":
-                CHECK_FONCTIONALITY = "    ✔"
+                checkFunctionality = "    ✔"
             else:
-                CHECK_FONCTIONALITY = "    ✘"
+                checkFunctionality = "    ✘"
 
-    if (res == "0"):
+    if res == '0':
         return "✔"
     else:
         return "✘"
     
-    return ""
-
 
 
 def checkResult(res, bench, g, p):
-    if (res[0] != refResult[bench][g][p.strip()]):
-        return False
-
-    return True
+    return (res[0] == '✔' and refResult[bench][g][p.strip()]) or (res[0] == '✘' and !refResult[bench][g][p.strip()]):
 
 
 
 def withoutGliches(max_order, generateFiles):
-    global CHECK_FONCTIONALITY
+    global checkFunctionality
 
     for i in range(0, len(BENCHMARK_GEN)):
         os.chdir(f"../{BENCHMARK_GEN[i][1]}")
@@ -159,19 +153,19 @@ def withoutGliches(max_order, generateFiles):
             subprocess.run(["make"])
 
             for k in range(1, order + 1):
-                for p in range(0, len(PROP)):
-                    secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", PROP[p], k, "-ng", True) + " "
-                    same = checkResult(secure, BENCHMARK_GEN[i][0], "no g", PROP[p])
-                    if not same and secure == "✘ ":
-                        secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", PROP[p], k, "-ng", False) + "*"
+                for p in range(0, len(secProps)):
+                    secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", secProps[p], k, "-ng", True) + " "
+                    same = checkResult(secure, BENCHMARK_GEN[i][0], "no g", secProps[p])
+                    if not same and secure == "✘":
+                        secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", secProps[p], k, "-ng", False) + "*"
                     res += f"{secure}{HUGESPACE}"
      
-            res += (max_order - j) * (len(PROP) - 1) * f"    {HUGESPACE}" + (max_order - j) * f"{SMALLSPACE}" + f"{CHECK_FONCTIONALITY}\n"
+            res += (max_order - j) * (len(secProps) - 1) * f"    {HUGESPACE}" + (max_order - j) * f"{SMALLSPACE}" + f"{checkFunctionality}\n"
 
 
-            with open(f"../test_env/{FILE}", "a") as f:
+            with open(f"../test_env/{resultFile}", "a") as f:
                 f.write(res)
-            CHECK_FONCTIONALITY = ""
+            checkFunctionality = ""
 
 
     for i in range(0, len(BENCHMARK_NO_GEN)):
@@ -189,40 +183,40 @@ def withoutGliches(max_order, generateFiles):
         subprocess.run(["make"])
          
         for k in range(1, max_order + 1):
-            if (k == 2 and BENCHMARK_NO_GEN[i][0] == "gms_and_5_shares"):
-                for p in range(0, len(PROP)):
-                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-ng", True) + " "
-                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "no g", PROP[p])
-                    if not same and secure == "✘ ":
-                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-ng", False) + "*"
+            if k == 2 and BENCHMARK_NO_GEN[i][0] == "gms_and_5_shares":
+                for p in range(0, len(secProps)):
+                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-ng", True) + " "
+                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "no g", secProps[p])
+                    if not same and secure == "✘":
+                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-ng", False) + "*"
                     res += f"{secure}{HUGESPACE}"
 
-            elif (k == 1):
-                for p in range(0, len(PROP)):
-                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-ng", True) + " "
-                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "no g", PROP[p])
-                    if not same and secure == "✘ ":
-                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-ng", False) + "*"
+            elif k == 1:
+                for p in range(0, len(secProps)):
+                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-ng", True) + " "
+                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "no g", secProps[p])
+                    if not same and secure == "✘":
+                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-ng", False) + "*"
                     res += f"{secure}{HUGESPACE}"
 
         if BENCHMARK_NO_GEN[i][0] != "gms_and_5_shares":
-            res += (max_order - 1) * (len(PROP) - 1) * f"    {HUGESPACE}" + (max_order - 1) * f"{SMALLSPACE}" + f"{CHECK_FONCTIONALITY}\n"
+            res += (max_order - 1) * (len(secProps) - 1) * f"    {HUGESPACE}" + (max_order - 1) * f"{SMALLSPACE}" + f"{checkFunctionality}\n"
         else:
-            res += (max_order - 2) * (len(PROP) - 1) * f"    {HUGESPACE}" + (max_order - 2) * f"{SMALLSPACE}" + f"{CHECK_FONCTIONALITY}\n"
+            res += (max_order - 2) * (len(secProps) - 1) * f"    {HUGESPACE}" + (max_order - 2) * f"{SMALLSPACE}" + f"{checkFunctionality}\n"
             
-        with open(f"../test_env/{FILE}", "a") as f:
+        with open(f"../test_env/{resultFile}", "a") as f:
             f.write(res)
-        CHECK_FONCTIONALITY = ""
+        checkFunctionality = ""
     
 
-    with open(f"../test_env/{FILE}", "a") as f:
+    with open(f"../test_env/{resultFile}", "a") as f:
         f.write("\n")
     
     existingFile = True
     
     
 def withGliches(max_order, generateFiles):
-    global CHECK_FONCTIONALITY
+    global checkFunctionality
 
     for i in range(0, len(BENCHMARK_GEN)):
         os.chdir(f"../{BENCHMARK_GEN[i][1]}")
@@ -243,18 +237,18 @@ def withGliches(max_order, generateFiles):
             subprocess.run(["make"])
 
             for k in range(1, order + 1):
-                for p in range(0, len(PROP)):
-                    secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", PROP[p], k, "-g", True) + " "
-                    same = checkResult(secure, BENCHMARK_GEN[i][0], "w/ g", PROP[p])
-                    if not same and secure == "✘ ":
-                        secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", PROP[p], k, "-g", False) + "*"
+                for p in range(0, len(secProps)):
+                    secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", secProps[p], k, "-g", True) + " "
+                    same = checkResult(secure, BENCHMARK_GEN[i][0], "w/ g", secProps[p])
+                    if not same and secure == "✘":
+                        secure = runSetup(f"{BENCHMARK_GEN[i][0]}_gen_{nbShares}_shares", secProps[p], k, "-g", False) + "*"
                     res += f"{secure}{HUGESPACE}"
 
-            res += (max_order - j) * (len(PROP) - 1) * f"    {HUGESPACE}" + (max_order - j) * f"{SMALLSPACE}" + f"{CHECK_FONCTIONALITY}\n"
+            res += (max_order - j) * (len(secProps) - 1) * f"    {HUGESPACE}" + (max_order - j) * f"{SMALLSPACE}" + f"{checkFunctionality}\n"
             
-            with open(f"../test_env/{FILE}", "a") as f:
+            with open(f"../test_env/{resultFile}", "a") as f:
                 f.write(res)
-            CHECK_FONCTIONALITY = ""
+            checkFunctionality = ""
     
     
     for i in range(0, len(BENCHMARK_NO_GEN)):
@@ -272,33 +266,33 @@ def withGliches(max_order, generateFiles):
         subprocess.run(["make"])
          
         for k in range(1, max_order + 1):
-            if (k == 2 and BENCHMARK_NO_GEN[i][0] == "gms_and_5_shares"):
-                for p in range(0, len(PROP)):
-                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-g", True) + " "
-                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "w/ g", PROP[p])
-                    if not same and secure == "✘  ":
-                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-g", False) + "*"
+            if k == 2 and BENCHMARK_NO_GEN[i][0] == "gms_and_5_shares":
+                for p in range(0, len(secProps)):
+                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-g", True) + " "
+                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "w/ g", secProps[p])
+                    if not same and secure == "✘":
+                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-g", False) + "*"
                     res += f"{secure}{HUGESPACE}"
 
-            elif (k == 1):
-                for p in range(0, len(PROP)):
-                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-g", True) + " "
-                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "w/ g", PROP[p])
-                    if not same and secure == "✘ ":
-                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", PROP[p], k, "-g", False) + "*"
+            elif k == 1:
+                for p in range(0, len(secProps)):
+                    secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-g", True) + " "
+                    same = checkResult(secure, BENCHMARK_NO_GEN[i][0], "w/ g", secProps[p])
+                    if not same and secure == "✘":
+                        secure = runSetup(f"{BENCHMARK_NO_GEN[i][0]}", secProps[p], k, "-g", False) + "*"
                     res += f"{secure}{HUGESPACE}"
 
         if BENCHMARK_NO_GEN[i][0] != "gms_and_5_shares":
-            res += (max_order - 1) * (len(PROP) - 1) * f"    {HUGESPACE}" + (max_order - 1) * f"{SMALLSPACE}" + f"{CHECK_FONCTIONALITY}\n"
+            res += (max_order - 1) * (len(secProps) - 1) * f"    {HUGESPACE}" + (max_order - 1) * f"{SMALLSPACE}" + f"{checkFunctionality}\n"
         else:
-            res += (max_order - 2) * (len(PROP) - 1) * f"    {HUGESPACE}" + (max_order - 2) * f"{SMALLSPACE}" + f"{CHECK_FONCTIONALITY}\n"
+            res += (max_order - 2) * (len(secProps) - 1) * f"    {HUGESPACE}" + (max_order - 2) * f"{SMALLSPACE}" + f"{checkFunctionality}\n"
             
-        with open(f"../test_env/{FILE}", "a") as f:
+        with open(f"../test_env/{resultFile}", "a") as f:
             f.write(res)
-        CHECK_FONCTIONALITY = ""
+        checkFunctionality = ""
 
 
-    with open(f"../test_env/{FILE}", "a") as f:
+    with open(f"../test_env/{resultFile}", "a") as f:
         f.write("\n")
 
     existingFile = True
@@ -306,7 +300,7 @@ def withGliches(max_order, generateFiles):
 
 
 def createCompFile(max_order):
-    resultFile = open(f'../test_env/{FILE}', 'r')
+    resultFile = open(f'../test_env/{resultFile}', 'r')
     header = resultFile.readline()
 
     diffFile = open('../test_env/diff_result.txt', 'w')
@@ -321,21 +315,21 @@ def createCompFile(max_order):
             tabBench = tabResult[0].split()
 
             for i in range(0, len(tabResult) // 6):
-                for p in range(0, len(PROP)):
+                for p in range(0, len(secProps)):
                     bench = tabBench[0]
                     g = tabBench[-2] + " g"
 
                     res += tabResult[1 + (i * 6) + p]
                     if res[-1] != "*":
                         res += " "
-                    if checkResult(tabResult[1 + (i * 6) + p], bench, g, PROP[p]):
+                    if checkResult(tabResult[1 + (i * 6) + p], bench, g, secProps[p]):
                         res += f"(OK)  {SMALLSPACE}  "
                     else:
                         res += f"(KO)  {SMALLSPACE}  "
 
             for i in range(1, max_order + 1):
-                if len(tabResult) == 2 + (len(PROP) * i):
-                    res += f"{HUGESPACE}" * ((max_order - i) * len(PROP) -1)  + (max_order - i) * f" {SMALLSPACE}{HUGESPACE} " + tabResult[-1].strip()
+                if len(tabResult) == 2 + (len(secProps) * i):
+                    res += f"{HUGESPACE}" * ((max_order - i) * len(secProps) -1)  + (max_order - i) * f" {SMALLSPACE}{HUGESPACE} " + tabResult[-1].strip()
                     if checkResult(tabResult[-1], bench, g, "check fonctionality"):
                         res += " (OK)"
                     else:
@@ -387,15 +381,15 @@ if __name__ == '__main__':
         print("### Error: max_order must be greater or egal than 1")
         sys.exit(1)
 
-    if os.path.exists(FILE):
-        os.remove(FILE)
+    if os.path.exists(resultFile):
+        os.remove(resultFile)
 
-    # touch $FILE + initialisation des en-têtes
-    with open(FILE, "w") as f:
+    # touch $resultFile + initialisation des en-têtes
+    with open(resultFile, "w") as f:
         f.write(" " * 32)
         for i in range(1, max_order + 1):
-            for j in range(0, len(PROP)):
-                f.write(f"        {PROP[j]} order {i}")
+            for j in range(0, len(secProps)):
+                f.write(f"        {secProps[j]} order {i}")
         f.write("       check fonctionality\n\n")
 
 
