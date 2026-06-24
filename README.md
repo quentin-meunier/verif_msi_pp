@@ -361,7 +361,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 
 #### Expected results without glitches
 
-| Benchmark | tps  | ni   | sni  | rni  | pini | opini |
+| Benchmark | TPS  | NI   | SNI  | RNI  | PINI | OPINI |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | DOM AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
 | HPC3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
@@ -382,7 +382,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 
 #### Expected results with glitches
 
-| Benchmark | tps  | ni   | sni  | rni  | pini | opini |
+| Benchmark | TPS  | NI   | SNI  | RNI  | PINI | OPINI |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | DOM AND | ✔ | ✔ | ✘ | ✔ | ✘ | ✘ |
 | HPC3 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
