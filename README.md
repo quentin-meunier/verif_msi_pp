@@ -25,7 +25,7 @@ In order to use VerifMSI constructs, the file `verif_msi_pp.hpp' from the `inclu
 Symbolic variables are created with a function called `symbol()`: the first parameter is the symbol name, the second parameter the symbol type ('S' for secret, 'M' for mask and 'P' for a public variable), and the third parameter the symbol width. Constants values are created with a function called `constant()`, taking as parameters the value and the width in bits. These functions, as the different operators, return a reference to a `Node`. The local variables used for storing the result of these calls should thus be aliases: node copy is indeed not possible, since we do not want to deal with different memory instances representing the same expression, which an hypothesis for the implemented cache and expression comparison (also, a deep copy would be required, inducing an additional cost).
 
 Example:
-```
+```cpp
 #include "verif_msi_pp.hpp"
 
 int main() {
@@ -62,7 +62,7 @@ int main() {
 
 VerifMSI++ also supports hardware constructs (gates and registers) for verifying gadgets implementations. The following code implements the Domain Oriented Masking AND from [1] with two shares. The function `getRealShares()` allows to split a secret into a specified number of shares. In this case, the returned elements are symbols typed as shares, such that the linear recombination (xor) of all the shares is the secret. The share symbols' name are constructing by adding the character `@` followed by the share number. An alternate function, `getPseudoShares()`, allows to make an explicit sharing based on the secret and dedicated masks. The difference in the secret representation (explicit or shares) determines which security properties can be verified.
 
-```
+```cpp
 #include "verif_msi_pp.hpp"
 
 int32_t order = 1;
@@ -173,7 +173,7 @@ Some operations related to Galois Fields are implemented but haven't been much t
 ### Simplification
 
 VerifMSI implements a wide range of simplifications, taking advantage of operators properties. In order to simplify an expression, simply call the `simplify()` function:
-```
+```cpp
 Node & p0 = symbol("p0", 'P', 8);
 Node & p1 = symbol("p1", 'P', 8);
 Node & m = symbol("m", 'M', 8);
@@ -190,7 +190,7 @@ Note: this functionality is temporarily broken and should not be used for now.
 ### Bit Decomposition of Expressions
 
 VerifMSI++ can decompose an expression into a concatenation of 1-bit expressions. Although this feature is mostly used in the verification algorithm, it is possible to get the equivalent bit decomposition with the function `getBitDecomposition()`. n-bit symbolic variables are decomposed into n 1-bit variables of the same type, using the `#` symbol for the bit number. For example, `getBitDecomposition(symbol("m", 'M', 2)` will produce `Concat(m#1, m#0)`.
-```
+```cpp
 Node & k = symbol("k", 'S', 4);
 Node & exp = k & constant(0x5, 4);
 Node & bitExp = getBitDecomposition(exp);
@@ -215,7 +215,7 @@ The minimal required arguments are the name, input width and output width.
 It is advised to specify the content of the array upon registration whenever possible, as this allows to evaluate the expression for concrete input values. This is very useful for checking an implementation, as it is sufficient to replace symbolic variables with constants in order to check the correctness of an implementation. This also allows to use the **concrete evaluation** module functions.
 
 For example, the SBox from the AES can be implemented as follows:
-```
+```cpp
 #include "verif_msi_pp.hpp"
 
 uint8_t sbox[256] = { 0x63, 0x7C, ...};
@@ -234,7 +234,7 @@ int main() {
 ```
 
 Arrays can also be associated to a function, which is used as a substitute for the expression to use. This allows for example to implement multiplication by 2 or 3 in the AES with an array:
-```
+```cpp
 #include "verif_msi_pp.hpp"
 
 Node & mul_02_func(Node & idx) {
@@ -256,7 +256,7 @@ int main() {
 
 It is also possible to use this functionality to implement a masked sbox access, taking advantage of the fact that we know the expression corresponding to an index. For example, in the Herbst scheme, `SBox'[x ^ m] = SBox[x] ^ m'` (using the function `getSymbolByName()` to get the masks `m` and `mp`)
 
-```
+```cpp
 #include "verif_msi_pp.hpp"
 
 Node & sboxp_func(Node & idx) {
@@ -356,6 +356,49 @@ These are the following:
 * OTSM: the OTSM gadget from [18]
 
 For schemes which are defined for any order, the benchmark file is a generator which creates the benchmark file for the specified order.
+
+We provide hereafter the expected verification results for each benchmark and each property, which are used as a reference for comparison with the actual verification results. When the masking scheme definition does not specify the expected outcome for a given property, we based our judgment on our comprehension of the masking scheme and the actual results obtained.
+
+#### Expected results without glitches
+
+| Benchmark | tps  | ni   | sni  | rni  | pini | opini |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| dom_and | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| hpc3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| hpc4 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| isw_and | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| isw_and_refresh | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| opini1_mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| opini2_mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| pini1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| pini_mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| otsm | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| tsm | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| tsmp_2_inputs | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| tsmp_3_inputs | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| gms_and_3_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+| gms_and_5_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+
+
+#### Expected results with glitches
+
+| Benchmark | tps  | ni   | sni  | rni  | pini | opini |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| dom_and | ✔ | ✔ | ✘ | ✔ | ✘ | ✘ |
+| hpc3 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| hpc4 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
+| isw_and | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| isw_and_refresh | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| opini1_mult | ✔ | ✔ | ✘ | ✘ | ✔ | ✔ |
+| opini2_mult | ✔ | ✔ | ✔ | ✘ | ✔ | ✔ |
+| pini1 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| pini_mult | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| otsm | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
+| tsm | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| tsmp_2_inputs | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| tsmp_3_inputs | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| gms_and_3_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+| gms_and_5_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
 
 
 ## License
