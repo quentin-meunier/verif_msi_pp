@@ -363,42 +363,42 @@ We provide hereafter the expected verification results for each benchmark and ea
 
 | Benchmark | tps  | ni   | sni  | rni  | pini | opini |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| dom_and | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
-| hpc3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| hpc4 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| isw_and | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
-| isw_and_refresh | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
-| opini1_mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| opini2_mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| pini1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| pini_mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| otsm | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| tsm | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| tsmp_2_inputs | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| tsmp_3_inputs | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| gms_and_3_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
-| gms_and_5_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+| DOM AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| HPC3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| HPC4 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| ISW AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| ISW AND refresh | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| OPINI1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| OPINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| PINI1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| PINI Mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| OTSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| TSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| TSM+ (2 inputs) | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| TSM+ (3 inputs) | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| GMS AND (3 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+| GMS AND (5 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
 
 
 #### Expected results with glitches
 
 | Benchmark | tps  | ni   | sni  | rni  | pini | opini |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| dom_and | ✔ | ✔ | ✘ | ✔ | ✘ | ✘ |
-| hpc3 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
-| hpc4 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
-| isw_and | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
-| isw_and_refresh | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
-| opini1_mult | ✔ | ✔ | ✘ | ✘ | ✔ | ✔ |
-| opini2_mult | ✔ | ✔ | ✔ | ✘ | ✔ | ✔ |
-| pini1 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
-| pini_mult | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
-| otsm | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
-| tsm | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| tsmp_2_inputs | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
-| tsmp_3_inputs | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
-| gms_and_3_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
-| gms_and_5_shares | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+| DOM AND | ✔ | ✔ | ✘ | ✔ | ✘ | ✘ |
+| HPC3 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| HPC4 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
+| ISW AND | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| ISW AND refresh | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| OPINI1 | ✔ | ✔ | ✘ | ✘ | ✔ | ✔ |
+| OPINI2 | ✔ | ✔ | ✔ | ✘ | ✔ | ✔ |
+| PINI1 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| PINI Mult | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| OTSM | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
+| TSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| TSM+ (2 inputs) | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| TSM+ (3 inputs) | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| GMS AND (3 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+| GMS AND (5 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
 
 
 ## License
