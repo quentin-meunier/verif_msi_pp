@@ -33,7 +33,7 @@ class HWElement {
     public:
     inline static int32_t nodeNum = 0;
     inline static int32_t nbNIcalls = 0;
-    inline static const bool remSingleInputProbesOpt = REM_SINGLE_INPUT_PROBES;
+    inline static const bool remProbesOpt = REM_SINGLE_INPUT_PROBES;
     inline static const bool remRedundantProbesOpt = REM_REDUNDANT_PROBES;
     inline static const bool bartheOpt = BARTHE_OPT;
     inline static std::set<HWElement *> allHWElements;

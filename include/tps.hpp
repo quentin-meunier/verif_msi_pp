@@ -47,6 +47,8 @@ bool niNoFalsePositive(Node & nodeIn, int maxShareOcc, bool bitDecompose = false
 bool niNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose = false, bool verbose = false);
 bool rni(Node & nodeIn, int diff, bool bitDecompose = false, bool verbose = false);
 bool rni(std::vector<Node *> & nodes, int diff, bool bitDecompose = false, bool verbose = false);
+bool rniNoFalsePositive(Node & nodeIn, int diff, bool bitDecompose = false, bool verbose = false);
+bool rniNoFalsePositive(std::vector<Node *> & nodes, int diff, bool bitDecompose = false, bool verbose = false);
 bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);
 bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);
 bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose = false, bool verbose = false);

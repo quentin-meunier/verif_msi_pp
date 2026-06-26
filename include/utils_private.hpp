@@ -11,12 +11,14 @@ Author(s): Quentin L. Meunier
 #define _utils_private_hpp_
 
 #include "node.hpp"
+#include "tps.hpp"
+#include "hw.hpp"
 
-void tpsValidity(Node & n);
-void niValidity(Node & n);
-void rniValidity(Node & n);
-void piniValidity(Node & n);
 
+void secPropValidity(std::set<Node *> & nodes, SecurityProperty secProp);
+void secPropValidity(std::set<HWElement *> & gates, SecurityProperty secProp);
+
+void secPropValidity(Node & n, SecurityProperty secProp);
 
 #endif
 

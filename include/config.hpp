@@ -25,7 +25,7 @@ Author(s): Quentin L. Meunier
 #define VERIF_REMOVE_CST_IN_ADD true
 
 #define REM_SINGLE_INPUT_PROBES true
-#define REM_REDUNDANT_PROBES    true
+#define REM_REDUNDANT_PROBES    false
 #define BARTHE_OPT              false
 
 #endif

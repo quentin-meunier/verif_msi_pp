@@ -20,9 +20,9 @@ Author(s): Quentin L. Meunier
 #include "concrev.hpp"
 #include "node.hpp"
 #include "utils.hpp"
+#include "utils_private.hpp"
 #include "arrayexp.hpp"
 #include "simplify.hpp"
-#include "utils_private.hpp"
 
 
 
@@ -561,7 +561,7 @@ static bool enumeratePublicVarsRec(Node & e0, std::vector<Node *> & publicVars, 
 bool getDistribWithExev(Node & e, bool * rud) {
     assert(e.width <= 64);
 
-    tpsValidity(e);
+    secPropValidity(e, TPS);
     Node & e0 = getBitDecomposition(e);
     
     std::vector<Node *> allVarsVec;
@@ -701,7 +701,7 @@ static void getEffectiveShares(Node & e0, std::vector<Node *> & publicVars, std:
 bool isNIWithExev(Node & e, int32_t maxShareOcc) {
     assert(e.width <= 64);
 
-    niValidity(e);
+    secPropValidity(e, NI);
     Node & e0 = getBitDecomposition(e);
     
     std::vector<Node *> allVarsVec;
@@ -800,7 +800,7 @@ bool isNIWithExev(Node & e, int32_t maxShareOcc) {
 bool isRNIWithExev(Node & e, int32_t diff) {
     assert(e.width <= 64);
 
-    rniValidity(e);
+    secPropValidity(e, RNI);
     Node & e0 = getBitDecomposition(e);
     
     std::vector<Node *> allVarsVec;
@@ -906,7 +906,7 @@ bool isRNIWithExev(Node & e, int32_t diff) {
 bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes) {
     assert(e.width <= 64);
 
-    niValidity(e);
+    secPropValidity(e, PINI);
     Node & e0 = getBitDecomposition(e);
     
     std::vector<Node *> allVarsVec;
@@ -981,7 +981,7 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
 bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes, std::set<int> & additionalInputIndexes) {
     assert(e.width <= 64);
 
-    niValidity(e);
+    secPropValidity(e, OPINI);
     Node & e0 = getBitDecomposition(e);
     
     std::vector<Node *> allVarsVec;

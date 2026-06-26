@@ -7,40 +7,50 @@ Author(s): Quentin L. Meunier
 */
 
 
+#include "utils_private.hpp"
 #include "node.hpp"
+#include "hw.hpp"
 #include "config.hpp"
 
 
-void tpsValidity(Node & n) {
+static void shareValidity(Node & n, SecurityProperty secProp) {
+    if (n.secretVarOcc.size() != 0) {
+        std::cerr << "*** Error: " << secProp2str(secProp) << " verification should use a share representation and not explicit secret variables" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+static void secretMaskValidity(Node & n, SecurityProperty secProp) {
     if (n.shareOcc.size() != 0) {
-        std::cerr << "*** Error: Threshold Probing verification should not use a share representation but explicit secret variables and masks" << std::endl;
+        std::cerr << "*** Error: " << secProp2str(secProp) << " verification should not use a share representation but explicit secret variables and masks" << std::endl;
         exit(EXIT_FAILURE);
     }
 }
 
 
-void niValidity(Node & n) {
-    if (n.secretVarOcc.size() != 0) {
-        std::cerr << "*** Error: NI verification should use a share representation and not explicit secret variables" << std::endl;
-        exit(EXIT_FAILURE);
+
+void secPropValidity(std::set<Node *> & nodes, SecurityProperty secProp) {
+    for (const auto & n : nodes) {
+        secPropValidity(*n, secProp);
     }
 }
 
 
-void rniValidity(Node & n) {
-    if (n.secretVarOcc.size() != 0) {
-        std::cerr << "*** Error: RNI verification should use a share representation and not explicit secret variables" << std::endl;
-        exit(EXIT_FAILURE);
+void secPropValidity(std::set<HWElement *> & gates, SecurityProperty secProp) {
+    for (const auto & gate : gates) {
+        secPropValidity(*gate->symbExp, secProp);
     }
 }
 
 
-void piniValidity(Node & n) {
-    if (n.secretVarOcc.size() != 0) {
-        std::cerr << "*** Error: PINI verification should use a share representation and not explicit secret variables" << std::endl;
-        exit(EXIT_FAILURE);
+void secPropValidity(Node & n, SecurityProperty secProp) {
+    if (secProp == TPS) {
+        secretMaskValidity(n, secProp);
+    }
+    else {
+        shareValidity(n, secProp);
     }
 }
-
 
 

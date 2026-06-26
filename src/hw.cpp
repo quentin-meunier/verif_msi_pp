@@ -16,12 +16,13 @@ Author(s): Quentin L. Meunier
 #include <algorithm>
 
 
-#include "node.hpp"
+#include "hw.hpp"
 #include "config.hpp"
+#include "node.hpp"
 #include "simplify.hpp"
 #include "check_leakage.hpp"
-#include "hw.hpp"
 #include "tps.hpp"
+#include "utils_private.hpp"
 
 
 
@@ -656,9 +657,9 @@ static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool w
     const int32_t tupleLen = order;
     HWElement ** t = new HWElement * [tupleLen];
 
-    std::function<void(int32_t i, int32_t nbTaken, bool includePartialTuples, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples)> tupleEnumRec;
+    std::function<void(int32_t i, int32_t nbTaken, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples)> tupleEnumRec;
 
-    tupleEnumRec = [&tupleEnumRec, &gateList, withGlitches, tupleLen, &t](int32_t i, int32_t nbTaken, bool includePartialTuples, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples) {
+    tupleEnumRec = [&tupleEnumRec, &gateList, withGlitches, includePartialTuples, tupleLen, &t](int32_t i, int32_t nbTaken, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples) {
         auto getLeakExps = [withGlitches](HWElement ** gates, int32_t nbTaken, std::set<Node *> & s) {
             for (int32_t i = 0; i < nbTaken; i += 1) {
                 HWElement * gate = gates[i];
@@ -693,11 +694,11 @@ static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool w
 
         for (int32_t idx = i; idx < (int32_t) gateList.size(); idx += 1) {
             t[nbTaken] = gateList[idx];
-            tupleEnumRec(idx + 1, nbTaken + 1, includePartialTuples, tuples);
+            tupleEnumRec(idx + 1, nbTaken + 1, tuples);
         }
     };
 
-    tupleEnumRec(0, 0, includePartialTuples, tuples);
+    tupleEnumRec(0, 0, tuples);
 
     delete [] t;
 }
@@ -705,7 +706,7 @@ static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool w
 
 
 
-static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, std::vector<HWElement *> & internalGatesList, int32_t order, bool withGlitches, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>>> & tuples) {
+static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, std::vector<HWElement *> & internalGatesList, int32_t order, bool withGlitches, bool includePartialTuples, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>>> & tuples) {
 
     std::function<void(int32_t nbOutputIndices)> tupleEnumPINIOutputIndices;
     tupleEnumPINIOutputIndices = [&](int32_t nbOutputIndices) {
@@ -748,8 +749,9 @@ static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, st
                     }
                 };
 
-                if (nbInternalProbesTaken == nbInternalProbesToTake) {
-                    assert(nbInternalProbesTaken == order - (int32_t) outputSharesTaken.size());
+                if (nbInternalProbesTaken == nbInternalProbesToTake || (includePartialTuples && nbInternalProbesTaken > 0)) {
+                    // Should fail now
+                    assert(nbInternalProbesTaken + (int32_t) outputSharesTaken.size() == order);
 
                     std::set<Node *> s;
                     getLeakExps(t, nbProbes, s);
@@ -765,7 +767,9 @@ static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, st
                     std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>> tup {v, w, nbInternalProbesTaken, outputSharesIndices};
 
                     tuples.insert(tup);
-                    return;
+                    if (nbInternalProbesTaken == nbInternalProbesToTake) {
+                        return;
+                    }
                 }
                 for (int32_t j = nextInternalProbeToTakeIndex; j < (int32_t) internalGatesList.size(); j += 1) {
                     t[idx + nbInternalProbesTaken] = internalGatesList[j];
@@ -802,8 +806,55 @@ static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, st
 }
 
 
+static bool allInputSharesAreAccessible(std::set<HWElement *> & gatesToVerify, bool verbose) {
+    std::set<Node *> reachableInputShares;
+    for (const auto & gate : gatesToVerify) {
+        if (gate->nature == GATE && gate->op == INPUT && gate->symbExp->nature == SYMB && gate->symbExp->symbType == 'A') {
+            reachableInputShares.insert(gate->symbExp);
+        }
+    }
 
-static void removeProbesWithGlitches(std::set<HWElement *> & gatesToVerify) {
+    //print(' '.join(map(lambda x: '%s' % x.symbExp.symb, reachableInputShares)))
+    if (verbose) {
+        std::cout << "# Reachable Input Shares: ";
+        for (const auto & n : reachableInputShares) {
+            std::cout << *n->symb << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::set<Node *> reachableInputSharesSecrets;
+    for (const auto & n : reachableInputShares) {
+        reachableInputSharesSecrets.insert(n->origSecret);
+    }
+    //print(' '.join(map(lambda x: '%s' % x[0].symb, reachableInputSharesSecrets)))
+    if (verbose) {
+        std::cout << "# Reachable Input Shares Secrets: ";
+        for (const auto & s : reachableInputSharesSecrets) {
+            std::cout << *s->symb << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    bool allInputShares = true;
+    for (const auto & s : reachableInputSharesSecrets) {
+        int32_t numShares = 0; // Number of accessible different input shares corresponding to the secret
+        for (const auto & n : reachableInputShares) {
+            if (n->origSecret == s) {
+                numShares += 1;
+            }
+        }
+        if (numShares != s->nbShares) {
+            allInputShares = false;
+            break;
+        }
+    }
+
+    return allInputShares;
+}
+
+
+static void removeIncludedProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
     // Removing probes on wires whose leakage is included in the leakage of another probe
     std::set<HWElement *> toRemove;
     for (const auto & gate : gatesToVerify) {
@@ -818,7 +869,17 @@ static void removeProbesWithGlitches(std::set<HWElement *> & gatesToVerify) {
 
             // if (gate->leakageOut.issubset(g->leakageOut))
             if (std::includes(g->leakageOut.begin(), g->leakageOut.end(), gate->leakageOut.begin(), gate->leakageOut.end())) {
-                toRemove.insert(gate);
+                if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
+                    if (verbose) {
+                        std::cout << "# NOT Removing included probe for gate " << g->num << ": " << *g->symbExp << " (output and " << secProp << ")" << std::endl;
+                    }
+                }
+                else {
+                    toRemove.insert(gate);
+                    if (verbose) {
+                        std::cout << "# Removing included probe for gate " << g->num << ": " << *g->symbExp << std::endl;
+                    }
+                }
                 break;
             }
         }
@@ -829,17 +890,73 @@ static void removeProbesWithGlitches(std::set<HWElement *> & gatesToVerify) {
 }
 
 
+// Remove probes corresponding to input shares
+static void removeInputSharesProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
+    std::set<HWElement *> gatesToVerifyCopy = gatesToVerify;
+
+    for (const auto & g : gatesToVerifyCopy) {
+        if (g->symbExp->nature == SYMB && g->symbExp->symbType == 'A') {
+            if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
+                if (verbose) {
+                    std::cout << "# NOT Removing input share probe for gate " << g->num << ": " << *g->symbExp << " (output and " << secProp << ")" << std::endl;
+                }
+            }
+            else {
+                gatesToVerify.erase(g);
+                if (verbose) {
+                    std::cout << "# Removing input share probe for gate " << g->num << ": " << *g->symbExp << std::endl;
+                }
+            }
+        }
+    }
+}
+
+
+// Remove the gate / probe if it contains an expression with only one input share index (ai.bi)
+static void removeAiBiProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
+    std::set<HWElement *> gatesToVerifyCopy = gatesToVerify;
+
+    for (const auto & g : gatesToVerifyCopy) {
+        int index = -1;
+        bool singleIndex = true;
+        for (const auto & [secret, val] : g->symbExp->shareOcc) {
+            if (val->size() > 1) {
+                singleIndex = false;
+                break;
+            }
+            else {
+                if (index == -1) {
+                    index = val->begin()->first->shareNum;
+                }
+                else if (index != val->begin()->first->shareNum) {
+                    singleIndex = false;
+                    break;
+                }
+            }
+        }
+
+        if (singleIndex) {
+            if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
+                if (verbose) {
+                    std::cout << "# NOT Removing \"ai.bi\" probe for gate " << g->num << ": " << *g->symbExp << " (output and " << secProp << ")" << std::endl;
+                }
+            }
+            else {
+                gatesToVerify.erase(g);
+                if (verbose) {
+                    std::cout << "# Removing \"ai.bi\" probe for gate " << g->num << ": " << *g->symbExp << std::endl;
+                }
+            }
+        }
+    }
+}
+
+
 // Remove the gate / probe if it contains at most one share per input and no random
-static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify, bool verbose) {
-    // QM : FIXME: why sorting?
-    // Copy in another container is necessary because we remove elements while traversing them
+static void removeAiBjProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
+    std::set<HWElement *> gatesToVerifyCopy = gatesToVerify;
 
-    std::vector<HWElement *> gatesToVerifyVec(gatesToVerify.begin(), gatesToVerify.end());
-    std::sort(gatesToVerifyVec.begin(), gatesToVerifyVec.end(), [](HWElement * a, HWElement * b) {
-            return a->num < b->num;
-    });
-
-    for (const auto & g : gatesToVerifyVec) {
+    for (const auto & g : gatesToVerifyCopy) {
         bool moreThanOneShare = false;
         for (const auto & [secret, val] : g->symbExp->shareOcc) {
             if (val->size() > 1) {
@@ -849,10 +966,17 @@ static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify, bool 
         }
 
         if (!moreThanOneShare && g->symbExp->maskingMaskOcc.size() + g->symbExp->otherMaskOcc.size() == 0) {
-            if (verbose) {
-                std::cout << "# Removing gate " << g->num << ": " << *g->symbExp << std::endl;
+            if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
+                if (verbose) {
+                    std::cout << "# NOT Removing \"ai.bj\" probe for gate " << g->num << ": " << *g->symbExp << " (output and " << secProp << ")" << std::endl;
+                }
             }
-            gatesToVerify.erase(g);
+            else {
+                gatesToVerify.erase(g);
+                if (verbose) {
+                    std::cout << "# Removing \"ai.bj\" probe for gate " << g->num << ": " << *g->symbExp << std::endl;
+                }
+            }
         }
     }
 }
@@ -860,7 +984,7 @@ static void removeSingleInputProbes(std::set<HWElement *> & gatesToVerify, bool 
 
 
 // Remove the gate / probe if it has no non-masking randoms, exactly the same masking randoms and the same or a subset of the input shares of another gate
-static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, SecurityProperty secProp, std::set<HWElement *> & outputs, bool verbose) {
+static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
     // FIXME: why sorting? the only interest would be not to make all cross comparisons, based on the fact that children nodes are traversed first
     //        i.e. for h, we can start at index j = i + 1 if i is the index of g
     // However, the copy in another container is necessary because we remove elements while traversing them
@@ -872,7 +996,7 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, Securit
 
     for (const auto & g : gatesToVerifyVec) {
         // For SNI and PINI, we do not want to remove output gates
-        if ((secProp == SNI or secProp == PINI) and outputs.contains(g)) {
+        if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
             continue;
         }
 
@@ -948,84 +1072,43 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
         getReachableGates(gate, gatesToVerify);
     }
 
+    secPropValidity(gatesToVerify, secProp);
+
+    bool completeGadget = allInputSharesAreAccessible(gatesToVerify, verbose);
+    if (not completeGadget) {
+        std::cerr << "# Error: Not all input shares are accessible, cannot verify the gadget" << std::endl;
+    }
+
     if (verbose) {
         std::cout << "# Reachable gates (" << gatesToVerify.size() << "): " << setGatesNumStr(gatesToVerify) << std::endl;
     }
 
-    bool doRemSingleInputProbesOpt;
-    if (withGlitches) {
-        doRemSingleInputProbesOpt = false;
-        removeProbesWithGlitches(gatesToVerify);
+    bool doPartialTuples = false;
+
+    if (withGlitches && HWElement::remProbesOpt) {
+        removeIncludedProbes(gatesToVerify, outputs, secProp, verbose);
     }
 
-    else if (secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI || secProp == OPINI) {
-        // Probe reduction is not applicable to TPS
-        // Checking if all input shares are part of the reachable gates
-        std::set<Node *> reachableInputShares;
-        for (const auto & gate : gatesToVerify) {
-            if (gate->nature == GATE && gate->op == INPUT && gate->symbExp->nature == SYMB && gate->symbExp->symbType == 'A') {
-                reachableInputShares.insert(gate->symbExp);
-            }
-        }
-        
-        //print(' '.join(map(lambda x: '%s' % x.symbExp.symb, reachableInputShares)))
-        if (verbose) {
-            std::cout << "# Reachable Input Shares: ";
-            for (const auto & n : reachableInputShares) {
-                std::cout << *n->symb << " ";
-            }
-            std::cout << std::endl;
-        }
-
-        std::set<std::tuple<Node *, int32_t>> reachableInputSharesSecrets;
-        for (const auto & n : reachableInputShares) {
-            reachableInputSharesSecrets.insert({n->origSecret, n->nbShares});
-        }
-        //print(' '.join(map(lambda x: '%s' % x[0].symb, reachableInputSharesSecrets)))
-        if (verbose) {
-            std::cout << "# Reachable Input Shares Secrets: ";
-            for (const auto & tup : reachableInputSharesSecrets) {
-                std::cout << *std::get<0>(tup)->symb << " ";
-            }
-            std::cout << std::endl;
-        }
-
-        bool allInputShares = true;
-        for (const auto & t : reachableInputSharesSecrets) {
-            int32_t numShares = 0; // Number of accessible different input shares corresponding to the secret
-            for (const auto & n : reachableInputShares) {
-                if (n->origSecret == std::get<0>(t)) {
-                    numShares += 1;
-                }
-            }
-            if (numShares != std::get<1>(t)) {
-                allInputShares = false;
-                break;
-            }
-        }
-
-        doRemSingleInputProbesOpt = HWElement::remSingleInputProbesOpt && allInputShares;
-        if (doRemSingleInputProbesOpt) {
-            if (verbose) {
-                std::cout << "# Removing Probes with at most 1 share / input and no random" << std::endl;
-            }
-            removeSingleInputProbes(gatesToVerify, verbose);
-        }
-
-
-        bool doRemRedundantProbesOpt = HWElement::remRedundantProbesOpt;
-        if (doRemRedundantProbesOpt) {
-            if (verbose) {
-                std::cout << "# Removing Redundant Probes" << std::endl;
-            }
-            removeRedundantProbes(gatesToVerify, secProp, outputs, verbose);
-        } // doRemRedundantProbesOpt
-    } // secProp
-
-    else {
-        assert(secProp == TPS);
-        doRemSingleInputProbesOpt = false;
+    if ((secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI) && HWElement::remProbesOpt) {
+        removeInputSharesProbes(gatesToVerify, outputs, secProp, verbose);
+        doPartialTuples = true;
     }
+
+    if ((secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI) && HWElement::remProbesOpt) {
+        removeAiBiProbes(gatesToVerify, outputs, secProp, verbose);
+        doPartialTuples = true;
+    }
+
+    if ((secProp == NI || secProp == RNI || secProp == SNI) && HWElement::remProbesOpt) {
+        removeAiBjProbes(gatesToVerify, outputs, secProp, verbose);
+        doPartialTuples = true;
+    }
+
+    if ((secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI || secProp == OPINI) && HWElement::remRedundantProbesOpt) {
+        removeRedundantProbes(gatesToVerify, outputs, secProp, verbose);
+        doPartialTuples = true;
+    }
+
 
 
     std::vector<HWElement *> gates(gatesToVerify.begin(), gatesToVerify.end());
@@ -1080,7 +1163,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
     if (secProp != PINI && secProp != OPINI) {
         std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> tuples;
-        tupleEnum(gates, order, withGlitches, doRemSingleInputProbesOpt, tuples);
+        tupleEnum(gates, order, withGlitches, doPartialTuples, tuples);
 
         if (verbose) {
             std::cout << "# Number of tuples: " << tuples.size() << std::endl;
@@ -1109,7 +1192,12 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             }
             else if (secProp == RNI) {
                 //std::cout << "# checking RNI for exps " << vecExpsStr(*std::get<0>(t)) << " and maxShareOcc = (nbShares - 1) - " << (order - std::get<1>(t)->size()) << std::endl;
-                res = rni(*std::get<0>(t), (order - std::get<1>(t)->size()));
+                if (noFalsePositive) {
+                    res = rniNoFalsePositive(*std::get<0>(t), (order - std::get<1>(t)->size()));
+                }
+                else {
+                    res = rni(*std::get<0>(t), (order - std::get<1>(t)->size()));
+                }
             }
             else if (secProp == SNI) {
                 int32_t nbOutputProbes = 0;
@@ -1151,7 +1239,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
                 internalGates.push_back(g);
             }
         }
-        tupleEnumPINI(outputList, internalGates, order, withGlitches, tuples);
+        tupleEnumPINI(outputList, internalGates, order, withGlitches, doPartialTuples, tuples);
 
         std::vector<std::vector<Node *>> allOutputLeakages;
 

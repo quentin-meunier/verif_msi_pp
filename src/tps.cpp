@@ -445,7 +445,7 @@ static bool checkPropertyWrapper(std::vector<Node *> & nodesIn, SecurityProperty
 
 
 bool tps(Node & nodeIn, bool bitDecompose, bool verbose) {
-    tpsValidity(nodeIn);
+    secPropValidity(nodeIn, TPS);
     PropParams dummy;
     return checkPropertyWrapper(nodeIn, TPS, dummy, bitDecompose, false, verbose);
 }
@@ -453,7 +453,7 @@ bool tps(Node & nodeIn, bool bitDecompose, bool verbose) {
 
 bool tps(std::vector<Node *> & nodes, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        tpsValidity(*n);
+        secPropValidity(*n, TPS);
     }
     PropParams dummy;
     return checkPropertyWrapper(nodes, TPS, dummy, bitDecompose, false, verbose);
@@ -461,7 +461,7 @@ bool tps(std::vector<Node *> & nodes, bool bitDecompose, bool verbose) {
 
 
 bool tpsNoFalsePositive(Node & nodeIn, bool bitDecompose, bool verbose) {
-    tpsValidity(nodeIn);
+    secPropValidity(nodeIn, TPS);
     PropParams dummy;
     return checkPropertyWrapper(nodeIn, TPS, dummy, bitDecompose, true, verbose);
 }
@@ -469,7 +469,7 @@ bool tpsNoFalsePositive(Node & nodeIn, bool bitDecompose, bool verbose) {
 
 bool tpsNoFalsePositive(std::vector<Node *> & nodes, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        tpsValidity(*n);
+        secPropValidity(*n, TPS);
     }
     PropParams dummy;
     return checkPropertyWrapper(nodes, TPS, dummy, bitDecompose, true, verbose);
@@ -478,7 +478,7 @@ bool tpsNoFalsePositive(std::vector<Node *> & nodes, bool bitDecompose, bool ver
 
 
 bool ni(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool verbose) {
-    niValidity(nodeIn);
+    secPropValidity(nodeIn, NI);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     return checkPropertyWrapper(nodeIn, NI, pp, bitDecompose, false, verbose);
@@ -487,7 +487,7 @@ bool ni(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool verbose) {
 
 bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        niValidity(*n);
+        secPropValidity(*n, NI);
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
@@ -496,7 +496,7 @@ bool ni(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool ve
 
 
 bool niNoFalsePositive(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool verbose) {
-    niValidity(nodeIn);
+    secPropValidity(nodeIn, NI);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     return checkPropertyWrapper(nodeIn, NI, pp, bitDecompose, true, verbose);
@@ -505,7 +505,7 @@ bool niNoFalsePositive(Node & nodeIn, int maxShareOcc, bool bitDecompose, bool v
 
 bool niNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        niValidity(*n);
+        secPropValidity(*n, NI);
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
@@ -515,7 +515,7 @@ bool niNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, bool bitDec
 
 
 bool rni(Node & nodeIn, int diff, bool bitDecompose, bool verbose) {
-    rniValidity(nodeIn);
+    secPropValidity(nodeIn, RNI);
     PropParams pp;
     pp.diff = diff;
     return checkPropertyWrapper(nodeIn, RNI, pp, bitDecompose, false, verbose);
@@ -524,7 +524,7 @@ bool rni(Node & nodeIn, int diff, bool bitDecompose, bool verbose) {
 
 bool rni(std::vector<Node *> & nodes, int diff, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        rniValidity(*n);
+        secPropValidity(*n, RNI);
     }
     PropParams pp;
     pp.diff = diff;
@@ -532,8 +532,26 @@ bool rni(std::vector<Node *> & nodes, int diff, bool bitDecompose, bool verbose)
 }
 
 
+bool rniNoFalsePositive(Node & nodeIn, int diff, bool bitDecompose, bool verbose) {
+    secPropValidity(nodeIn, RNI);
+    PropParams pp;
+    pp.diff = diff;
+    return checkPropertyWrapper(nodeIn, RNI, pp, bitDecompose, true, verbose);
+}
+
+
+bool rniNoFalsePositive(std::vector<Node *> & nodes, int diff, bool bitDecompose, bool verbose) {
+    for (const auto & n : nodes) {
+        secPropValidity(*n, RNI);
+    }
+    PropParams pp;
+    pp.diff = diff;
+    return checkPropertyWrapper(nodes, RNI, pp, bitDecompose, true, verbose);
+}
+
+
 bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
-    piniValidity(nodeIn);
+    secPropValidity(nodeIn, PINI);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes;
@@ -543,7 +561,7 @@ bool pini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bi
 
 bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        piniValidity(*n);
+        secPropValidity(*n, PINI);
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
@@ -553,7 +571,7 @@ bool pini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIn
 
 
 bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
-    piniValidity(nodeIn);
+    secPropValidity(nodeIn, PINI);
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes;
@@ -563,7 +581,7 @@ bool piniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputI
 
 bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        piniValidity(*n);
+        secPropValidity(*n, PINI);
     }
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
@@ -604,6 +622,7 @@ static bool opini_internal(std::vector<Node *> & nodes, int maxShareOcc, std::se
 
 
 bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+    secPropValidity(nodeIn, OPINI);
     std::vector<Node *> nodes;
     nodes.push_back(&nodeIn);
     return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, false);
@@ -612,13 +631,14 @@ bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::v
 
 bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        piniValidity(*n);
+        secPropValidity(*n, OPINI);
     }
     return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, false);
 }
 
 
 bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
+    secPropValidity(nodeIn, OPINI);
     std::vector<Node *> nodes;
     nodes.push_back(&nodeIn);
     return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
@@ -627,7 +647,7 @@ bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & output
 
 bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose) {
     for (const auto & n : nodes) {
-        piniValidity(*n);
+        secPropValidity(*n, OPINI);
     }
     return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
 }
