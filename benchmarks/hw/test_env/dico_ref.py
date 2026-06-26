@@ -2,6 +2,11 @@
 
 refResult = {
     "dom_and": {
+        "gen": True,
+        "dir": "dom_and",
+        "gen_file": "generate_dom_and.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -9,7 +14,6 @@ refResult = {
             "rni": True,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -18,10 +22,14 @@ refResult = {
             "rni": True,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "hpc3": {
+        "gen": True,
+        "dir": "hpc3",
+        "gen_file": "generate_hpc3.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -29,7 +37,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -38,10 +45,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "hpc4": {
+        "gen": True,
+        "dir": "hpc4",
+        "gen_file": "generate_hpc4.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -49,7 +60,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True,
         },
         "w/ g": {
             "tps": True,
@@ -58,10 +68,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True,
         }
     },
     "isw_and": {
+        "gen": True,
+        "dir": "isw_and",
+        "gen_file": "generate_isw_and.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -69,7 +83,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True,
         },
         "w/ g": {
             "tps": False,
@@ -78,10 +91,14 @@ refResult = {
             "rni": False,
             "pini": False,
             "opini": False,
-            "check fonctionality": True,
         }
     },
     "isw_and_refresh": {
+        "gen": True,
+        "dir": "isw_and_refresh",
+        "gen_file": "generate_isw_and_refresh.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -89,7 +106,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True,
         },
         "w/ g": {
             "tps": False,
@@ -98,10 +114,14 @@ refResult = {
             "rni": False,
             "pini": False,
             "opini": False,
-            "check fonctionality": True,
         }
     },
     "opini1": {
+        "gen": True,
+        "dir": "opini1",
+        "gen_file": "generate_opini1.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -109,7 +129,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -118,10 +137,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True
         }
     },
-    "opini2_mult": {
+    "opini2": {
+        "gen": True,
+        "dir": "opini2",
+        "gen_file": "generate_opini2.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -129,7 +152,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -138,10 +160,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True
         }
     },
     "pini1": {
+        "gen": True,
+        "dir": "pini1",
+        "gen_file": "generate_pini1.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -149,7 +175,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": False,
@@ -158,10 +183,14 @@ refResult = {
             "rni": False,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "pini_mult": {
+        "gen": True,
+        "dir": "pini_mult",
+        "gen_file": "generate_pini_mult.py",
+        "source_file": None,
+        "verif_order": None,
         "no g": {
             "tps": True,
             "ni": True,
@@ -169,7 +198,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": False,
@@ -178,10 +206,14 @@ refResult = {
             "rni": False,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "otsm": {
+        "gen": False,
+        "dir": "otsm",
+        "gen_file": None,
+        "source_file": "otsm",
+        "verif_order": 1,
         "no g": {
             "tps": True,
             "ni": True,
@@ -189,7 +221,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -198,10 +229,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": True,
-            "check fonctionality": True
         }
     },
     "tsm": {
+        "gen": False,
+        "dir": "tsm",
+        "gen_file": None,
+        "source_file": "tsm",
+        "verif_order": 1,
         "no g": {
             "tps": True,
             "ni": True,
@@ -209,7 +244,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -218,10 +252,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "tsmp_2_inputs": {
+        "gen": False,
+        "dir": "tsm_plus",
+        "gen_file": None,
+        "source_file": "tsmp_2_inputs",
+        "verif_order": 1,
         "no g": {
             "tps": True,
             "ni": True,
@@ -229,7 +267,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -238,10 +275,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "tsmp_3_inputs": {
+        "gen": False,
+        "dir": "tsm_plus",
+        "gen_file": None,
+        "source_file": "tsmp_3_inputs",
+        "verif_order": 1,
         "no g": {
             "tps": True,
             "ni": True,
@@ -249,7 +290,6 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -258,10 +298,14 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "gms_and_3_shares": {
+        "gen": False,
+        "dir": "gms_and",
+        "gen_file": None,
+        "source_file": "gms_and_3_shares",
+        "verif_order": 1,
         "no g": {
             "tps": True,
             "ni": False,
@@ -269,7 +313,6 @@ refResult = {
             "rni": True,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -278,10 +321,14 @@ refResult = {
             "rni": True,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         }
     },
     "gms_and_5_shares": {
+        "gen": False,
+        "dir": "gms_and",
+        "gen_file": None,
+        "source_file": "gms_and_5_shares",
+        "verif_order": 1,
         "no g": {
             "tps": True,
             "ni": False,
@@ -289,7 +336,6 @@ refResult = {
             "rni": True,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         },
         "w/ g": {
             "tps": True,
@@ -298,7 +344,6 @@ refResult = {
             "rni": True,
             "pini": False,
             "opini": False,
-            "check fonctionality": True
         }
     }
 }
