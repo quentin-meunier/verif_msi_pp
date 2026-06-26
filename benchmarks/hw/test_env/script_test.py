@@ -26,12 +26,14 @@ secProps = ["tps ", "ni  ", "sni ", "rni ", "pini", "opini"]
 
 def usage(generateFiles):
     print('Usage: script_test.py <max_order> [options]')
-    print('    This script contains tests for the VerifMSI++ benchmarks.')
+    print('\n')
+    print('This script runs all the hw bechmarks and checks for their results for all the security property. In the output file, the \'✔\' and \'✘\' symbols indicate success and failure respectively, for the security check. If a security check fails while it is expected to succeed, the verification is run again using enumeration upon failure. In this case, the \'*\' mark is added in the result file. The \'OK\' and \'KO\' strings express the compliance with the expected verification result. Each verification is made at an order equal to the designed one (usually number of shares minus one).')
     print('Arguments:')
-    print('<max_order>                    : Set the maximum security order to check')
+    print('<max_order>                    : Set the maximum security order to check for generic gadgets')
     print('Options:')
-    print('-g,   --generation             : Generate files to test(default: %s)' % (generateFiles and 'Yes' or 'No'))
+    print('-g,    --generation            : Generate files to test(default: %s)' % (generateFiles and 'Yes' or 'No'))
     print('-ng,   --no-generation         : Do not generate files to test(default: %s)' % (generateFiles and 'No' or 'Yes'))
+    print('-h,    --help                  : Displays this help')
 
 
 
@@ -84,13 +86,13 @@ def checkResult(res, bench, g, p):
 
 
 
-def withoutGliches(max_order, generateFiles):
+def withoutGliches(maxOrder, generateFiles):
 
     for bench in refResult:
         os.chdir(f"../{refResult[bench]['dir']}")
         res = ""
 
-        for order in range(1, max_order + 1):
+        for order in range(1, maxOrder + 1):
 
             if refResult[bench]["gen"]:
                 refResult[bench]["source_file"] = f"{bench}_gen_{order + 1}_shares"
@@ -100,9 +102,9 @@ def withoutGliches(max_order, generateFiles):
 
             if order == refResult[bench]["verif_order"]:
                 if "shares" in bench:
-                    res += f"{bench} no glitches{SMALLSPACE}"
+                    res += f"{bench} no glitches{SMALLSPACE}" #
                 else:
-                    res += f"{bench} {order + 1} shares no glitches "
+                    res += f"{bench} {order + 1} shares no glitches " #
 
 
 
@@ -112,11 +114,11 @@ def withoutGliches(max_order, generateFiles):
                 subprocess.run(["make"])
 
                 for p in range(0, len(secProps)):
-                    (secure, resFunc) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, True)
+                    (secure, resFunc) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, True) #
                     secure += " "
-                    same = checkResult(secure, bench, "no g", secProps[p])
+                    same = checkResult(secure, bench, "no g", secProps[p]) #
                     if not same and secure[0] == "✘":
-                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", False, False)
+                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", False, False) #
                         secure += "*"
                     res += f"{secure}{HUGESPACE}"
      
@@ -133,14 +135,13 @@ def withoutGliches(max_order, generateFiles):
 
 
 
-    
-def withGliches(max_order, generateFiles):
+def withGliches(maxOrder, generateFiles):
 
     for bench in refResult:
         os.chdir(f"../{refResult[bench]['dir']}")
         res = ""
 
-        for order in range(1, max_order + 1):
+        for order in range(1, maxOrder + 1):
 
             if refResult[bench]["gen"]:
                 refResult[bench]["source_file"] = f"{bench}_gen_{order + 1}_shares"
@@ -183,7 +184,7 @@ def withGliches(max_order, generateFiles):
 
 
 
-def createCompFile(max_order):
+def createCompFile(maxOrder):
     global resultFile
 
     resFile = open(f'../test_env/{resultFile}', 'r')
@@ -213,7 +214,7 @@ def createCompFile(max_order):
                     else:
                         res += f"(KO)  {SMALLSPACE}  "
 
-            for i in range(1, max_order + 1):
+            for i in range(1, maxOrder + 1):
                 if len(tabResult) == 2 + (len(secProps) * i):
                     res += "     " + tabResult[-1].strip()
                     if tabResult[-1][0] == "✔":
@@ -221,7 +222,6 @@ def createCompFile(max_order):
                     else:
                         res += " (KO)"
                 
-
             diffFile.write(res + "\n")
 
     resFile.close()
@@ -240,16 +240,14 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if not sys.argv[1].isdigit():
-        print('*** Error: first argument (max_order) must be an integer', file = sys.stderr)
+        print('*** Error: first argument (max order) must be an integer', file = sys.stderr)
         usage(generateFiles)
         sys.exit(1)
 
-    max_order = int(sys.argv[1])
-
-    idx = 0
-    argv = sys.argv[2:]
-    while idx < len(argv):
-        arg = argv[idx]
+    idx = 1
+    maxOrder = None
+    while idx < len(sys.argv):
+        arg = sys.argv[idx]
         if arg == '-h' or arg == '--help':
             usage(generateFiles)
             sys.exit(0)
@@ -257,15 +255,17 @@ if __name__ == '__main__':
             generateFiles = True
         elif arg == '-ng' or arg == '--no-generation':
             generateFiles = False
+        elif maxOrder == None:
+            maxOrder = int(arg)
+            idx += 1
         else:
             print('*** Error: unrecognized option: %s' % arg, file = sys.stderr)
             usage(generateFiles)
             sys.exit(1)
         idx += 1
 
-
-    if max_order < 1:
-        print("### Error: max_order must be greater or egal than 1")
+    if maxOrder < 1:
+        print("*** Error: max order must be greater than or equal to 1", file = sys.stderr)
         sys.exit(1)
 
     if os.path.exists(resultFile):
@@ -279,10 +279,9 @@ if __name__ == '__main__':
         f.write("     check fonctionality\n\n")
 
 
-    #createBenchList(generateFiles)
-    withoutGliches(max_order, generateFiles)
-    withGliches(max_order, generateFiles)
-    createCompFile(max_order)
+    withoutGliches(maxOrder, generateFiles)
+    withGliches(maxOrder, generateFiles)
+    createCompFile(maxOrder)
 
 
 

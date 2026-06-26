@@ -12,9 +12,9 @@ from init_generator import Gadget
 
 
 
-def generate_opini2_mult(*argv):
+def generate_opini2(*argv):
 
-    gadget = Gadget(prop = 'opini', benchmark = 'opini2_mult', currentScript = os.path.basename(__file__), article = '[1] Gaëtan Cassiers and François-Xavier Standaert. 2021. Provably Secure Hardware Masking in the Transition- and Glitch-Robust Probing Model: Better Safe than Sorry. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2021, 2 (2021), 136–158. https://tches.iacr.org/index.php/TCHES/article/view/8790/8390', descriptionGenerator = '   This script generates a VerifMSI++ file of the O-PINI2 gadget from [1].')
+    gadget = Gadget(prop = 'opini', benchmark = 'opini2', currentScript = os.path.basename(__file__), article = '[1] Gaëtan Cassiers and François-Xavier Standaert. 2021. Provably Secure Hardware Masking in the Transition- and Glitch-Robust Probing Model: Better Safe than Sorry. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2021, 2 (2021), 136–158. https://tches.iacr.org/index.php/TCHES/article/view/8790/8390', descriptionGenerator = '   This script generates a VerifMSI++ file of the O-PINI2 gadget from [1].')
 
     gadget.descriptionFile = "   This script contains a VerifMSI++ description of the O-PINI2 gadget from [1] with %d shares." % (gadget.nbShares)
 
@@ -26,7 +26,7 @@ def generate_opini2_mult(*argv):
 
     content += '''
     
-int32_t opini2_mult_%d_shares(int32_t * nbCheck) {
+int32_t opini2_%d_shares(int32_t * nbCheck) {
 
 ''' % (gadget.nbShares)
 
@@ -155,7 +155,7 @@ int32_t opini2_mult_%d_shares(int32_t * nbCheck) {
 
 
 if __name__ == '__main__':
-    generate_opini2_mult(*sys.argv[1:])
+    generate_opini2(*sys.argv[1:])
 
 
 
