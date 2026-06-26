@@ -871,13 +871,13 @@ static void removeIncludedProbes(std::set<HWElement *> & gatesToVerify, std::set
             if (std::includes(g->leakageOut.begin(), g->leakageOut.end(), gate->leakageOut.begin(), gate->leakageOut.end())) {
                 if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
                     if (verbose) {
-                        std::cout << "# NOT Removing included probe for gate " << g->num << ": " << *g->symbExp << " (output and " << secProp << ")" << std::endl;
+                        std::cout << "# NOT Removing included probe for gate " << gate->num << ": " << *gate->symbExp << " (output and " << secProp << ")" << std::endl;
                     }
                 }
                 else {
                     toRemove.insert(gate);
                     if (verbose) {
-                        std::cout << "# Removing included probe for gate " << g->num << ": " << *g->symbExp << std::endl;
+                        std::cout << "# Removing included probe for gate " << gate->num << ": " << *gate->symbExp << std::endl;
                     }
                 }
                 break;
@@ -912,7 +912,7 @@ static void removeInputSharesProbes(std::set<HWElement *> & gatesToVerify, std::
 }
 
 
-// Remove the gate / probe if it contains an expression with only one input share index (ai.bi)
+// Remove the gate / probe if it contains an expression with only one input share index (ai.bi) and no random
 static void removeAiBiProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
     std::set<HWElement *> gatesToVerifyCopy = gatesToVerify;
 
@@ -935,7 +935,7 @@ static void removeAiBiProbes(std::set<HWElement *> & gatesToVerify, std::set<HWE
             }
         }
 
-        if (singleIndex) {
+        if (singleIndex && g->symbExp->maskingMaskOcc.size() + g->symbExp->otherMaskOcc.size() == 0) {
             if ((secProp == SNI or secProp == PINI or secProp == OPINI) and outputs.contains(g)) {
                 if (verbose) {
                     std::cout << "# NOT Removing \"ai.bi\" probe for gate " << g->num << ": " << *g->symbExp << " (output and " << secProp << ")" << std::endl;

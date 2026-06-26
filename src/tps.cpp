@@ -144,7 +144,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         std::cout << "# Call func checkProperty on exp " << nodeIn << std::endl;
     }
     
-    assert(not noFalsePositive or (secProp == TPS or secProp == NI or secProp == PINI or secProp == OPINI)) ;
+    assert(not noFalsePositive or (secProp == TPS or secProp == NI or secProp == PINI or secProp == OPINI or secProp == RNI)) ;
 
     int maxShareOcc = 0;
     int diff = 0;
