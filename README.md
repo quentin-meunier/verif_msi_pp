@@ -389,7 +389,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 | HPC4 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
 | ISW AND | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | ISW AND refresh | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
-| OPINI1 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| OPINI1 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
 | OPINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | PINI1 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | PINI Mult | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |

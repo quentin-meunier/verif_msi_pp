@@ -2,6 +2,7 @@
 
 refResult = {
     "dom_and": {
+        "name": 'DOM AND',
         "gen": True,
         "dir": "dom_and",
         "gen_file": "generate_dom_and.py",
@@ -25,6 +26,7 @@ refResult = {
         }
     },
     "hpc3": {
+        "name": 'HPC3',
         "gen": True,
         "dir": "hpc3",
         "gen_file": "generate_hpc3.py",
@@ -48,6 +50,7 @@ refResult = {
         }
     },
     "hpc4": {
+        "name": 'HPC4',
         "gen": True,
         "dir": "hpc4",
         "gen_file": "generate_hpc4.py",
@@ -71,6 +74,7 @@ refResult = {
         }
     },
     "isw_and": {
+        "name": 'ISW AND',
         "gen": True,
         "dir": "isw_and",
         "gen_file": "generate_isw_and.py",
@@ -94,6 +98,7 @@ refResult = {
         }
     },
     "isw_and_refresh": {
+        "name": 'ISW AND Refresh',
         "gen": True,
         "dir": "isw_and_refresh",
         "gen_file": "generate_isw_and_refresh.py",
@@ -117,6 +122,7 @@ refResult = {
         }
     },
     "opini1": {
+        "name": 'OPINI1',
         "gen": True,
         "dir": "opini1",
         "gen_file": "generate_opini1.py",
@@ -136,10 +142,11 @@ refResult = {
             "sni": False,
             "rni": True,
             "pini": True,
-            "opini": False,
+            "opini": True,
         }
     },
     "opini2": {
+        "name": 'OPINI2',
         "gen": True,
         "dir": "opini2",
         "gen_file": "generate_opini2.py",
@@ -163,6 +170,7 @@ refResult = {
         }
     },
     "pini1": {
+        "name": 'PINI1',
         "gen": True,
         "dir": "pini1",
         "gen_file": "generate_pini1.py",
@@ -186,6 +194,7 @@ refResult = {
         }
     },
     "pini_mult": {
+        "name": 'PINI Mult',
         "gen": True,
         "dir": "pini_mult",
         "gen_file": "generate_pini_mult.py",
@@ -209,6 +218,7 @@ refResult = {
         }
     },
     "otsm": {
+        "name": 'OTSM',
         "gen": False,
         "dir": "otsm",
         "gen_file": None,
@@ -232,6 +242,7 @@ refResult = {
         }
     },
     "tsm": {
+        "name": 'TSM',
         "gen": False,
         "dir": "tsm",
         "gen_file": None,
@@ -255,6 +266,7 @@ refResult = {
         }
     },
     "tsmp_2_inputs": {
+        "name": 'TSM+ 2 inputs',
         "gen": False,
         "dir": "tsm_plus",
         "gen_file": None,
@@ -278,6 +290,7 @@ refResult = {
         }
     },
     "tsmp_3_inputs": {
+        "name": 'TSM+ 3 inputs',
         "gen": False,
         "dir": "tsm_plus",
         "gen_file": None,
@@ -301,6 +314,7 @@ refResult = {
         }
     },
     "gms_and_3_shares": {
+        "name": 'GMS AND 3 shares',
         "gen": False,
         "dir": "gms_and",
         "gen_file": None,
@@ -324,6 +338,7 @@ refResult = {
         }
     },
     "gms_and_5_shares": {
+        "name": 'GMS AND 5 shares',
         "gen": False,
         "dir": "gms_and",
         "gen_file": None,
@@ -347,3 +362,4 @@ refResult = {
         }
     }
 }
+

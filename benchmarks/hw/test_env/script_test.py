@@ -89,6 +89,7 @@ def checkResult(res, bench, g, p):
 def withoutGliches(maxOrder, generateFiles):
 
     for bench in refResult:
+        bench_name = refResult[bench]["name"]
         os.chdir(f"../{refResult[bench]['dir']}")
         res = ""
 
@@ -138,6 +139,7 @@ def withoutGliches(maxOrder, generateFiles):
 def withGliches(maxOrder, generateFiles):
 
     for bench in refResult:
+        bench_name = refResult[bench]["name"]
         os.chdir(f"../{refResult[bench]['dir']}")
         res = ""
 
