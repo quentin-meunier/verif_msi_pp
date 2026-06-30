@@ -14,7 +14,7 @@ int main() {
     Node & res = a[p0 << 1];
 
     Node & t = p0 << 1;
-    std::cout << simplifyUSBV(t) << std::endl;
+    std::cout << simplify(t, true) << std::endl;
     //std::cout << getBitDecomposition(t) << std::endl;
     //Node & test2 = getBitDecomposition(res);
     //std::cout << test2 << std::endl;
