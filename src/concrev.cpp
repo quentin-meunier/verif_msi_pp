@@ -637,15 +637,15 @@ static bool shareIsEffective(Node & e0, std::vector<Node *> & sharesWithFixedVal
         assert(shareWithFixedVal.width == 1);
         for (int64_t val = 0; val < (1LL << shareWithFixedVal.width); val += 1) {
             m.insert_or_assign(&shareWithFixedVal, &Const(val, shareWithFixedVal.width));
-            bool ni = shareIsEffective(e0, sharesWithFixedVal, s, maskVars, idx + 1, m);
-            if (!ni) {
-                return false;
+            bool isEffective = shareIsEffective(e0, sharesWithFixedVal, s, maskVars, idx + 1, m);
+            if (isEffective) {
+                return true;
             }
         }
-        return true;
+        return false;
     }
     else {
-        // Computing distribution for both values of the tested relevant shares
+        // Computing distribution for both values of the tested relevant share
         std::map<uint64_t, uint64_t> distrib0;
         std::map<uint64_t, uint64_t> distrib1;
 
@@ -981,6 +981,7 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
 bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes, std::set<int> & additionalInputIndexes) {
     assert(e.width <= 64);
 
+    //std::cout << "# isOPINIWithExev: " << e << std::endl;
     secPropValidity(e, OPINI);
     Node & e0 = getBitDecomposition(e);
     
@@ -1015,14 +1016,14 @@ bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexe
     
     //std::cout << "# Effective Shares: ";
     for (const auto & sh : effectiveShares) {
-        //std::cout << *sh << ", " << std::endl;
+        //std::cout << *sh << ", ";
         if (!outputIndexes.contains(sh->shareNum)) {
             additionalInputIndexes.insert(sh->shareNum);
         }
     }
     //std::cout << std::endl;
 
-    //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << effectiveShareIndexesNotInOutputIndexes.size() << std::endl;
+    //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << additionalInputIndexes.size() << std::endl;
 
     return (int32_t) additionalInputIndexes.size() <= maxShareOcc;
 }

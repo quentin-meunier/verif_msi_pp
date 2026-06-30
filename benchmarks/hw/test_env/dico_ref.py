@@ -36,7 +36,7 @@ refResult = {
             "sni": True,
             "rni": True,
             "pini": True,
-            "opini": False,
+            "opini": True,
         },
         "w/ g": {
             "tps": True,
@@ -81,7 +81,7 @@ refResult = {
             "ni": True,
             "sni": True,
             "rni": True,
-            "pini": True,
+            "pini": False,
             "opini": False,
         },
         "w/ g": {
@@ -105,7 +105,7 @@ refResult = {
             "sni": True,
             "rni": True,
             "pini": True,
-            "opini": False,
+            "opini": True,
         },
         "w/ g": {
             "tps": False,
@@ -136,7 +136,7 @@ refResult = {
             "sni": False,
             "rni": True,
             "pini": True,
-            "opini": True,
+            "opini": False,
         }
     },
     "opini2": {
@@ -243,7 +243,7 @@ refResult = {
             "sni": True,
             "rni": True,
             "pini": True,
-            "opini": False,
+            "opini": True,
         },
         "w/ g": {
             "tps": True,
@@ -266,7 +266,7 @@ refResult = {
             "sni": True,
             "rni": True,
             "pini": True,
-            "opini": False,
+            "opini": True,
         },
         "w/ g": {
             "tps": True,
@@ -289,7 +289,7 @@ refResult = {
             "sni": True,
             "rni": True,
             "pini": True,
-            "opini": False,
+            "opini": True,
         },
         "w/ g": {
             "tps": True,
