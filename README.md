@@ -364,18 +364,18 @@ We provide hereafter the expected verification results for each benchmark and ea
 | Benchmark | TPS  | NI   | SNI  | RNI  | PINI | OPINI |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | DOM AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
-| HPC3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| HPC3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | HPC4 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | ISW AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
-| ISW AND refresh | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| ISW AND refresh | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | OPINI1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | OPINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | PINI1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
 | PINI Mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
 | OTSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
-| TSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| TSM+ (2 inputs) | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
-| TSM+ (3 inputs) | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| TSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| TSM+ (2 inputs) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| TSM+ (3 inputs) | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | GMS AND (3 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
 | GMS AND (5 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
 
@@ -389,8 +389,8 @@ We provide hereafter the expected verification results for each benchmark and ea
 | HPC4 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
 | ISW AND | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | ISW AND refresh | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
-| OPINI1 | ✔ | ✔ | ✘ | ✘ | ✔ | ✔ |
-| OPINI2 | ✔ | ✔ | ✔ | ✘ | ✔ | ✔ |
+| OPINI1 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
+| OPINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | PINI1 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | PINI Mult | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | OTSM | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
@@ -399,6 +399,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 | TSM+ (3 inputs) | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
 | GMS AND (3 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
 | GMS AND (5 shares) | ✔ | ✘ | ✘ | ✔ | ✘ | ✘ |
+
 
 
 ## License
