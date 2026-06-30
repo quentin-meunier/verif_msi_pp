@@ -750,17 +750,17 @@ static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, st
                 };
 
                 if (nbInternalProbesTaken == nbInternalProbesToTake || (includePartialTuples && nbInternalProbesTaken > 0)) {
-                    // Should fail now
-                    assert(nbInternalProbesTaken + (int32_t) outputSharesTaken.size() == order);
+                    assert(nbInternalProbesTaken + (int32_t) outputSharesTaken.size() <= order);
+                    int32_t nbProbesTaken = (int32_t) outputSharesTaken.size() * (int32_t) outputList.size() + nbInternalProbesTaken;
 
                     std::set<Node *> s;
-                    getLeakExps(t, nbProbes, s);
+                    getLeakExps(t, nbProbesTaken, s);
                     std::vector<Node *> * v = new std::vector<Node *>();
                     for (const auto & n : s) {
                         v->push_back(n);
                     }
                     std::vector<HWElement *> * w = new std::vector<HWElement *>();
-                    for (int32_t j = 0; j < nbProbes; j += 1) {
+                    for (int32_t j = 0; j < nbProbesTaken; j += 1) {
                         w->push_back(t[j]);
                     }
                     std::set<int32_t> outputSharesIndices(outputSharesTaken.begin(), outputSharesTaken.end());
