@@ -15,9 +15,9 @@ def generate_pini_mult(*argv):
 
     gadget = Gadget(prop = 'pini', benchmark = 'pini_mult', currentScript = os.path.basename(__file__), article = '[1] Wang, W., Ji, F., Zhang, J., & Yu, Y. (2023). Efficient Private Circuits with Precomputation. IACR Transactions on Cryptographic Hardware and Embedded Systems.', descriptionGenerator = '   This script generates a VerifMSI++ file describing a circuit implementing the finite field multiplication following the PINI scheme from [1].')
 
-    gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the finite field multiplication following the PINI scheme from [1] with %d shares." % (gadget.nbShares)
-
     gadget.parseArgs()
+
+    gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the finite field multiplication following the PINI scheme from [1] with %d shares." % (gadget.nbShares)
     
     content = ''
     

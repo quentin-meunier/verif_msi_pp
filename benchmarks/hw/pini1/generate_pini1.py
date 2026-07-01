@@ -15,9 +15,9 @@ def generate_pini1(*argv):
     
     gadget = Gadget(prop = 'pini', benchmark = 'pini1', currentScript = os.path.basename(__file__), article = '[1] Gaëtan Cassiers and François-Xavier Standaert. Trivially and Efficiently Composing Masked Gadgets With Probe Isolating Non-Interference, in IEEE Transactions on Information Forensics and Security, vol. 15, pp. 2542-2555, 2020.', descriptionGenerator = '   This script generates a VerifMSI++ file of the PINI1 gadget from [1].')
 
-    gadget.descriptionFile = "   This script contains a VerifMSI++ description of the PINI1 gadget from [1] with %d shares." % (gadget.nbShares)
-
     gadget.parseArgs()
+
+    gadget.descriptionFile = "   This script contains a VerifMSI++ description of the PINI1 gadget from [1] with %d shares." % (gadget.nbShares)
     
     content = ''
     

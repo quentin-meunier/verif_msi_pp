@@ -21,9 +21,9 @@ def generate_isw_and_refresh(*argv):
 
     gadget = Gadget(prop = 'pini', benchmark = 'isw_and_refresh', currentScript = os.path.basename(__file__), article = '[1] Ishai, Y., Sahai, A., & Wagner, D. (2003). Private circuits: Securing hardware against probing attacks. 23rd Annual International Cryptology Conference, 2003. Springer Berlin Heidelberg.', descriptionGenerator = '   This script generates a VerifMSI++ file describing a circuit implementing the logical AND following the ISW scheme with share refreshing from [1].')
 
-    gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the ISW scheme with share refreshing from [1] with %d shares." % (gadget.nbShares)
-
     gadget.parseArgs()
+
+    gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the ISW scheme with share refreshing from [1] with %d shares." % (gadget.nbShares)
     
     
     nextRandNum = 0

@@ -18,10 +18,10 @@ def generate_dom_and(*argv):
     
     gadget = Gadget(prop = 'ni', benchmark = 'dom_and', currentScript = os.path.basename(__file__), article = '[1] Groß, H., Mangard, S., & Korak, T. (2017). An efficient side-channel protected AES implementation with arbitrary protection order. In Topics in Cryptology–CT-RSA 2017: The Cryptographers\' Track at the RSA Conference 2017, Springer International Publishing.', descriptionGenerator = '   This script generates a VerifMSI++ file describing a circuit implementing the logical AND following the DOM scheme from [1].')
 
+    gadget.parseArgs()
+
     gadget.descriptionFile = "   This script contains a VerifMSI++ description of a circuit implementing the logical AND following the DOM scheme from [1] with %d shares." % (gadget.nbShares)
 
-    
-    gadget.parseArgs()
     
     content = ''
     

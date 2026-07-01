@@ -16,7 +16,7 @@ SMALLSPACE = " " * 10
 MEDSPACE = " " * 16
 HUGESPACE = " " * 18
 
-resultFile = "test.txt"
+resultFile = "result.txt"
 checkFunctionality = True
 
 secProps = ["tps ", "ni  ", "sni ", "rni ", "pini", "opini"]
@@ -48,14 +48,14 @@ def writeLineHeader(line):
 def runSetup(bench, prop, order, glitches, firstTime, checkFunctionality):
 
     if checkFunctionality:
-        print("bench : ", bench)
-        print("order : ", order)
-        print()
         cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches, "-c"]
+        print(f"./bin/{bench} -p {prop} -o {order} {glitches} -c")
     elif firstTime:
         cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches]
+        print(f"./bin/{bench} -p {prop} -o {order} {glitches}")
     else:
         cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches, "-nfp"]
+        print(f"./bin/{bench} -p {prop} -o {order} {glitches} -nfp")
 
     res = subprocess.run(cmd, capture_output = True, text = True)
 
@@ -70,9 +70,9 @@ def runSetup(bench, prop, order, glitches, firstTime, checkFunctionality):
         if line[:15] == "# Functionality":
             words = line.split()
             if words[-1] == "[OK]":
-                resFunc = "    ✔"
+                resFunc = "✔"
             else:
-                resFunc = "    ✘"
+                resFunc = "✘"
 
     if res == '0':
         return ("✔", resFunc)
@@ -86,12 +86,16 @@ def checkResult(res, bench, g, p):
 
 
 
-def withoutGliches(maxOrder, generateFiles):
+def executeProgramms(maxOrder, generateFiles):
+
+    dicoRes = {}
 
     for bench in refResult:
-        bench_name = refResult[bench]["name"]
+        print(f"\ncd ../{refResult[bench]['dir']}")
         os.chdir(f"../{refResult[bench]['dir']}")
         res = ""
+        
+        dicoRes[bench] = {}
 
         for order in range(1, maxOrder + 1):
 
@@ -102,132 +106,114 @@ def withoutGliches(maxOrder, generateFiles):
                 refResult[bench]["verif_order"] = order
 
             if order == refResult[bench]["verif_order"]:
-                if "shares" in bench:
-                    res += f"{bench} no glitches{SMALLSPACE}" #
-                else:
-                    res += f"{bench} {order + 1} shares no glitches " #
-
-
-
-                nb_spaces = 44 - (len(bench) + 21)
-                res += " " * nb_spaces
+                dicoRes[bench][order] = {}
 
                 subprocess.run(["make"])
 
+                dicoRes[bench][order]["no g"] = {}
+                dicoRes[bench][order]["w/ g"] = {}
                 for p in range(0, len(secProps)):
-                    (secure, resFunc) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, True) #
-                    secure += " "
+                    # without glitches
+                    if p == 0:
+                        (secure, resFunc) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, True) #
+                    else:
+                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, False)
+                    dicoRes[bench][order]["check functionality"] = resFunc
                     same = checkResult(secure, bench, "no g", secProps[p]) #
                     if not same and secure[0] == "✘":
                         (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", False, False) #
                         secure += "*"
-                    res += f"{secure}{HUGESPACE}"
-     
-                res += f"{resFunc}\n"
+                    dicoRes[bench][order]["no g"][secProps[p]] = secure
 
 
-        with open(f"../test_env/{resultFile}", "a") as f:
-            f.write(res)
-
-
-    with open(f"../test_env/{resultFile}", "a") as f:
-        f.write("\n")
-
-
-
-
-def withGliches(maxOrder, generateFiles):
-
-    for bench in refResult:
-        bench_name = refResult[bench]["name"]
-        os.chdir(f"../{refResult[bench]['dir']}")
-        res = ""
-
-        for order in range(1, maxOrder + 1):
-
-            if refResult[bench]["gen"]:
-                refResult[bench]["source_file"] = f"{bench}_gen_{order + 1}_shares"
-                if generateFiles :
-                    subprocess.run(["python3", refResult[bench]["gen_file"], "-n", str(order + 1)])
-                refResult[bench]["verif_order"] = order
-
-            if order == refResult[bench]["verif_order"]:
-                if "shares" in bench:
-                    res += f"{bench} w/ glitches{SMALLSPACE}"
-                else:
-                    res += f"{bench} {order + 1} shares w/ glitches "
-
-
-
-                nb_spaces = 44 - (len(bench) + 21)
-                res += " " * nb_spaces
-
-                subprocess.run(["make"])
-
-                for p in range(0, len(secProps)):
-                    (secure, resFunc) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-g", True, True)
-                    secure += " "
-                    same = checkResult(secure, bench, "w/ g", secProps[p])
+                    #with glitches
+                    (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-g", True, False) #
+                    dicoRes[bench][order]["check functionality"] = resFunc
+                    same = checkResult(secure, bench, "w/ g", secProps[p]) #
                     if not same and secure[0] == "✘":
-                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-g", False, False)
+                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-g", False, False) #
                         secure += "*"
-                    res += f"{secure}{HUGESPACE}"
-     
-                res += f"{resFunc}\n"
+                    dicoRes[bench][order]["w/ g"][secProps[p]] = secure
 
 
-        with open(f"../test_env/{resultFile}", "a") as f:
-            f.write(res)
-
-
-    with open(f"../test_env/{resultFile}", "a") as f:
-        f.write("\n")
+    return dicoRes
 
 
 
 
-def createCompFile(maxOrder):
-    global resultFile
+def createFiles(maxOrder, dicoRes):
 
-    resFile = open(f'../test_env/{resultFile}', 'r')
-    header = resFile.readline()
+    os.chdir("../test_env")
 
-    diffFile = open('../test_env/diff_result.txt', 'w')
-    diffFile.write(header)
-    
-    for resultLine in resFile:
-        if resultLine == "\n":
-            diffFile.write("\n")
-        else:
-            res = writeLineHeader(resultLine)
-            tabResult = re.split(r'    +', resultLine)
-            tabBench = tabResult[0].split()
+    header = " " * 39
+    for j in range(0, len(secProps)):
+        header += f"      {secProps[j]}{SMALLSPACE}"
+    header += "     check fonctionality\n\n"
 
-            for i in range(0, len(tabResult) // 6):
-                for p in range(0, len(secProps)):
-                    bench = tabBench[0]
-                    g = tabBench[-2] + " g"
 
-                    res += tabResult[1 + (i * 6) + p]
-                    if res[-1] != "*":
-                        res += " "
-                    if checkResult(tabResult[1 + (i * 6) + p], bench, g, secProps[p]):
-                        res += f"(OK)  {SMALLSPACE}  "
+    contentResFile = header
+    contentDiffFile = header
+
+
+    glitches = ["no", "w/"]
+
+
+    for g in glitches:
+        for bench in dicoRes:
+            for order in range(1, maxOrder + 1):
+                if order in dicoRes[bench]:
+                    if "shares" in bench:
+                        contentResFile += f"{bench} {g} glitches{SMALLSPACE}"
+                        contentDiffFile += f"{refResult[bench]['name']} {g} glitches{SMALLSPACE}"
                     else:
-                        res += f"(KO)  {SMALLSPACE}  "
+                        contentResFile += f"{bench} {order + 1} shares {g} glitches "
+                        contentDiffFile += f"{refResult[bench]['name']} {order + 1} shares {g} glitches "
 
-            for i in range(1, maxOrder + 1):
-                if len(tabResult) == 2 + (len(secProps) * i):
-                    res += "     " + tabResult[-1].strip()
-                    if tabResult[-1][0] == "✔":
-                        res += " (OK)"
+                    nb_spaces = 44 - (len(bench) + 21)
+                    contentResFile += " " * nb_spaces
+                    contentDiffFile += " " * nb_spaces
+
+
+                    for p in secProps:
+
+                        glitch = g + " g"
+                        '''print("bench : ", bench)
+                        print("order : ", order)
+                        print("glitch : ", glitch)
+                        print("prop : ", p)'''
+                        res = f"{dicoRes[bench][order][glitch][p]}"
+                        if res[-1] != "*":
+                            res += " "
+
+                        contentResFile += res + f"{HUGESPACE}"
+
+                        contentDiffFile += res
+            
+                        if checkResult(dicoRes[bench][order][glitch][p], bench, glitch, p):
+                            contentDiffFile += f"(OK)  {SMALLSPACE}  "
+                        else:
+                            contentDiffFile += f"(KO)  {SMALLSPACE}  "
+
+                    res = f"     {dicoRes[bench][order]['check functionality']}"
+
+                    contentResFile += res + "\n"
+
+                    contentDiffFile += res
+                    if dicoRes[bench][order]['check functionality'] == "✔":
+                        contentDiffFile += " (OK)\n"
                     else:
-                        res += " (KO)"
-                
-            diffFile.write(res + "\n")
+                        contentDiffFile += " (KO)\n"
 
-    resFile.close()
-    diffFile.close()
+        contentResFile += "\n"
+        contentDiffFile += "\n"
+
+
+    with open(f'result.txt', 'w') as resFile:
+        resFile.write(contentResFile)
+
+    with open('diff_result.txt', 'w') as diffFile:
+        diffFile.write(contentDiffFile)
+
 
 
 
@@ -259,7 +245,6 @@ if __name__ == '__main__':
             generateFiles = False
         elif maxOrder == None:
             maxOrder = int(arg)
-            idx += 1
         else:
             print('*** Error: unrecognized option: %s' % arg, file = sys.stderr)
             usage(generateFiles)
@@ -270,20 +255,9 @@ if __name__ == '__main__':
         print("*** Error: max order must be greater than or equal to 1", file = sys.stderr)
         sys.exit(1)
 
-    if os.path.exists(resultFile):
-        os.remove(resultFile)
 
-    # touch $resultFile + initialisation des en-têtes
-    with open(resultFile, "w") as f:
-        f.write(" " * 39)
-        for j in range(0, len(secProps)):
-            f.write(f"      {secProps[j]}{SMALLSPACE}")
-        f.write("     check fonctionality\n\n")
-
-
-    withoutGliches(maxOrder, generateFiles)
-    withGliches(maxOrder, generateFiles)
-    createCompFile(maxOrder)
+    dicoRes = executeProgramms(maxOrder, generateFiles)
+    createFiles(maxOrder, dicoRes)
 
 
 
