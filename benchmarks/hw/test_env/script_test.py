@@ -10,16 +10,14 @@ import subprocess
 import re
 from dico_ref import refResult
 
+colWidth = 16
+firstColWidth = 39
 
-
-SMALLSPACE = " " * 10
-MEDSPACE = " " * 16
-HUGESPACE = " " * 18
-
-resultFile = "result.txt"
+resultFile = 'results.txt'
+diffFile = 'diff.txt'
 checkFunctionality = True
 
-secProps = ["tps ", "ni  ", "sni ", "rni ", "pini", "opini"]
+secProps = ['tps', 'ni', 'sni', 'rni', 'pini', 'opini']
 
 
 
@@ -45,180 +43,178 @@ def writeLineHeader(line):
 
 
 
-def runSetup(bench, prop, order, glitches, firstTime, checkFunctionality):
-
-    if checkFunctionality:
-        cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches, "-c"]
-        print(f"./bin/{bench} -p {prop} -o {order} {glitches} -c")
-    elif firstTime:
-        cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches]
-        print(f"./bin/{bench} -p {prop} -o {order} {glitches}")
-    else:
-        cmd = [f"./bin/{bench}", "-p", prop.strip(), "-o", str(order), glitches, "-nfp"]
-        print(f"./bin/{bench} -p {prop} -o {order} {glitches} -nfp")
-
+def print_and_execute(cmd):
+    print(' '.join(cmd))
     res = subprocess.run(cmd, capture_output = True, text = True)
+    return res.stdout.splitlines()
 
-    lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
-    if lines:
-        words = lines[-1].split()
-        if words:
-            res = words[-1]
 
-    resFunc = None
-    for line in lines:
-        if line[:15] == "# Functionality":
+def myChdir(d):
+    print(f"cd {d}")
+    os.chdir(d)
+
+
+def writeToFile(filename, content):
+    with open(filename, 'w') as f:
+        f.write(content)
+
+
+
+def runFunctionalityCheck(bench, order):
+    cmd = [f"./bin/{bench}", '-p', secProps[0], '-o', str(order), '-c']
+    res = print_and_execute(cmd)
+
+    for line in res:
+        if line[:15] == '# Functionality':
             words = line.split()
-            if words[-1] == "[OK]":
-                resFunc = "✔"
-            else:
-                resFunc = "✘"
-
-    if res == '0':
-        return ("✔", resFunc)
-    else:
-        return ("✘", resFunc)
-    
-
-
-def checkResult(res, bench, g, p):
-    return (res[0] == '✔' and refResult[bench][g][p.strip()]) or (res[0] == '✘' and not refResult[bench][g][p.strip()])
+            return words[-1] == "[OK]"
 
 
 
-def executeProgramms(maxOrder, generateFiles):
+
+def runVerif(bench, prop, order, glitches, noFalsePositive):
+
+    cmd = [f"./bin/{bench}", '-p', prop, '-o', str(order), glitches]
+    if noFalsePositive:
+        cmd.append('-nfp')
+
+    lines = print_and_execute(cmd)
+
+    res = lines[-1].split()[-1]
+
+    return res == '0'
+
+
+
+
+def verifPrograms(maxOrder, generateFiles):
 
     dicoRes = {}
 
+
     for bench in refResult:
-        print(f"\ncd ../{refResult[bench]['dir']}")
-        os.chdir(f"../{refResult[bench]['dir']}")
-        res = ""
+        myChdir(f"{refResult[bench]['dir']}")
         
         dicoRes[bench] = {}
 
         for order in range(1, maxOrder + 1):
 
-            if refResult[bench]["gen"]:
-                refResult[bench]["source_file"] = f"{bench}_gen_{order + 1}_shares"
-                if generateFiles :
-                    subprocess.run(["python3", refResult[bench]["gen_file"], "-n", str(order + 1)])
-                refResult[bench]["verif_order"] = order
+            if refResult[bench]['gen'] or order == refResult[bench]['verif_order']:
+                if refResult[bench]['gen']:
+                    execFile = f"{bench}_gen_{order + 1}_shares"
+                    if generateFiles:
+                        cmd = ['python3', refResult[bench]['gen_file'], '-n', str(order + 1)]
+                        print_and_execute(cmd)
+                else:
+                    execFile = refResult[bench]['source_file']
 
-            if order == refResult[bench]["verif_order"]:
+                print_and_execute(['make'])
+
+
                 dicoRes[bench][order] = {}
 
-                subprocess.run(["make"])
+                # Checking functionality
+                dicoRes[bench][order]['func'] = runFunctionalityCheck(execFile, order)
 
-                dicoRes[bench][order]["no g"] = {}
-                dicoRes[bench][order]["w/ g"] = {}
-                for p in range(0, len(secProps)):
-                    # without glitches
-                    if p == 0:
-                        (secure, resFunc) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, True) #
-                    else:
-                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", True, False)
-                    dicoRes[bench][order]["check functionality"] = resFunc
-                    same = checkResult(secure, bench, "no g", secProps[p]) #
-                    if not same and secure[0] == "✘":
-                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-ng", False, False) #
-                        secure += "*"
-                    dicoRes[bench][order]["no g"][secProps[p]] = secure
+                for glitches in (False, True):
+                    glitch_str = glitches and 'w/ g' or 'no g'
+                    glitch_param = glitches and '-g' or '-ng'
+                    dicoRes[bench][order][glitch_str] = {}
 
+                    for p in range(0, len(secProps)):
+                        dicoRes[bench][order][glitch_str][secProps[p]] = {}
 
-                    #with glitches
-                    (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-g", True, False) #
-                    dicoRes[bench][order]["check functionality"] = resFunc
-                    same = checkResult(secure, bench, "w/ g", secProps[p]) #
-                    if not same and secure[0] == "✘":
-                        (secure, _) = runSetup(f"{refResult[bench]['source_file']}", secProps[p], order, "-g", False, False) #
-                        secure += "*"
-                    dicoRes[bench][order]["w/ g"][secProps[p]] = secure
+                        verifResult = runVerif(execFile, secProps[p], order, glitch_param, False)
+                        dicoRes[bench][order][glitch_str][secProps[p]]['result'] = verifResult
 
+                        resultOk = (verifResult == refResult[bench][glitch_str][secProps[p]])
+                        dicoRes[bench][order][glitch_str][secProps[p]]['ok'] = resultOk
 
+                        if not resultOk and not verifResult:
+                            verifResult = runVerif(execFile, secProps[p], order, glitch_param, True)
+                            dicoRes[bench][order][glitch_str][secProps[p]]['result'] = verifResult
+
+                            resultOk = (verifResult == refResult[bench][glitch_str][secProps[p]])
+                            dicoRes[bench][order][glitch_str][secProps[p]]['ok'] = resultOk
+
+                            dicoRes[bench][order][glitch_str][secProps[p]]['used_enum'] = True
+                        else:
+                            dicoRes[bench][order][glitch_str][secProps[p]]['used_enum'] = False
+
+        myChdir("..")
     return dicoRes
 
 
 
 
-def createFiles(maxOrder, dicoRes):
+def createResultFiles(dicoRes):
 
-    os.chdir("../test_env")
-
-    header = " " * 39
+    header = ' ' * firstColWidth
     for j in range(0, len(secProps)):
-        header += f"      {secProps[j]}{SMALLSPACE}"
-    header += "     check fonctionality\n\n"
+        header += secProps[j].upper() + ' ' * (colWidth - len(secProps[j]))
+    header += 'Functionality\n\n'
 
+    resFileContent = header
+    diffFileContent = header
 
-    contentResFile = header
-    contentDiffFile = header
-
-
-    glitches = ["no", "w/"]
-
+    glitches = ['no', 'w/']
 
     for g in glitches:
         for bench in dicoRes:
-            for order in range(1, maxOrder + 1):
-                if order in dicoRes[bench]:
-                    if "shares" in bench:
-                        contentResFile += f"{bench} {g} glitches{SMALLSPACE}"
-                        contentDiffFile += f"{refResult[bench]['name']} {g} glitches{SMALLSPACE}"
+            for order in dicoRes[bench]:
+                if refResult[bench]['gen']:
+                    res = refResult[bench]['name'] + ' %d shares %s glitches' % (order + 1, g)
+                else:
+                    res = refResult[bench]['name'] + ' %s glitches' % g
+
+                res += ' ' * (firstColWidth - len(res))
+                resFileContent += res
+                diffFileContent += res
+
+                for p in secProps:
+
+                    glitch = g + ' g'
+                    res = ''
+                    if dicoRes[bench][order][glitch][p]['result']:
+                        res += '✔'
                     else:
-                        contentResFile += f"{bench} {order + 1} shares {g} glitches "
-                        contentDiffFile += f"{refResult[bench]['name']} {order + 1} shares {g} glitches "
-
-                    nb_spaces = 44 - (len(bench) + 21)
-                    contentResFile += " " * nb_spaces
-                    contentDiffFile += " " * nb_spaces
-
-
-                    for p in secProps:
-
-                        glitch = g + " g"
-                        '''print("bench : ", bench)
-                        print("order : ", order)
-                        print("glitch : ", glitch)
-                        print("prop : ", p)'''
-                        res = f"{dicoRes[bench][order][glitch][p]}"
-                        if res[-1] != "*":
-                            res += " "
-
-                        contentResFile += res + f"{HUGESPACE}"
-
-                        contentDiffFile += res
-            
-                        if checkResult(dicoRes[bench][order][glitch][p], bench, glitch, p):
-                            contentDiffFile += f"(OK)  {SMALLSPACE}  "
-                        else:
-                            contentDiffFile += f"(KO)  {SMALLSPACE}  "
-
-                    res = f"     {dicoRes[bench][order]['check functionality']}"
-
-                    contentResFile += res + "\n"
-
-                    contentDiffFile += res
-                    if dicoRes[bench][order]['check functionality'] == "✔":
-                        contentDiffFile += " (OK)\n"
+                        res += '✘'
+                    if dicoRes[bench][order][glitch][p]['used_enum']:
+                        res += '*'
                     else:
-                        contentDiffFile += " (KO)\n"
+                        res += ' '
 
-        contentResFile += "\n"
-        contentDiffFile += "\n"
+                    resFileContent += res + ' ' * (colWidth - len(res))
 
+                    if dicoRes[bench][order][glitch][p]['ok']:
+                        res += '(OK)'
+                    else:
+                        res += '(KO)'
 
-    with open(f'result.txt', 'w') as resFile:
-        resFile.write(contentResFile)
+                    diffFileContent += res + ' ' * (colWidth - len(res))
 
-    with open('diff_result.txt', 'w') as diffFile:
-        diffFile.write(contentDiffFile)
+                if dicoRes[bench][order]['func']:
+                    res = '✔'
+                else:
+                    res = '✘'
+
+                resFileContent += res + '\n'
+                diffFileContent += res + '\n'
+
+        resFileContent += '\n'
+        diffFileContent += '\n'
+
+    writeToFile(resultFile, resFileContent)
+    writeToFile(diffFile, diffFileContent)
 
 
 
 
 
 if __name__ == '__main__':
+
+    scriptDir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+    benchsDir = os.path.abspath(os.path.join(scriptDir, '..'))
 
     generateFiles = True
 
@@ -252,12 +248,14 @@ if __name__ == '__main__':
         idx += 1
 
     if maxOrder < 1:
-        print("*** Error: max order must be greater than or equal to 1", file = sys.stderr)
+        print('*** Error: max order must be greater than or equal to 1', file = sys.stderr)
         sys.exit(1)
 
 
-    dicoRes = executeProgramms(maxOrder, generateFiles)
-    createFiles(maxOrder, dicoRes)
+    myChdir(benchsDir)
+    dicoRes = verifPrograms(maxOrder, generateFiles)
+    myChdir(scriptDir)
+    createResultFiles(dicoRes)
 
 
 

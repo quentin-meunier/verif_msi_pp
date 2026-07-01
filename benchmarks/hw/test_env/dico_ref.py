@@ -142,7 +142,7 @@ refResult = {
             "sni": False,
             "rni": True,
             "pini": True,
-            "opini": True,
+            "opini": False,
         }
     },
     "opini2": {
