@@ -105,12 +105,28 @@ py::tuple bindCheckSecurity(int32_t order, bool withGlitches, const std::string 
     else {
         std::cout << "*** Error: Unknown security property " << secProp << std::endl;
     }
-    std::vector<HWElement *> cppOutputs;
-    for (const auto & o : outputs) {
-        cppOutputs.push_back(&py::cast<HWElement &>(o));
+    std::vector<std::vector<HWElement *>> cppOutputList;
+    if (outputs.size() > 0 && py::isinstance<py::list>(outputs[0])) {
+        // Python call looked like checkSecurity(..., outputA, outputB, outputC)
+        for (const auto & output : outputs) {
+            std::vector<HWElement *> outputShares;
+            for (const auto & share : output.cast<py::list>()) {
+                outputShares.push_back(&py::cast<HWElement &>(share));
+            }
+            cppOutputList.push_back(outputShares);
+        }
+    } 
+    else {
+        // Python call looked like checkSecurity(..., share1, share2, share3)
+        std::vector<HWElement *> outputShares;
+        for (const auto & share : outputs) {
+            outputShares.push_back(&py::cast<HWElement &>(share));
+        }
+        cppOutputList.push_back(outputShares);
     }
+
     int32_t nbLeak;
-    nbLeak = checkSecurity(order, withGlitches, sp, cppOutputs, false, &nbCheck);
+    nbLeak = checkSecurity(order, withGlitches, sp, cppOutputList, false, &nbCheck);
     return py::make_tuple(nbLeak, nbCheck);
 }
 
