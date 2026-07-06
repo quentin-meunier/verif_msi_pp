@@ -364,6 +364,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 | Benchmark | TPS  | NI   | SNI  | RNI  | PINI | OPINI |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | DOM AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
+| HPC2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | HPC3 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | HPC4 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | ISW AND | ✔ | ✔ | ✔ | ✔ | ✘ | ✘ |
@@ -371,6 +372,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 | OPINI1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | OPINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | PINI1 | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
+| PINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | PINI Mult | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |
 | OTSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | TSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
@@ -385,6 +387,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 | Benchmark | TPS  | NI   | SNI  | RNI  | PINI | OPINI |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | DOM AND | ✔ | ✔ | ✘ | ✔ | ✘ | ✘ |
+| HPC2 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
 | HPC3 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
 | HPC4 | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
 | ISW AND | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
@@ -392,6 +395,7 @@ We provide hereafter the expected verification results for each benchmark and ea
 | OPINI1 | ✔ | ✔ | ✘ | ✔ | ✔ | ✘ |
 | OPINI2 | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | PINI1 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
+| PINI2 | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | PINI Mult | ✘ | ✘ | ✘ | ✘ | ✘ | ✘ |
 | OTSM | ✔ | ✔ | ✘ | ✔ | ✔ | ✔ |
 | TSM | ✔ | ✔ | ✔ | ✔ | ✔ | ✘ |

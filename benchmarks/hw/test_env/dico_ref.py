@@ -25,6 +25,30 @@ refResult = {
             "opini": False,
         }
     },
+    "hpc2": {
+        "name": 'HPC2',
+        "gen": True,
+        "dir": "hpc2",
+        "gen_file": "generate_hpc2.py",
+        "source_file": None,
+        "verif_order": None,
+        "no g": {
+            "tps": True,
+            "ni": True,
+            "sni": True,
+            "rni": True,
+            "pini": True,
+            "opini": True,
+        },
+        "w/ g": {
+            "tps": True,
+            "ni": True,
+            "sni": False,
+            "rni": True,
+            "pini": True,
+            "opini": False,
+        }
+    },
     "hpc3": {
         "name": 'HPC3',
         "gen": True,
@@ -183,6 +207,30 @@ refResult = {
             "rni": True,
             "pini": True,
             "opini": False,
+        },
+        "w/ g": {
+            "tps": False,
+            "ni": False,
+            "sni": False,
+            "rni": False,
+            "pini": False,
+            "opini": False,
+        }
+    },
+    "pini2": {
+        "name": 'PINI2',
+        "gen": True,
+        "dir": "pini2",
+        "gen_file": "generate_pini2.py",
+        "source_file": None,
+        "verif_order": None,
+        "no g": {
+            "tps": True,
+            "ni": True,
+            "sni": True,
+            "rni": True,
+            "pini": True,
+            "opini": True,
         },
         "w/ g": {
             "tps": False,
