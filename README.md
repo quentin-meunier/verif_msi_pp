@@ -346,9 +346,11 @@ These are the following:
 * DOM AND: the Domain Oriented Masking implementation of the AND gate from [1], resistant to glitches
 * GMS AND: two implementations of the AND gate using the Generalized Masking Scheme, described in the article, using respectively 3 and 5 shares from [9]
 * PINI1: the PINI1 gadget from [4]
+* PINI2: the PINI2 gadget from [21]
 * PINI Mult: the PINI multiplication scheme from [8]
 * OPINI1: the O-PINI1 gadget from [15]
 * OPINI2: the O-PINI2 gadget from [15]
+* HPC2: the HPC2 gadget from [15]
 * HPC3: the HPC3 gadget from [16]
 * HPC4: the HPC4 gadget from [17]
 * TSM: the TSM gadget from [18]
@@ -453,4 +455,6 @@ We provide hereafter the expected verification results for each benchmark and ea
 [19] N. Amiot, Q. Meunier, K. Heydemann & E. Encrenaz. (2025). aLEAKator: HDL Mixed-Domain Simulation for Masked Hardware & Software Formal Verification. Cryptology ePrint Archive. 
 
 [20] G. Barthe, S. Belaïd, F. Dupressoir, P. A. Fouque, B. Grégoire & P. Y. Strub. (2015). Verified proofs of higher-order masking. In Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 457-485). Berlin, Heidelberg: Springer Berlin Heidelberg.
+
+[21] G. Cassiers and F.-X. Standaert. (2019). Towards globally optimized masking: From low randomness to low noise rate or probe isolating multiplications with reduced randomness and security against horizontal attacks. IACR Trans. Cryptogr. Hardw. Embed. Syst. 2019.
 
