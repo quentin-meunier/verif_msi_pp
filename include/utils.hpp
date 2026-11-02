@@ -35,6 +35,13 @@ Node & constant(int64_t val, int32_t width);
 bool litteralInteger(Node & e, uint64_t * val);
 void checkTpsResult(Node & exp, bool expected);
 void checkNIResult(Node & exp, int maxShares, bool expected);
+void checkMaskOcc(
+    Node & n,
+    std::pair<Node *, Node *> expPreservedMask,
+    const std::map<Node *, Node *> & expCurrentlyMasking,
+    const std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> & expMaskingMaskOcc,
+    const std::map<Node *, std::set<Node *>> & expOtherMaskOcc
+);
 
 uint64_t getTime();
 

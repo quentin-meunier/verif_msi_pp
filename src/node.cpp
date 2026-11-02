@@ -838,7 +838,7 @@ Node & Node::makeBitwiseNode(NodeOp op, Node * child0, Node * child1) {
             int32_t carry = 0;
             for (int32_t i = 0; i < nlimbs - 1; i += 1) {
                 res[i] = child0->cst[i] + child1->cst[i] + carry;
-                carry = res[i] < child0->cst[i] ? 1 : 0;
+                carry = (res[i] < child0->cst[i] || (carry == 1 && res[i] == child0->cst[i])) ? 1 : 0;
             }
             if (width % 64 == 0) {
                 res[nlimbs - 1] = child0->cst[nlimbs - 1] + child1->cst[nlimbs - 1] + carry;
@@ -894,8 +894,9 @@ Node & Node::operator-(Node & other) {
         uint64_t res[nlimbs];
         int32_t carry = 1;
         for (int32_t i = 0; i < nlimbs; i += 1) {
-            res[i] = cst[i] + ~other.cst[i] + carry;
-            carry = res[i] < ~other.cst[i] ? 1 : 0;
+            uint64_t inv = ~other.cst[i];
+            res[i] = cst[i] + inv + carry;
+            carry = (res[i] < cst[i] || (carry == 1 && res[i] == cst[i])) ? 1 : 0;
         }
         if (width % 64 != 0) {
             res[nlimbs - 1] = res[nlimbs - 1] % (1ULL << (width % 64));
@@ -911,8 +912,9 @@ Node & Node::operator-() {
         uint64_t res[nlimbs];
         int32_t carry = 1;
         for (int32_t i = 0; i < nlimbs; i += 1) {
-            res[i] = ~cst[i] + carry;
-            carry = res[i] < ~cst[i] ? 1 : 0;
+            uint64_t inv = ~cst[i];
+            res[i] = inv + carry;
+            carry = (res[i] < inv) ? 1 : 0;
         }
         if (width % 64 != 0) {
             res[nlimbs - 1] = res[nlimbs - 1] % (1ULL << (width % 64));
@@ -1000,10 +1002,19 @@ Node & Node::operator>>(int32_t shval) {
         int32_t limb_rem = shval % 64;
         int32_t mslWidth = ((width - 1) % 64) + 1; // Width of Most Significant Limb
         if (limb_rem == 0) {
+            uint64_t w;
+            if (mslWidth == 64) {
+                w = ((int64_t) cst[nlimbs - 1]) >> 63;
+            }
+            else {
+                w = ((int64_t) (cst[nlimbs - 1] << (64 - mslWidth))) >> 63;
+            }
             for (int32_t i = 0; i < nlimbs; i += 1) {
                 if (i + limb_shift >= nlimbs) {
-                    uint64_t w = ((int64_t) cst[nlimbs - 1]) >> 63;
                     res[i] = w;
+                }
+                else if (i + limb_shift == nlimbs - 1 && mslWidth != 64) {
+                    res[i] = cst[nlimbs - 1] | (w << mslWidth);
                 }
                 else {
                     res[i] = cst[i + limb_shift];
@@ -1921,7 +1932,22 @@ Node & ipow(Node & n0, Node & n1) {
 
 uint64_t ipowInt(uint64_t a, uint64_t b, int32_t w) {
     assert(w <= 64);
-    return w == 64 ? (a * b) : (a * b) % (1ULL << w); // FIXME a ** b and not a * b
+    uint64_t res = 1;
+    uint64_t base = a;
+    uint64_t exp = b;
+    while (exp > 0) {
+        if ((exp & 1) != 0) {
+            res *= base;
+        }
+        base *= base;
+        exp >>= 1;
+    }
+    if (w == 64) {
+        return res;
+    }
+    else {
+        return res & ((1ULL << w) - 1);
+    }
 }
 
 

@@ -35,6 +35,17 @@ int main() {
     Node & n = Node::OpNode(BAND, {&n3, &n2, &n2, &n1, &n4});
 
     n.printMaskOcc();
+
+    checkMaskOcc(
+        n,
+        {NULL, NULL},
+        {},
+        {
+            {&m, {{&n0, {{&n0, {6, 0}}, {&n1, {6, 1}}, {&n2, {3, 2}}, {&n4, {1, 2}}}}}}
+        },
+        {}
+    );
+
     n.dump("graph.dot");
 
     return 0;

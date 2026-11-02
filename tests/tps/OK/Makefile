@@ -1,4 +1,4 @@
 
-VMSI_HOME=../../../
+VMSI_HOME ?= $(shell realpath ../../..)
 include ../../Makefile.common
 

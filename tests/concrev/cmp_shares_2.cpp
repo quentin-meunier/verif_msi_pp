@@ -1,7 +1,5 @@
 
-#include "concrev.hpp"
-#include "utils.hpp"
-#include "simplify.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
@@ -75,7 +73,7 @@ int main() {
 
 
     bool rud;
-    bool sid = getDistribWithExev(k0b0, &rud);
+    bool sid = getDistribWithExev(replaceSharesWithSecretsAndMasks(k0b0), &rud);
     if (rud && sid) {
         std::cout << "OK" << std::endl;
     }
@@ -83,7 +81,7 @@ int main() {
         std::cout << "KO" << std::endl;
     }
 
-    sid = getDistribWithExev(kb0, &rud);
+    sid = getDistribWithExev(replaceSharesWithSecretsAndMasks(kb0), &rud);
     if (rud && sid) {
         std::cout << "OK" << std::endl;
     }

@@ -14,7 +14,8 @@ int main() {
     checkTpsResult(e0, false);
 
     bool res;
-    res = getDistribWithExev(e0);
+    bool rud;
+    res = getDistribWithExev(e0, &rud);
     std::cout << "# Res : " << res << std::endl;
 
     res = tpsNoFalsePositive(e0);

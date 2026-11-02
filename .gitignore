@@ -1,17 +1,24 @@
 libverif_msi_pp.a
 libverif_msi_pp.so
 *.o
+*.d
+obj/
+__pycache__/
 tests/simplify/bin
 tests/concrev/bin
 tests/ni/bin
 tests/tps/OK/bin
+tests/tps/KO/bin
 tests/large_int/bin
 tests/mask_occ/bin
 tests/extended_simplify/bin
+tests/arith/bin
 tests/temp
 benchmarks/hw/dom_and/bin
 benchmarks/hw/dom_and/*.cpp
 benchmarks/hw/gms_and/bin
+benchmarks/hw/hpc2/bin
+benchmarks/hw/hpc2/*.cpp
 benchmarks/hw/hpc3/bin
 benchmarks/hw/hpc3/*.cpp
 benchmarks/hw/hpc4/bin
@@ -26,10 +33,15 @@ benchmarks/hw/opini1/*.cpp
 benchmarks/hw/opini2/bin
 benchmarks/hw/opini2/*.cpp
 benchmarks/hw/otsm/bin
+benchmarks/hw/pini1/bin
+benchmarks/hw/pini1/*.cpp
+benchmarks/hw/pini2/bin
+benchmarks/hw/pini2/*.cpp
 benchmarks/hw/pini_mult/bin
 benchmarks/hw/pini_mult/*.cpp
 benchmarks/hw/tsm/bin
 benchmarks/hw/tsm_plus/bin
 
 verif_msi_pp.cpython-*.so
+_core.cpython-*.so
 

@@ -11,13 +11,43 @@ int main() {
     std::cout << "# Masks Occurrences of node: " << n0 << std::endl;
     n0.printMaskOcc();
 
+    checkMaskOcc(
+        n0,
+        {NULL, NULL},
+        {{&m0, &n0}},
+        {{&m0, {{&n0, {{&n0, {1, 0}}}}}}},
+        {}
+    );
+
     Node & n1 = m1 + n0;
     std::cout << "# Masks Occurrences of node: " << n1 << std::endl;
     n1.printMaskOcc();
 
+    checkMaskOcc(
+        n1,
+        {NULL, NULL},
+        {{&m0, &n0}, {&m1, &n1}},
+        {
+            {&m0, {{&n0, {{&n0, {1, 0}}, {&n1, {1, 1}}}}}},
+            {&m1, {{&n1, {{&n1, {1, 0}}}}}}
+        },
+        {}
+    );
+
     Node & e = n1 + m0;
     std::cout << "# Masks Occurrences of node: " << e << std::endl;
     e.printMaskOcc();
+
+    checkMaskOcc(
+        e,
+        {NULL, NULL},
+        {{&m1, &n1}},
+        {
+            {&m0, {{&n0, {{&n0, {1, 0}}, {&n1, {1, 1}}}}}},
+            {&m1, {{&n1, {{&n1, {1, 0}}, {&e, {1, 1}}}}}}
+        },
+        {{&m0, {&e}}}
+    );
 
     e.dump("graph.dot");
 

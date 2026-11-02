@@ -31,6 +31,17 @@ int main() {
 
     std::cout << "# Masks Occurrences of node: " << e << std::endl;
     e.printMaskOcc();
+
+    checkMaskOcc(
+        e,
+        {NULL, NULL},
+        {},
+        {
+            {&m0, {{&n0, {{&n0, {2, 0}}, {&n1, {1, 1}}}}}}
+        },
+        {}
+    );
+
     e.dump("graph.dot");
 
     return 0;

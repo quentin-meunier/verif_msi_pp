@@ -52,7 +52,7 @@ void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t
         exit(EXIT_FAILURE);
     }
 
-    if (outWidth != 8 && outWidth != 16 && outWidth != 32 && inWidth != 64) {
+    if (outWidth != 8 && outWidth != 16 && outWidth != 32 && outWidth != 64) {
         std::cerr << "*** Error: Only supported values for outWidth are 8, 16, 32 and 64" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -218,7 +218,7 @@ bool litteralInteger(Node & e, uint64_t * val) {
     }
     else {
         Node & s = simplify(e);
-        if (s.nature == CONST && e.nlimbs == 1) {
+        if (s.nature == CONST && s.nlimbs == 1) {
             *val = s.cst[0];
             return true;
         }
@@ -243,6 +243,83 @@ void checkTpsResult(Node & exp, bool expected) {
 void checkNIResult(Node & exp, int maxShares, bool expected) {
     bool res = checkNIVal(exp, maxShares);
     if (res == expected) {
+        std::cout << "OK" << std::endl;
+    }
+    else {
+        std::cout << "KO" << std::endl;
+    }
+}
+
+
+void checkMaskOcc(
+    Node & n,
+    std::pair<Node *, Node *> expPreservedMask,
+    const std::map<Node *, Node *> & expCurrentlyMasking,
+    const std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> & expMaskingMaskOcc,
+    const std::map<Node *, std::set<Node *>> & expOtherMaskOcc
+) {
+    bool ok = true;
+
+    if (n.preservedMask != expPreservedMask) {
+        ok = false;
+    }
+
+    if (n.currentlyMasking != expCurrentlyMasking) {
+        ok = false;
+    }
+
+    if (n.maskingMaskOcc.size() != expMaskingMaskOcc.size()) {
+        ok = false;
+    }
+    else {
+        for (const auto & [m, expCtrBaseMap] : expMaskingMaskOcc) {
+            if (!n.maskingMaskOcc.contains(m)) {
+                ok = false;
+                break;
+            }
+            if (n.maskingMaskOcc[m]->size() != expCtrBaseMap.size()) {
+                ok = false;
+                break;
+            }
+            for (const auto & [ctrBase, expCtrMap] : expCtrBaseMap) {
+                if (!n.maskingMaskOcc[m]->contains(ctrBase)) {
+                    ok = false;
+                    break;
+                }
+                if (*n.maskingMaskOcc[m]->at(ctrBase) != expCtrMap) {
+                    ok = false;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (n.otherMaskOcc.size() != expOtherMaskOcc.size()) {
+        ok = false;
+    }
+    else {
+        #if SEL_MSK_W_NON_MSKNG_OCC
+        for (const auto & [m, expParents] : expOtherMaskOcc) {
+            if (!n.otherMaskOcc.contains(m)) {
+                ok = false;
+                break;
+            }
+            if (*n.otherMaskOcc[m] != expParents) {
+                ok = false;
+                break;
+            }
+        }
+        #else
+        for (const auto & [m, expParents] : expOtherMaskOcc) {
+            if (!n.otherMaskOcc.contains(m)) {
+                ok = false;
+                break;
+            }
+        }
+        #endif
+    }
+
+    if (ok) {
         std::cout << "OK" << std::endl;
     }
     else {
@@ -328,6 +405,9 @@ std::vector<Node *> getPseudoShares(Node & s, int nbShares) {
 
 
 static Node & replaceSharesWithSecretsAndMasksRec(Node & node, std::map<Node *, Node *> & m) {
+    if (m.contains(&node)) {
+        return *m[&node];
+    }
     if (node.nature != OP) {
         return node;
     }
@@ -407,6 +487,7 @@ void verifMSICleanup() {
     ArrayExp::allArrays.clear();
     
     secretShared.clear();
+    symbolsByName.clear();
     registeredArrays.clear();
     registeredArraysByName.clear();
     registeredArraysByAddr.clear();

@@ -57,8 +57,7 @@ int32_t pini2_%d_shares(int32_t * nbCheck) {
     content += '\n'
 
     for i in range(gadget.nbShares):
-        for j in range(gadget.nbShares):
-            content += '    HWElement & α%d%d = genericGmul(%s%d, %s%d);\n' % (i, j, inputVars[0], i, inputVars[1], j)
+        content += '    HWElement & alpha%d_%d = genericGmul(%s%d, %s%d);\n' % (i, i, inputVars[0], i, inputVars[1], i)
 
     #-----------------------init_cprod--------------------------------
     for i in range(gadget.nbShares):
@@ -107,9 +106,9 @@ int32_t pini2_%d_shares(int32_t * nbCheck) {
 
         if (i + 1) < gadget.order:
             content += '    HWElement & sumt%d = xorGate(vectSumt%d);\n' % (i, i)
-            content += '    HWElement & e%d = xorGate(α%d%d, sumt%d);\n' % (i, i, i, i)
+            content += '    HWElement & e%d = xorGate(alpha%d_%d, sumt%d);\n' % (i, i, i, i)
         else:
-            content += '    HWElement & e%d = α%d%d;\n' % (i, i, i)
+            content += '    HWElement & e%d = alpha%d_%d;\n' % (i, i, i)
         content += '\n'
 
         if (i % 2) != (gadget.order % 2):

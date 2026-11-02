@@ -181,7 +181,7 @@ void parseArgs(GadgetParams & params, int cmpt, const char ** tabArgs) {
         else if (strcmp(arg, "-v") == 0 or strcmp(arg, "--verbose") == 0) {
             params.verbose = true;
         }
-        else if (strcmp(arg, "-nv") == 0 or strcmp(arg, "--verbose") == 0) {
+        else if (strcmp(arg, "-nv") == 0 or strcmp(arg, "--no-verbose") == 0) {
             params.verbose = false;
         }
         else if (strcmp(arg, "-t") == 0 or strcmp(arg, "--output-target") == 0) {

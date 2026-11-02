@@ -1,6 +1,5 @@
 
-#include "node.hpp"
-#include "utils.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
@@ -24,8 +23,8 @@ int main() {
     //std::cout << "e : " << e << std::endl;
     checkNIResult(e, 2, true);
 
-    e = u0 ^ v0 ^ u1 ^ u2;
-    checkNIResult(e, 2, false);
+    Node & e2 = u0 ^ v0 ^ u1 ^ u2;
+    checkNIResult(e2, 2, false);
 
     return 0;
 }

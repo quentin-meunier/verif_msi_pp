@@ -14,7 +14,8 @@ int main() {
     // TODO: trouver une expression qui ne fuit pas mais pour laquelle on ne conclut pas en symbolique
 
     bool res;
-    res = getDistribWithExev(e0);
+    bool rud;
+    res = getDistribWithExev(e0, &rud);
     std::cout << "# Res : " << res << std::endl;
 
     res = tpsNoFalsePositive(e0);

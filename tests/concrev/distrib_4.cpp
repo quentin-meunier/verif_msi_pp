@@ -1,7 +1,5 @@
 
-#include "concrev.hpp"
-#include "utils.hpp"
-#include "simplify.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
@@ -16,7 +14,7 @@ int main() {
     //std::cout << e0.verbatimPrint() << std::endl;
 
     bool rud;
-    bool sid = getDistribWithExev(e0, &rud);
+    bool sid = getDistribWithExev(replaceSharesWithSecretsAndMasks(e0), &rud);
 
     if (rud && sid) {
         std::cout << "OK" << std::endl;
@@ -27,7 +25,7 @@ int main() {
 
     Node & e1 = k & k0;
 
-    sid = getDistribWithExev(e1, &rud);
+    sid = getDistribWithExev(replaceSharesWithSecretsAndMasks(e1), &rud);
 
     if (!rud && !sid) {
         std::cout << "OK" << std::endl;

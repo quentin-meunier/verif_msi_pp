@@ -462,7 +462,7 @@ static void bitDecomposeCst(Node & node) {
     int32_t idx = 0;
     for (int32_t limb = 0; limb < node.nlimbs; limb += 1) {
         int32_t limit = 64;
-        if (limb != node.nlimbs && (node.width % 64) != 0) {
+        if (limb == node.nlimbs - 1 && (node.width % 64) != 0) {
             limit = node.width % 64;
         }
         for (int32_t b = 0; b < limit; b += 1) {

@@ -1,7 +1,5 @@
 
-#include "node.hpp"
-#include "utils.hpp"
-#include "simplify.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
@@ -12,7 +10,7 @@ int main() {
     for (int i = 0; i < 1000; i += 1) {
 
         int32_t v = rand() % 256;
-        std::cout << v << std::endl;
+        //std::cout << v << std::endl;
 
         Node & c0 = constant(v, 8);
 
@@ -24,7 +22,7 @@ int main() {
 
         //std::cout << "n1: " << n1 << std::endl;
 
-        Node & c1 = constant(255 - v, 8);
+        Node & c1 = constant((256 - v) % 256, 8);
 
         Node & n2 = n1 + c1;
 

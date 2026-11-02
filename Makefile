@@ -10,20 +10,23 @@ BUILD_PYTHON ?= 1
 PYTHONLIB := _core$(shell python3-config --extension-suffix)
 
 
-SRC_FILES=$(wildcard $(SRC_DIR)/*.cpp)
-OBJ_FILES=$(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
+SRC_FILES := $(filter-out $(SRC_DIR)/pybind11_wrapper.cpp,$(wildcard $(SRC_DIR)/*.cpp))
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
+DEP_FILES := $(OBJ_FILES:.o=.d) $(OBJ_DIR)/pybind11_wrapper.d
 
 
 PYTHON_TARGET :=
-SRC_FILES := $(filter-out $(SRC_DIR)/pybind11_wrapper.cpp,$(SRC_FILES))
+HAS_PYBIND11 := $(shell python3 -m pybind11 --includes 2>/dev/null)
 ifeq ($(BUILD_PYTHON),1)
+ifneq ($(HAS_PYBIND11),)
 PYTHON_TARGET := $(PYTHONLIB)
+endif
 endif
 
 all: create_objdir libverif_msi_pp.a libverif_msi_pp.so $(PYTHON_TARGET)
 
-#CFLAGS=-g -std=c++20 -Wall -O0 -fPIC -Wno-vla-cxx-extension
-CFLAGS=-std=c++20 -Wall -O3 -fPIC -Wno-vla-cxx-extension
+#CFLAGS=-g -std=c++20 -Wall -O0 -fPIC -Wno-vla-cxx-extension -MMD -MP
+CFLAGS=-std=c++20 -Wall -O3 -fPIC -Wno-vla-cxx-extension -MMD -MP
 INCLUDES=-I$(INC_DIR)
 
 
@@ -36,54 +39,20 @@ libverif_msi_pp.a: $(OBJ_FILES)
 libverif_msi_pp.so: $(OBJ_FILES)
 	$(CXX) $^ -shared -o $@
 
-$(PYTHONLIB): libverif_msi_pp.so $(SRC_DIR)/pybind11_wrapper.cpp
-	$(CXX) -O3 -Wall -Werror -shared -std=c++20 -fPIC `python3 -m pybind11 --includes` $(INCLUDES) $(SRC_DIR)/pybind11_wrapper.cpp -o $@ -L. -lverif_msi_pp -Wl,-rpath,$(CUR_DIR)
+$(PYTHONLIB): libverif_msi_pp.so $(SRC_DIR)/pybind11_wrapper.cpp | create_objdir
+	$(CXX) -O3 -Wall -Werror -shared -std=c++20 -fPIC -MMD -MP -MF $(OBJ_DIR)/pybind11_wrapper.d `python3 -m pybind11 --includes` $(INCLUDES) $(SRC_DIR)/pybind11_wrapper.cpp -o $@ -L. -lverif_msi_pp -Wl,-rpath,$(CUR_DIR)
 
-
-$(OBJ_DIR)/SHA256.o: $(SRC_DIR)/SHA256.cpp $(INC_DIR)/SHA256.hpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | create_objdir
 	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
 
-$(OBJ_DIR)/arrayexp.o: $(SRC_DIR)/arrayexp.cpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
+-include $(DEP_FILES)
 
-$(OBJ_DIR)/tps.o: $(SRC_DIR)/tps.cpp $(INC_DIR)/tps.hpp $(INC_DIR)/node.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/config.hpp $(INC_DIR)/concrev.hpp $(INC_DIR)/utils_private.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/node.o: $(SRC_DIR)/node.cpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/SHA256.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/concrev.o: $(SRC_DIR)/concrev.cpp $(INC_DIR)/concrev.hpp $(INC_DIR)/node.hpp $(INC_DIR)/utils.hpp $(INC_DIR)/utils_private.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/simplify.o: $(SRC_DIR)/simplify.cpp $(INC_DIR)/simplify.hpp $(INC_DIR)/simp_conc.hpp $(INC_DIR)/node.hpp $(INC_DIR)/SHA256.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/simp_conc.o: $(SRC_DIR)/simp_conc.cpp $(INC_DIR)/simp_conc.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/hw.o: $(SRC_DIR)/hw.cpp $(INC_DIR)/hw.hpp $(INC_DIR)/node.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/check_leakage.hpp $(INC_DIR)/tps.hpp $(INC_DIR)/config.hpp $(INC_DIR)/utils.hpp $(INC_DIR)/utils_private.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/check_leakage.o: $(SRC_DIR)/check_leakage.cpp $(INC_DIR)/check_leakage.hpp $(INC_DIR)/node.hpp $(INC_DIR)/utils.hpp $(INC_DIR)/tps.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/utils.o: $(SRC_DIR)/utils.cpp $(INC_DIR)/utils.hpp $(INC_DIR)/node.hpp $(INC_DIR)/arrayexp.hpp $(INC_DIR)/simplify.hpp $(INC_DIR)/check_leakage.hpp $(INC_DIR)/config.hpp $(INC_DIR)/hw.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/simp_rules.o: $(SRC_DIR)/simp_rules.cpp $(INC_DIR)/simp_rules.hpp $(INC_DIR)/node.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/utils_private.o: $(SRC_DIR)/utils_private.cpp $(INC_DIR)/utils_private.hpp $(INC_DIR)/node.hpp $(INC_DIR)/hw.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-$(OBJ_DIR)/circuit.o: $(SRC_DIR)/circuit.cpp $(INC_DIR)/circuit.hpp $(INC_DIR)/config.hpp
-	$(CXX) -c $(CFLAGS) $(INCLUDES) -o $@ $<
-
-
+test: all
+	python3 run_tests.py
 
 clean:
-	rm -f $(OBJ_DIR)/*.o
+	rm -f $(OBJ_DIR)/*.o $(OBJ_DIR)/*.d
 
 realclean: clean
-	rm -rf $(OBJ_DIR) libverif_msi_pp.a libverif_msi_pp.so 
+	rm -rf $(OBJ_DIR) libverif_msi_pp.a libverif_msi_pp.so $(PYTHONLIB)
 

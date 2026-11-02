@@ -1,7 +1,5 @@
 
-#include "concrev.hpp"
-#include "utils.hpp"
-#include "simplify.hpp"
+#include "verif_msi_pp.hpp"
 
 
 int main() {
