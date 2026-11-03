@@ -9,9 +9,9 @@
 #define CIRCUIT_HPP
 
 
-#include <cstring>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include "verif_msi_pp.hpp"
 

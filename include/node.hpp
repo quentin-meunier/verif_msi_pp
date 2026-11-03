@@ -20,7 +20,6 @@ Author(s): Quentin L. Meunier
 #include <string>
 #include <cstdint>
 #include <iostream>
-#include <ostream>
 
 #include "config.hpp"
 

@@ -7,6 +7,8 @@ Author(s): Quentin L. Meunier
 */
 
 #include <cassert>
+#include <cstdint>
+#include <set>
 
 #include "simp_conc.hpp"
 #include "node.hpp"

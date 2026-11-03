@@ -8,7 +8,11 @@ Author(s): Quentin L. Meunier
 
 
 #include <cassert>
+#include <cstdint>
 #include <deque>
+#include <map>
+#include <set>
+#include <tuple>
 
 
 #include "simp_rules.hpp"

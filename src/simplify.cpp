@@ -7,7 +7,7 @@ Author(s): Quentin L. Meunier
 */
 
 #include <vector>
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 
 

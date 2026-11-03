@@ -12,6 +12,7 @@ Author(s): Quentin L. Meunier
 #include <cassert>
 #include <functional>
 #include <algorithm>
+#include <set>
 
 
 #include "hw.hpp"

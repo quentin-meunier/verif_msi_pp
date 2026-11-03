@@ -8,6 +8,7 @@ Author(s): Quentin L. Meunier
 
 
 #include <cassert>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <iomanip>

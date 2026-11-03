@@ -6,6 +6,8 @@
  */
 
 
+#include <cstring>
+
 #include "circuit.hpp"
 
 
