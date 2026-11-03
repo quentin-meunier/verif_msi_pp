@@ -21,6 +21,8 @@ Author(s): Quentin L. Meunier
 #include "utils.hpp"
 
 
+namespace vmsi {
+
 typedef enum _HWElementNature {
     HWNONE,
     GATE,
@@ -57,6 +59,7 @@ class HWElement {
     static HWElement & InputGate(Node & input);
     static HWElement & Gate(NodeOp op, std::vector<HWElement *> & inputs);
     static HWElement & Register(HWElement & input);
+    static void cleanup();
 
 
     friend std::ostream& operator<<(std::ostream &, const HWElement &);
@@ -88,6 +91,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<HWElement *> & outputs, bool noFalsePositive, int32_t * nbCheck, bool verbose = false);
 int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp, std::vector<std::vector<HWElement *>> & outputList, bool noFalsePositive, int32_t * nbCheck, bool verbose = false);
 
+} // namespace vmsi
 
 
 #endif

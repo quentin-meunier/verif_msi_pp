@@ -8,9 +8,6 @@ Author(s): Quentin L. Meunier
 
 // Concrete Evaluation
 
-#include <set>
-#include <vector>
-#include <map>
 #include <cstdlib>
 #include <cassert>
 #include <random>
@@ -25,6 +22,7 @@ Author(s): Quentin L. Meunier
 #include "simplify.hpp"
 
 
+namespace vmsi {
 
 int32_t getSymbolicBitsNum(Node & n) {
     std::set<Node *> allVars;
@@ -47,7 +45,7 @@ int32_t getSymbolicBitsNum(Node & n) {
         allVars.insert(k);
     }
     for (const auto & [k, v] : n.shareOcc) {
-        for (const auto & [l, w] : *v) {
+        for (const auto & [l, w] : v) {
             allVars.insert(l);
         }
     }
@@ -81,7 +79,7 @@ int32_t getMaxSymbVarWidth(Node & n) {
         allVars.insert(k);
     }
     for (const auto & [k, v] : n.shareOcc) {
-        for (const auto & [l, w] : *v) {
+        for (const auto & [l, w] : v) {
             allVars.insert(l);
         }
     }
@@ -122,7 +120,7 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
             allVars.insert(k);
         }
         for (const auto & [k, v] : e->shareOcc) {
-            for (const auto & [l, w] : *v) {
+            for (const auto & [l, w] : v) {
                 allVars.insert(l);
             }
         }
@@ -838,7 +836,7 @@ bool isRNIWithExev(Node & e, int32_t diff) {
                 nbUsedShares += 1;
             }
         }
-        assert(nbUsedShares == (int32_t) e0.shareOcc[v]->size());
+        assert(nbUsedShares == (int32_t) e0.shareOcc[v].size());
         if (nbUsedShares + diff >= nbTotalShares) {
             for (const auto & sh : shareVarsOrig) {
                 if (sh->origSecret == v) {
@@ -1027,6 +1025,8 @@ bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexe
 
     return (int32_t) additionalInputIndexes.size() <= maxShareOcc;
 }
+
+} // namespace vmsi
 
 
 

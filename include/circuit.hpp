@@ -11,11 +11,12 @@
 
 #include <cstring>
 #include <iostream>
-#include <filesystem>
 #include <fstream>
 
 #include "verif_msi_pp.hpp"
 
+
+namespace vmsi {
 
 typedef struct _GadgetParams {
     int32_t order;
@@ -50,6 +51,8 @@ std::vector<Node *> getShares(GadgetParams & params, Node & s, int32_t nbShares)
 void displayConfig(GadgetParams & params, const char * benchmark, int32_t nbshares);
 
 HWElement & genericGmul(GadgetParams & params, HWElement & child0, HWElement & child1);
+
+} // namespace vmsi
 
 
 #endif

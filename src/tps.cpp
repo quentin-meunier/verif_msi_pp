@@ -6,9 +6,6 @@ SPDX-License-Identifier: GPL-3.0-only
 Author(s): Quentin L. Meunier
 */
 
-#include <set>
-#include <vector>
-#include <algorithm>
 #include <cassert>
 
 #include "tps.hpp"
@@ -18,6 +15,7 @@ Author(s): Quentin L. Meunier
 #include "utils_private.hpp"
 
 
+namespace vmsi {
 
 std::string secProp2str(SecurityProperty secProp) {
     switch (secProp) {
@@ -194,10 +192,8 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         else if (secProp == NI) {
             bool isNI = true;
             for (const auto & [s, val] : node->shareOcc) {
-                // val is node->shareOcc->at(s)
-                //std::cout << "origSecret: " << *s << std::endl;
-                //std::cout << "val->size : " << val->size() << " - maxShareOcc : " << maxShareOcc << std::endl;
-                if ((int32_t) val->size() > maxShareOcc) {
+                // val is node->shareOcc.at(s)
+                if ((int32_t) val.size() > maxShareOcc) {
                     isNI = false;
                     break;
                 }
@@ -211,7 +207,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             for (const auto & [s, shares] : node->shareOcc) {
                 // shares is node->shareOcc[s]
                 int nbTotalShares = s->nbShares;
-                if ((int32_t) shares->size() + diff >= nbTotalShares) {
+                if ((int32_t) shares.size() + diff >= nbTotalShares) {
                     isRNI = false;
                     break;
                 }
@@ -224,7 +220,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             //print('# outputIndexes: %s' % ' '.join(map(lambda x: '%d' % x, outputIndexes)))
             std::set<int32_t> internalSharesIndexes;
             for (const auto & [s, shares] : node->shareOcc) {
-                for (const auto & [sh, val] : *shares) {
+                for (const auto & [sh, val] : shares) {
                     int32_t num = sh->shareNum;
                     if (not outputIndexes->contains(num)) {
                         internalSharesIndexes.insert(num);
@@ -248,9 +244,9 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // - For this m, choose CTR Base with the highest count
         // - For this CTR Base, choose the CTR with the max height for the same count
         // FIXME: change map copies to an alias, check that this is ok
-        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > & maskingMaskOcc = node->maskingMaskOcc;
+        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> & maskingMaskOcc = node->maskingMaskOcc;
         #if SEL_MSK_W_NON_MSKNG_OCC
-        std::map<Node *, std::set<Node *> * > & otherMaskOcc = node->otherMaskOcc;
+        std::map<Node *, std::set<Node *>> & otherMaskOcc = node->otherMaskOcc;
         #else
         std::set<Node *> & otherMaskOcc = node->otherMaskOcc;
         #endif
@@ -262,11 +258,11 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             //std::cout << "# debug: trying mask " << *m << std::endl;
             int32_t nbOtherOcc = 0;
 
-            int32_t nbMaskingOcc = maskingMaskOcc[m]->size();
+            int32_t nbMaskingOcc = v.size();
 
             #if SEL_MSK_W_NON_MSKNG_OCC
             if (otherMaskOcc.contains(m)) {
-                nbOtherOcc = otherMaskOcc[m]->size();
+                nbOtherOcc = otherMaskOcc[m].size();
             }
             #else
             if (otherMaskOcc.contains(m)) {
@@ -301,7 +297,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             if (secProp == OPINI) {
                 std::set<int32_t> internalSharesIndexes;
                 for (const auto & [s, shares] : node->shareOcc) {
-                    for (const auto & [sh, val] : *shares) {
+                    for (const auto & [sh, val] : shares) {
                         int32_t num = sh->shareNum;
                         if (not outputIndexes->contains(num)) {
                             internalSharesIndexes.insert(num);
@@ -359,10 +355,10 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
         uint64_t minCount = std::numeric_limits<uint64_t>::max();
         Node * selCtrBase = NULL;
-        std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > & occs = *maskingMaskOcc[selMask];
+        std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>> & occs = maskingMaskOcc[selMask];
         for (const auto & [ctrBase, val] : occs) { // val is occs[ctrBase]
-            if (val->at(ctrBase).first < minCount) {
-                minCount = val->at(ctrBase).first;
+            if (val.at(ctrBase).first < minCount) {
+                minCount = val.at(ctrBase).first;
                 selCtrBase = ctrBase;
             }
         }
@@ -384,7 +380,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             selCtr = selCtrBase;
         }
         else {
-            for (const auto & [ctr, val] : *occs[selCtrBase]) { // val is occs[selCtrBase][ctr]
+            for (const auto & [ctr, val] : occs[selCtrBase]) { // val is occs[selCtrBase][ctr]
                 int32_t height = val.second;
                 if (val.first == minCount && height > maxHeight) {
                     maxHeight = height;
@@ -651,5 +647,7 @@ bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set
     }
     return opini_internal(nodes, maxShareOcc, outputIndexes, allOutputsLeakages, bitDecompose, verbose, true);
 }
+
+} // namespace vmsi
 
 

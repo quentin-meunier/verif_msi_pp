@@ -9,6 +9,8 @@
 #include "circuit.hpp"
 
 
+namespace vmsi {
+
 void defaultParams(GadgetParams & params) {
     params.order = 1;
     params.specifiedOrder = 1;
@@ -215,5 +217,7 @@ void parseArgs(GadgetParams & params, int cmpt, const char ** tabArgs) {
         std::cout << "*** Warning: this gadget was set for the order " << params.specifiedOrder << std::endl;
     }
 }
+
+} // namespace vmsi
 
 

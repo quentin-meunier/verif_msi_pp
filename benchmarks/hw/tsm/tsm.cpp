@@ -8,6 +8,7 @@
 #include <cstring>
 
 #include "verif_msi_pp.hpp"
+#include "circuit.hpp"
 
 bool verbose = false;
 

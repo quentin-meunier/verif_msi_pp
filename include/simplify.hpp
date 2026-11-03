@@ -16,11 +16,15 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 
 
+namespace vmsi {
+
 Node & getBitDecomposition(Node & node);
 
 Node & simplify(Node & n, bool useSingleBitVariables = false);
 
 bool equivalence(Node & node0, Node & node1);
+
+} // namespace vmsi
 
 #endif
 

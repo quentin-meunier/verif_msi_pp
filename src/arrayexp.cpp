@@ -8,19 +8,29 @@ Author(s): Quentin L. Meunier
 
 
 #include <cassert>
+#include <cstdlib>
+#include <cstring>
 
 #include "arrayexp.hpp"
 #include "node.hpp"
 
 
-ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint32_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize) {
+namespace vmsi {
+
+ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize) {
     this->name = name;
     this->inWidth = inWidth;
     this->outWidth = outWidth;
     this->addr = addr;
     this->size = size;
     this->func = func;
-    this->content = content;
+    if (content != NULL && size > 0) {
+        this->content = malloc(size);
+        memcpy(this->content, content, size);
+    }
+    else {
+        this->content = NULL;
+    }
     this->elemSize = elemSize;
 
     if (allArrays.contains(name)) {
@@ -48,6 +58,13 @@ ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth) 
     }
 
     allArrays[name] = this;
+}
+
+
+ArrayExp::~ArrayExp() {
+    if (content != NULL) {
+        free(content);
+    }
 }
  
 
@@ -89,5 +106,18 @@ uint64_t ArrayExp::getContent(uint64_t idx) {
     }
     return val;
 }
+
+
+void ArrayExp::cleanup() {
+    for (const auto & a : registeredArrays) {
+        delete a;
+    }
+    registeredArrays.clear();
+    registeredArraysByName.clear();
+    registeredArraysByAddr.clear();
+    allArrays.clear();
+}
+
+} // namespace vmsi
 
 

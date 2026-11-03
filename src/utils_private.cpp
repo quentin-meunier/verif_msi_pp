@@ -13,6 +13,8 @@ Author(s): Quentin L. Meunier
 #include "config.hpp"
 
 
+namespace vmsi {
+
 static void shareValidity(Node & n, SecurityProperty secProp) {
     if (n.secretVarOcc.size() != 0) {
         std::cerr << "*** Error: " << secProp2str(secProp) << " verification should use a share representation and not explicit secret variables" << std::endl;
@@ -52,5 +54,7 @@ void secPropValidity(Node & n, SecurityProperty secProp) {
         shareValidity(n, secProp);
     }
 }
+
+} // namespace vmsi
 
 

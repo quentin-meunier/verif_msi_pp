@@ -15,27 +15,37 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 
 
+namespace vmsi {
+
 class ArrayExp {
 
     public:
     std::string name;
     int32_t inWidth;
     int32_t outWidth;
-    uint32_t addr;
+    uint64_t addr;
     int32_t size;
     std::function<Node &(Node &)> func;
     void * content;
     int32_t elemSize; // size in bytes of an element in the concrete array
 
     inline static std::map<std::string, ArrayExp *> allArrays;
+    inline static std::set<ArrayExp *> registeredArrays;
+    inline static std::map<std::string, ArrayExp *> registeredArraysByName;
+    inline static std::map<uint64_t, ArrayExp *> registeredArraysByAddr;
 
     ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth);
-    ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint32_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize);
+    ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize);
+    ~ArrayExp();
  
+    static void cleanup();
+
     Node & operator[](Node & child);
     uint64_t getContent(uint64_t idx);
 
 };
+
+} // namespace vmsi
 
 
 #endif

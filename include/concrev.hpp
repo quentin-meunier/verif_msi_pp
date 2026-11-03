@@ -12,6 +12,8 @@ Author(s): Quentin L. Meunier
 
 #include "node.hpp"
 
+namespace vmsi {
+
 bool compareExpsWithExev(Node & e0, Node & e1);
 bool compareExpsWithExev(Node & e0, Node & e1, std::map<Node *, Node *> & res, uint64_t * v0, uint64_t * v1);
 bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval);
@@ -26,6 +28,8 @@ Node & getExpValue(Node & node, std::map<Node *, Node *> & m);
 
 int32_t getSymbolicBitsNum(Node & n);
 int32_t getMaxSymbVarWidth(Node & n);
+
+} // namespace vmsi
 
 
 #endif

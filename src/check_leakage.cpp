@@ -16,7 +16,7 @@ Author(s): Quentin L. Meunier
 #include "simplify.hpp"
 
 
-
+namespace vmsi {
 
 #define CHECK_VAL_BODY(check_call, check_call_bd) ({    \
     bool res;                                           \
@@ -183,5 +183,7 @@ bool checkOPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outp
 }
 
 #undef CHECK_TRANS_BODY
+
+} // namespace vmsi
 
 

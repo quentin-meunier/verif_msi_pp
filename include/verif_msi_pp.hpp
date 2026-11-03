@@ -20,7 +20,10 @@ Author(s): Quentin L. Meunier
 #include "check_leakage.hpp"
 #include "hw.hpp"
 #include "simp_rules.hpp"
-#include "circuit.hpp"
+
+#ifndef VMSI_NO_USING_NAMESPACE
+using namespace vmsi;
+#endif
 
 
 #endif

@@ -12,12 +12,16 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 
 
+namespace vmsi {
 
 void addGenericSimpRule(Node & s, Node & t);
 void addSpecificSimpRule(Node & s, Node & t);
+void clearSimpRules();
 
 Node & getEquiv(Node & e);
 Node & getEquiv(Node & e, bool * found);
+
+} // namespace vmsi
 
 #endif
 

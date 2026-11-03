@@ -14,6 +14,8 @@ Author(s): Quentin L. Meunier
 #include <bit>
 #include <set>
 #include <map>
+#include <unordered_map>
+#include <tuple>
 #include <vector>
 #include <string>
 #include <cstdint>
@@ -23,6 +25,7 @@ Author(s): Quentin L. Meunier
 #include "config.hpp"
 
 
+namespace vmsi {
 
 typedef enum _NodeNature {
     NONE = 0,
@@ -78,6 +81,13 @@ constexpr int bit_width(T x) {
 }
 
 
+struct HashTuple {
+    size_t operator()(const std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> & t) const {
+        return std::get<0>(t);
+    }
+};
+
+
 class Node {
 
     public:
@@ -93,9 +103,11 @@ class Node {
     inline static const std::set<char> forbiddenChars = {'#', '@', '[', ']'};
     
     inline static std::map<std::string, Node *> symb2node;
-    inline static std::map<int32_t, std::map<uint64_t, Node *>> cst2node;
-    inline static std::map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, Node *> bigCst2node;
+    inline static std::unordered_map<int32_t, std::unordered_map<uint64_t, Node *>> cst2node;
+    inline static std::unordered_map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, Node *, HashTuple> bigCst2node;
     inline static std::map<std::string, Node *> str2node;
+    inline static std::set<Node *> secretShared;
+    inline static std::map<std::string, Node *> symbolsByName;
    
     inline static int32_t nodeNum = 0;
     inline static const int32_t gfBase = 3;
@@ -104,23 +116,13 @@ class Node {
 
     inline static bool modeTempNode = false;
     inline static std::set<Node *> toDelete;
-    inline static std::map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, Node *> cache;
+    inline static std::unordered_map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, Node *, HashTuple> cache;
     inline static std::set<Node *> opNodes;
 
-    int32_t num;
-    int32_t width;
     std::vector<Node *> * children;
-    int32_t nbShares;
-    int32_t shareNum;
     std::string * symb;
-    char symbType;
-    NodeNature nature;
-    NodeOp op;
-    bool hasWordOp;
-    bool hasPlus;
-    bool wordAnalysisHasFailedOnSubExp;
-    int32_t nlimbs;
     uint64_t * cst;
+    uint64_t inlineCst;
     std::string * strn;
 
     // Cache to Extract node for each bit
@@ -132,6 +134,18 @@ class Node {
     Node * origSecret; // For share nodes: original secret from which the share is derived
     Node * pseudoShareEq; // Pseudo-share equivalent
 
+    int32_t num;
+    int32_t width;
+    int32_t nbShares;
+    int32_t shareNum;
+    int32_t nlimbs;
+    NodeNature nature;
+    NodeOp op;
+    char symbType;
+    bool hasWordOp;
+    bool hasPlus;
+    bool wordAnalysisHasFailedOnSubExp;
+
     std::set<Node *> secretVarOcc;
     std::set<Node *> publicVarOcc;
     
@@ -141,36 +155,33 @@ class Node {
     // maskingMaskOcc[mask][ctrBase][ctr] = {count, height}
     // count  : number of occurrences
     // height : height of ctr starting from ctrBase (0 for ctrBase)
-    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>> * > * > maskingMaskOcc;
+    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> maskingMaskOcc;
 
     #if SEL_MSK_W_NON_MSKNG_OCC
     // otherMaskOcc[mask] = set() containing all parents in sub-expression
-    std::map<Node *, std::set<Node *> * > otherMaskOcc;
+    std::map<Node *, std::set<Node *>> otherMaskOcc;
     #else
     std::set<Node *> otherMaskOcc;
     #endif
 
-    std::map<Node *, std::map<Node *, int32_t> * > shareOcc;
+    std::map<Node *, std::map<Node *, int32_t>> shareOcc;
  
     // preservedMask: bijection of a mask, can mask if a maskingNode is encountered. tuple if not None: (mask, parent)
     std::pair<Node *, Node *> preservedMask;
 
-    uint64_t * h;
+    uint64_t h[4];
 
     Node();
     ~Node();
     Node(const Node &) = delete;
 
-    static Node & SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
-    static Node & ConstNode(uint64_t cst, int32_t width, bool extendMSB = false);
-    static Node & ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width);
     static Node & ConstNodeAuto(uint64_t cst);
-    static Node & StrNode(const std::string & s);
     static Node & OpNode(NodeOp op, const std::vector<Node *> & children);
     static const char * op2strOp(NodeOp op);
 
     static void setModeTemporaryNodes();
     static void setModePermanentNodes();
+    static void cleanup();
 
     void printVarOcc();
     void printMaskOcc();
@@ -178,6 +189,16 @@ class Node {
 
     
     private:
+    static Node & SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
+    static Node & ConstNode(uint64_t cst, int32_t width, bool extendMSB = false);
+    static Node & ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width);
+    static Node & StrNode(const std::string & s);
+
+    friend Node & SymbInternal(std::string symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);
+    friend Node & Const(uint64_t * cst, int32_t nlimbs, int32_t width);
+    friend Node & Const(uint64_t cst, int32_t width, bool extendMSB);
+    friend Node & Str(const std::string & s);
+
     void fillReachableNodes(Node * n, std::set<Node *> & rn);
     static void dumpNodes(const char * filename, std::set<Node *> & nodes);
     static Node & makeBitwiseNode(NodeOp op, Node * child0, Node * child1);
@@ -273,6 +294,8 @@ uint64_t glogInt(uint64_t a);
 
 bool isZero(uint64_t * cst, int32_t width);
 bool isAllOne(uint64_t * cst, int32_t width);
+
+} // namespace vmsi
 
 #endif
 

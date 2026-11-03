@@ -30,13 +30,16 @@ SOFTWARE.
 #include <array>
 
 
+namespace vmsi {
+
 class SHA256 {
 
 public:
     SHA256();
     void update(const uint8_t * data, size_t length);
-    void update(const std::string &data);
+    void update(const std::string & data);
     uint64_t * digest();
+    void digest(uint64_t * hash);
 
     static std::string toString(const uint64_t * digest);
 
@@ -65,15 +68,34 @@ private:
         0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
     };
 
-    static uint32_t rotr(uint32_t x, uint32_t n);
-    static uint32_t choose(uint32_t e, uint32_t f, uint32_t g);
-    static uint32_t majority(uint32_t a, uint32_t b, uint32_t c);
-    static uint32_t sig0(uint32_t x);
-    static uint32_t sig1(uint32_t x);
+    // Defined inline: these helpers are called many times per block and must
+    // not go through the PLT (-fPIC prevents inlining of non-inline exported functions)
+    static inline uint32_t rotr(uint32_t x, uint32_t n) {
+        return (x >> n) | (x << (32 - n));
+    }
+
+    static inline uint32_t choose(uint32_t e, uint32_t f, uint32_t g) {
+        return (e & f) ^ (~e & g);
+    }
+
+    static inline uint32_t majority(uint32_t a, uint32_t b, uint32_t c) {
+        return (a & (b | c)) | (b & c);
+    }
+
+    static inline uint32_t sig0(uint32_t x) {
+        return rotr(x, 7) ^ rotr(x, 18) ^ (x >> 3);
+    }
+
+    static inline uint32_t sig1(uint32_t x) {
+        return rotr(x, 17) ^ rotr(x, 19) ^ (x >> 10);
+    }
+
     void transform();
     void pad();
     void revert(uint8_t * hash);
 };
+
+} // namespace vmsi
 
 #endif
 

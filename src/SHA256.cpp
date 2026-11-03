@@ -27,9 +27,10 @@ SOFTWARE.
 
 
 #include <cstring>
-#include <sstream>
 #include <iomanip>
 
+
+namespace vmsi {
 
 SHA256::SHA256(): m_blocklen(0), m_bitlen(0) {
     m_state[0] = 0x6a09e667;
@@ -62,39 +63,19 @@ void SHA256::update(const std::string & data) {
 }
 
 
+void SHA256::digest(uint64_t * hash) {
+    pad();
+    revert((uint8_t *) hash);
+}
+
+
 uint64_t * SHA256::digest() {
     //uint8_t * hash = new uint8_t[32];
     uint64_t * hash = new uint64_t[4];
 
-    pad();
-    revert((uint8_t *) hash);
+    digest(hash);
 
     return hash;
-}
-
-
-uint32_t SHA256::rotr(uint32_t x, uint32_t n) {
-    return (x >> n) | (x << (32 - n));
-}
-
-
-uint32_t SHA256::choose(uint32_t e, uint32_t f, uint32_t g) {
-    return (e & f) ^ (~e & g);
-}
-
-
-uint32_t SHA256::majority(uint32_t a, uint32_t b, uint32_t c) {
-    return (a & (b | c)) | (b & c);
-}
-
-
-uint32_t SHA256::sig0(uint32_t x) {
-    return SHA256::rotr(x, 7) ^ SHA256::rotr(x, 18) ^ (x >> 3);
-}
-
-
-uint32_t SHA256::sig1(uint32_t x) {
-    return SHA256::rotr(x, 17) ^ SHA256::rotr(x, 19) ^ (x >> 10);
 }
 
 
@@ -192,5 +173,7 @@ std::string SHA256::toString(const uint64_t * digest) {
 
     return s.str();
 }
+
+} // namespace vmsi
 
 

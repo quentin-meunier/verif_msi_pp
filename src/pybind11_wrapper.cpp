@@ -201,6 +201,9 @@ void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py
     }
 
     registerArray(name, inWidth, outWidth, cppAddr, size, func, cppContent, elemSize);
+    if (cppContent != NULL) {
+        free(cppContent);
+    }
 }
 
 
@@ -480,6 +483,7 @@ PYBIND11_MODULE(_core, m) {
     m.def("getRealShares", &bindGetRealShares, "Desc.");
 
     m.def("printStats", &printStats, "Desc.");
+    m.def("verifMSICleanup", &verifMSICleanup, "Desc.");
 }
 
 

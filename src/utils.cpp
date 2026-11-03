@@ -17,15 +17,10 @@ Author(s): Quentin L. Meunier
 #include "check_leakage.hpp"
 #include "config.hpp"
 #include "hw.hpp"
+#include "simp_rules.hpp"
 
 
-std::set<Node *> secretShared;
-std::set<ArrayExp *> registeredArrays;
-std::map<std::string, ArrayExp *> registeredArraysByName;
-std::map<uint64_t, ArrayExp *> registeredArraysByAddr;
-std::map<std::string, Node *> symbolsByName;
-
-
+namespace vmsi {
 
 bool bitExpEnable() {
     return BIT_EXP_ENABLE;
@@ -36,13 +31,13 @@ bool bitExpEnable() {
 void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize) {
 
     if (addr != 0) {
-        if (registeredArraysByAddr.contains(addr)) {
+        if (ArrayExp::registeredArraysByAddr.contains(addr)) {
             std::cerr << "*** Error: Array with base address 0x" << std::hex << addr << std::dec << " already registered" << std::endl;
             exit(EXIT_FAILURE);
         }
     }
 
-    if (registeredArraysByName.contains(name)) {
+    if (ArrayExp::registeredArraysByName.contains(name)) {
         std::cerr << "*** Error: Array with name " << name << " already registered" << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -60,40 +55,40 @@ void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t
     ArrayExp * arr = new ArrayExp(name, inWidth, outWidth, addr, size, func, content, elemSize);
 
     if (addr != 0x0) {
-        registeredArraysByAddr.emplace(addr, arr);
+        ArrayExp::registeredArraysByAddr.emplace(addr, arr);
     }
-    registeredArraysByName.emplace(name, arr);
-    registeredArrays.insert(arr);
+    ArrayExp::registeredArraysByName.emplace(name, arr);
+    ArrayExp::registeredArrays.insert(arr);
 }
 
 
 
 ArrayExp & getArrayByAddr(uint64_t addr) {
-    return *registeredArraysByAddr[addr];
+    return *ArrayExp::registeredArraysByAddr[addr];
 }
 
 
 ArrayExp & getArrayByName(std::string name) {
-    return *registeredArraysByName[name];
+    return *ArrayExp::registeredArraysByName[name];
 }
 
 
 int32_t getArraySizeByAddr(uint64_t addr) {
-    return registeredArraysByAddr[addr]->size;
+    return ArrayExp::registeredArraysByAddr[addr]->size;
 }
 
 
 int32_t getArraySizeByName(std::string name) {
-    return registeredArraysByName[name]->size;
+    return ArrayExp::registeredArraysByName[name]->size;
 }
 
 
 std::function<Node &(Node &)> & getArrayFuncByAddr(uint64_t addr) {
-    return registeredArraysByAddr[addr]->func;
+    return ArrayExp::registeredArraysByAddr[addr]->func;
 }
 
 std::function<Node &(Node &)> & getArrayFuncByName(std::string name) {
-    return registeredArraysByName[name]->func;
+    return ArrayExp::registeredArraysByName[name]->func;
 }
 
 
@@ -196,13 +191,13 @@ void checkResults(Node & res, Node & ref, bool usbv) {
 
 Node & symbol(std::string symb, char symbType, int32_t width) {
     Node & s = Symb(symb.c_str(), symbType, width, 0, 0, NULL, NULL);
-    symbolsByName.emplace(symb, &s);
+    Node::symbolsByName.emplace(symb, &s);
     return s;
 }
 
 
 Node & getSymbolByName(std::string symb) {
-    return *symbolsByName[symb];
+    return *Node::symbolsByName[symb];
 }
 
 
@@ -277,16 +272,16 @@ void checkMaskOcc(
                 ok = false;
                 break;
             }
-            if (n.maskingMaskOcc[m]->size() != expCtrBaseMap.size()) {
+            if (n.maskingMaskOcc[m].size() != expCtrBaseMap.size()) {
                 ok = false;
                 break;
             }
             for (const auto & [ctrBase, expCtrMap] : expCtrBaseMap) {
-                if (!n.maskingMaskOcc[m]->contains(ctrBase)) {
+                if (!n.maskingMaskOcc[m].contains(ctrBase)) {
                     ok = false;
                     break;
                 }
-                if (*n.maskingMaskOcc[m]->at(ctrBase) != expCtrMap) {
+                if (n.maskingMaskOcc[m].at(ctrBase) != expCtrMap) {
                     ok = false;
                     break;
                 }
@@ -304,7 +299,7 @@ void checkMaskOcc(
                 ok = false;
                 break;
             }
-            if (*n.otherMaskOcc[m] != expParents) {
+            if (n.otherMaskOcc[m] != expParents) {
                 ok = false;
                 break;
             }
@@ -364,11 +359,11 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
         std::cerr << "*** Error: first parameter of function getRealShares() can only be a secret variable" << std::endl;
         exit(EXIT_FAILURE);
     }
-    if (secretShared.contains(&s)) {
+    if (Node::secretShared.contains(&s)) {
         std::cerr << "*** Error: Secret variable " << s << " has already been split into shares" << std::endl;
         exit(EXIT_FAILURE);
     }
-    secretShared.insert(&s);
+    Node::secretShared.insert(&s);
     s.nbShares = nbShares;
     std::vector<Node *> pseudoShares = getPseudoSharesInternal(s, nbShares);
     std::vector<Node *> res;
@@ -383,7 +378,7 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
         }
 
         Node & a = SymbInternal(str, 'A', s.width, nbShares, i, &s, pseudoShares[i]);
-        symbolsByName.emplace(str, &a);
+        Node::symbolsByName.emplace(str, &a);
         res.push_back(&a);
     }
     return res;
@@ -395,11 +390,11 @@ std::vector<Node *> getPseudoShares(Node & s, int nbShares) {
         std::cerr << "*** Error: first parameter of function getPseudoShares() can only be a secret variable" << std::endl;
         exit(EXIT_FAILURE);
     }
-    if (secretShared.contains(&s)) {
+    if (Node::secretShared.contains(&s)) {
         std::cerr << "*** Error: Secret variable " << s << " has already been split into shares" << std::endl;
         exit(EXIT_FAILURE);
     }
-    secretShared.insert(&s);
+    Node::secretShared.insert(&s);
     return getPseudoSharesInternal(s, nbShares);
 }
 
@@ -435,7 +430,7 @@ static Node & replaceSharesWithSecretsAndMasksRec(Node & node, std::map<Node *, 
 Node & replaceSharesWithSecretsAndMasks(Node & e) {
     std::map<Node *, Node *> m;
     for (const auto & [s, v] : e.shareOcc) {
-        for (const auto & [sh, w] : *v) {
+        for (const auto & [sh, w] : v) {
             m[sh] = sh->pseudoShareEq;
         }
     }
@@ -462,7 +457,7 @@ void printStats() {
         //    std::cout << "#     " << *n << std::endl;
         //}
     }
-    int nbCstNodes = 0;
+    int nbCstNodes = Node::bigCst2node.size();
     for (const auto & [w, m] : Node::cst2node) {
         nbCstNodes += m.size();
     }
@@ -476,45 +471,10 @@ void printStats() {
 
 
 void verifMSICleanup() {
-    for (const auto & hwe : HWElement::allHWElements) {
-        delete hwe;
-    }
-    HWElement::allHWElements.clear();
-    
-    for (const auto & [s, a] : ArrayExp::allArrays) {
-        delete a;
-    }
-    ArrayExp::allArrays.clear();
-    
-    secretShared.clear();
-    symbolsByName.clear();
-    registeredArrays.clear();
-    registeredArraysByName.clear();
-    registeredArraysByAddr.clear();
-
-    for (const auto & n : Node::opNodes) {
-        delete n;
-    }
-    Node::opNodes.clear();
-    Node::cache.clear();
-    for (const auto & [s, symbNode] : Node::symb2node) {
-        delete symbNode;
-    }
-    Node::symb2node.clear();
-    for (const auto & [w, m] : Node::cst2node) {
-        for (const auto & [v, cstNode] : m) {
-            delete cstNode;
-        }
-    }
-    Node::cst2node.clear();
-    for (const auto & [h, cstNode] : Node::bigCst2node) {
-        delete cstNode;
-    }
-    Node::bigCst2node.clear();
-    for (const auto & [s, strNode] : Node::str2node) {
-        delete strNode;
-    }
-    Node::str2node.clear();
+    HWElement::cleanup();
+    ArrayExp::cleanup();
+    clearSimpRules();
+    Node::cleanup();
 }
 
 
@@ -538,6 +498,8 @@ void dumpConfig(std::ostream & os) {
     os << std::noboolalpha;
     os << "### End of VerifMSI++ configuration ###" << std::endl;
 }
+
+} // namespace vmsi
 
 
 

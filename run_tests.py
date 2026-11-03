@@ -207,6 +207,11 @@ g_masked = vmsi.xorGate(g_u0, g_m)
 assert vmsi.checkSecurity(1, False, "ni", g_masked, g_u1)[0] == 0
 assert vmsi.checkSecurity(1, False, "ni", vmsi.xorGate(g_u0, g_u1), g_u1)[0] > 0
 
+# 5. Cleanup and symbol reuse
+vmsi.verifMSICleanup()
+k_after = vmsi.symbol("k", "S", 8)
+assert vmsi.equivalence(vmsi.simplify(k_after ^ k_after), vmsi.constant(0, 8))
+
 print("OK")
 """
     t0 = time.perf_counter()
@@ -540,7 +545,8 @@ def main() -> int:
 
     if not args.no_python:
         py_so = list(ROOT_DIR.glob("_core*.so"))
-        if py_so:
+        lib_so = ROOT_DIR / "libverif_msi_pp.so"
+        if py_so and (not lib_so.exists() or py_so[0].stat().st_mtime >= lib_so.stat().st_mtime):
             py_res = run_python_bindings_test(args.timeout)
             all_results.append(py_res)
             tag = "OK" if py_res.status == "PASS" else "FAIL"

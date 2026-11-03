@@ -8,7 +8,10 @@ Author(s): Quentin L. Meunier
 
 #include <cassert>
 
+#include "simp_conc.hpp"
 #include "node.hpp"
+
+namespace vmsi {
 
 static int32_t currBit;
 static int32_t nextCurrBit;
@@ -158,6 +161,8 @@ Node * extendedMergeConcatExtract(std::vector<Node *> & children, bool * ok) {
         nextCurrBit = -1;
         traverseExp(*child);
         if (abortAll || nextCurrBit == -1) {
+            m.clear();
+            processedNodes.clear();
             *ok = false;
             return NULL;
         }
@@ -168,6 +173,8 @@ Node * extendedMergeConcatExtract(std::vector<Node *> & children, bool * ok) {
         else {
             Node & replacedChild = replaceExtracts(*child);
             if (not rawEquivalence(*refReplacedChild, replacedChild)) {
+                m.clear();
+                processedNodes.clear();
                 *ok = false;
                 return NULL;
             }
@@ -175,14 +182,20 @@ Node * extendedMergeConcatExtract(std::vector<Node *> & children, bool * ok) {
         currBit = nextCurrBit + 1;
     }
     if (currBit != varWidth) {
+        m.clear();
+        processedNodes.clear();
         *ok = false;
         return NULL;
     }
 
     *ok = true;
     Node & retNode = buildEquivNode(*children[0]);
+    m.clear();
+    processedNodes.clear();
     return &retNode;
 }
+
+} // namespace vmsi
 
 
 // FIXME: set temporary mode and delete temporary nodes?

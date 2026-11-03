@@ -15,10 +15,14 @@ Author(s): Quentin L. Meunier
 #include "hw.hpp"
 
 
+namespace vmsi {
+
 void secPropValidity(std::set<Node *> & nodes, SecurityProperty secProp);
 void secPropValidity(std::set<HWElement *> & gates, SecurityProperty secProp);
 
 void secPropValidity(Node & n, SecurityProperty secProp);
+
+} // namespace vmsi
 
 #endif
 

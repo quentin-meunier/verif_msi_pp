@@ -14,6 +14,8 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 
 
+namespace vmsi {
+
 bool checkTpsVal(Node & e, bool * usedBitExpRet = NULL);
 bool checkNIVal(Node & e, int maxShareOcc, bool * usedBitExpRet = NULL);
 bool checkRNIVal(Node & e, int diff, bool * usedBitExpRet = NULL);
@@ -33,6 +35,8 @@ bool checkNITrans(Node & e0, Node & e1, int maxShareOcc, bool * usedBitExpRet = 
 bool checkRNITrans(Node & e0, Node & e1, int diff, bool * usedBitExpRet = NULL);
 bool checkPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes, bool * usedBitExpRet = NULL);
 bool checkOPINITrans(Node & e0, Node & e1, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputLeakages, bool * usedBitExpRet);
+
+} // namespace vmsi
 
 
 #endif

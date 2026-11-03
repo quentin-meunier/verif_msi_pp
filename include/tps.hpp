@@ -16,6 +16,8 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 
 
+namespace vmsi {
+
 typedef enum _SecurityProperty {
     PROP_NONE,
     TPS,
@@ -58,6 +60,8 @@ bool opini(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::v
 bool opini(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
 bool opiniNoFalsePositive(Node & nodeIn, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
 bool opiniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose = false, bool verbose = false);
+
+} // namespace vmsi
 
 #endif
 

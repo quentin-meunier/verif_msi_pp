@@ -9,10 +9,8 @@ Author(s): Quentin L. Meunier
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <set>
 #include <cassert>
 #include <functional>
-#include <memory>
 #include <algorithm>
 
 
@@ -25,6 +23,7 @@ Author(s): Quentin L. Meunier
 #include "utils_private.hpp"
 
 
+namespace vmsi {
 
 HWElement::HWElement() {
     num = nodeNum;
@@ -36,6 +35,16 @@ HWElement::HWElement() {
 HWElement::~HWElement() {
     //std::cout << "# Deleting HWElement " << num << std::endl;
     //std::cout << "#          symbExp: " << *symbExp << std::endl;
+}
+
+
+void HWElement::cleanup() {
+    for (const auto & hwe : allHWElements) {
+        delete hwe;
+    }
+    allHWElements.clear();
+    nodeNum = 0;
+    nbNIcalls = 0;
 }
 
 
@@ -359,7 +368,7 @@ HWElement & Register(HWElement & child) {
 
 
 // Display functions
-static std::string vecGatesNumStr(std::vector<HWElement *> & t) {
+static std::string vecGatesNumStr(const std::vector<HWElement *> & t) {
     std::ostringstream ss;
     for (bool first{true}; const auto & g : t) {
         ss << (first ? first = false, "" : ", ") << g->num;
@@ -367,7 +376,7 @@ static std::string vecGatesNumStr(std::vector<HWElement *> & t) {
     return ss.str();
 }
 
-static std::string setGatesNumStr(std::set<HWElement *> & t) {
+static std::string setGatesNumStr(const std::set<HWElement *> & t) {
     std::ostringstream ss;
     for (bool first{true}; const auto & g : t) {
         ss << (first ? first = false, "" : ", ") << g->num;
@@ -375,7 +384,7 @@ static std::string setGatesNumStr(std::set<HWElement *> & t) {
     return ss.str();
 }
 
-static std::string vecExpsStr(std::vector<Node *> & t) {
+static std::string vecExpsStr(const std::vector<Node *> & t) {
     std::ostringstream ss;
     for (bool first{true}; const auto & e : t) {
         ss << (first ? first = false, "" : ", ") << e->toString();
@@ -383,7 +392,7 @@ static std::string vecExpsStr(std::vector<Node *> & t) {
     return ss.str();
 }
 
-[[maybe_unused]] static std::string setExpsStr(std::set<Node *> & t) {
+[[maybe_unused]] static std::string setExpsStr(const std::set<Node *> & t) {
     std::ostringstream ss;
     for (bool first{true}; const auto & e : t) {
         ss << (first ? first = false, "" : ", ") << e->toString();
@@ -482,7 +491,7 @@ static bool bartheOpt(std::set<HWElement *> & gatesToVerify, int32_t order, bool
         }
     };
 
-    auto tupleEnumBis = [](std::set<Node *> & expsSet, int32_t order, std::vector<std::vector<Node *> *> & tuples) {
+    auto tupleEnumBis = [](std::set<Node *> & expsSet, int32_t order, std::vector<std::vector<Node *>> & tuples) {
         // same idea as tupleEnum but with the following differences:
         // - it does not enumerates on gates, but directly on symb exps
         // - there is no partial tuples
@@ -492,13 +501,7 @@ static bool bartheOpt(std::set<HWElement *> & gatesToVerify, int32_t order, bool
         std::function<void(int32_t i, int32_t nbTaken)> tupleEnumBisRec;
         tupleEnumBisRec = [order, t, &tuples, &expsVec, &tupleEnumBisRec](int32_t i, int32_t nbTaken) {
             if (nbTaken == order) {
-                //std::vector<Node *> * v = new std::vector<Node *>();
-                //for (int32_t j = 0; j < order; j += 1) {
-                //    v->push_back(t[i]);
-                //}
-                //std::unique_ptr<std::vector<Node *>> v(new std::vector<Node *>(t, t + order));
-                std::vector<Node *> * v = new std::vector<Node *>(t, t + order); // TODO: do not forget to delete
-                tuples.push_back(v);
+                tuples.emplace_back(t, t + order);
                 return;
             }
 
@@ -586,23 +589,19 @@ static bool bartheOpt(std::set<HWElement *> & gatesToVerify, int32_t order, bool
                 localPrint("# Not res (main check), return false");
                 return false;
             }
-            std::vector<std::vector<Node *> *> tuples;
+            std::vector<std::vector<Node *>> tuples;
             for (int32_t i = 1; i < d; i += 1) {
                 tupleEnumBis(ycMinusx, i, tuples);
                 for (const auto & t : tuples) {
                     std::set<Node *> xUniont(x);
-                    xUniont.insert(t->begin(), t->end());
+                    xUniont.insert(t.begin(), t.end());
                     bool res = check(xUniont, d - i, eMinusyc, depth + 1);
                     if (!res) {
                         localPrint("# Not res (check in for loop), return false");
                         return false;
                     }
                 }
-                while (tuples.size() != 0) {
-                    std::vector<Node *> * v = tuples.back();
-                    delete v;
-                    tuples.pop_back();
-                }
+                tuples.clear();
             }
             return true;
         }
@@ -652,14 +651,14 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 }
 
 
-static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool withGlitches, bool includePartialTuples, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples) {
+static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool withGlitches, bool includePartialTuples, std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>>> & tuples) {
 
     const int32_t tupleLen = order;
     HWElement ** t = new HWElement * [tupleLen];
 
-    std::function<void(int32_t i, int32_t nbTaken, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples)> tupleEnumRec;
+    std::function<void(int32_t i, int32_t nbTaken, std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>>> & tuples)> tupleEnumRec;
 
-    tupleEnumRec = [&tupleEnumRec, &gateList, withGlitches, includePartialTuples, tupleLen, &t](int32_t i, int32_t nbTaken, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> & tuples) {
+    tupleEnumRec = [&tupleEnumRec, &gateList, withGlitches, includePartialTuples, tupleLen, &t](int32_t i, int32_t nbTaken, std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>>> & tuples) {
         auto getLeakExps = [withGlitches](HWElement ** gates, int32_t nbTaken, std::set<Node *> & s) {
             for (int32_t i = 0; i < nbTaken; i += 1) {
                 HWElement * gate = gates[i];
@@ -677,16 +676,9 @@ static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool w
         if (nbTaken == tupleLen || (includePartialTuples && nbTaken > 0)) {
             std::set<Node *> s;
             getLeakExps(t, nbTaken, s);
-            std::vector<Node *> * v = new std::vector<Node *>();
-            for (const auto & n : s) {
-                v->push_back(n);
-            }
-            std::vector<HWElement *> * w = new std::vector<HWElement *>();
-            for (int32_t i = 0; i < nbTaken; i += 1) {
-                w->push_back(t[i]);
-            }
-            std::tuple<std::vector<Node *> *, std::vector<HWElement *> *> tup {v, w};
-            tuples.insert(tup);
+            std::vector<Node *> v(s.begin(), s.end());
+            std::vector<HWElement *> w(t, t + nbTaken);
+            tuples.emplace_back(std::move(v), std::move(w));
             if (nbTaken == tupleLen) {
                 return;
             }
@@ -706,7 +698,7 @@ static void tupleEnum(std::vector<HWElement *> & gateList, int32_t order, bool w
 
 
 
-static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, std::vector<HWElement *> & internalGatesList, int32_t order, bool withGlitches, bool includePartialTuples, std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>>> & tuples) {
+static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, std::vector<HWElement *> & internalGatesList, int32_t order, bool withGlitches, bool includePartialTuples, std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>, int32_t, std::set<int32_t>>> & tuples) {
 
     std::function<void(int32_t nbOutputIndices)> tupleEnumPINIOutputIndices;
     tupleEnumPINIOutputIndices = [&](int32_t nbOutputIndices) {
@@ -755,18 +747,10 @@ static void tupleEnumPINI(std::vector<std::vector<HWElement *>> & outputList, st
 
                     std::set<Node *> s;
                     getLeakExps(t, nbProbesTaken, s);
-                    std::vector<Node *> * v = new std::vector<Node *>();
-                    for (const auto & n : s) {
-                        v->push_back(n);
-                    }
-                    std::vector<HWElement *> * w = new std::vector<HWElement *>();
-                    for (int32_t j = 0; j < nbProbesTaken; j += 1) {
-                        w->push_back(t[j]);
-                    }
+                    std::vector<Node *> v(s.begin(), s.end());
+                    std::vector<HWElement *> w(t, t + nbProbesTaken);
                     std::set<int32_t> outputSharesIndices(outputSharesTaken.begin(), outputSharesTaken.end());
-                    std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>> tup {v, w, nbInternalProbesTaken, outputSharesIndices};
-
-                    tuples.insert(tup);
+                    tuples.emplace_back(std::move(v), std::move(w), nbInternalProbesTaken, std::move(outputSharesIndices));
                     if (nbInternalProbesTaken == nbInternalProbesToTake) {
                         return;
                     }
@@ -920,15 +904,15 @@ static void removeAiBiProbes(std::set<HWElement *> & gatesToVerify, std::set<HWE
         int index = -1;
         bool singleIndex = true;
         for (const auto & [secret, val] : g->symbExp->shareOcc) {
-            if (val->size() > 1) {
+            if (val.size() > 1) {
                 singleIndex = false;
                 break;
             }
             else {
                 if (index == -1) {
-                    index = val->begin()->first->shareNum;
+                    index = val.begin()->first->shareNum;
                 }
-                else if (index != val->begin()->first->shareNum) {
+                else if (index != val.begin()->first->shareNum) {
                     singleIndex = false;
                     break;
                 }
@@ -959,7 +943,7 @@ static void removeAiBjProbes(std::set<HWElement *> & gatesToVerify, std::set<HWE
     for (const auto & g : gatesToVerifyCopy) {
         bool moreThanOneShare = false;
         for (const auto & [secret, val] : g->symbExp->shareOcc) {
-            if (val->size() > 1) {
+            if (val.size() > 1) {
                 moreThanOneShare = true;
                 break;
             }
@@ -1012,13 +996,13 @@ static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, std::se
 
                 std::set<Node *> gShares;
                 for (const auto & [secret, val] : g->symbExp->shareOcc) {
-                    for (const auto & [sh, num] : *val) {
+                    for (const auto & [sh, num] : val) {
                         gShares.insert(sh);
                     }
                 }
                 std::set<Node *> hShares;
                 for (const auto & [secret, val] : h->symbExp->shareOcc) {
-                    for (const auto & [sh, num] : *val) {
+                    for (const auto & [sh, num] : val) {
                         hShares.insert(sh);
                     }
                 }
@@ -1155,62 +1139,58 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
     }
 
 
-    std::vector<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *>> leakingHwe;
+    std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>>> leakingHwe;
 
     if (verbose) {
         std::cout << "# Starting tuple enumeration" << std::endl;
     }
 
     if (secProp != PINI && secProp != OPINI) {
-        std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> * >> tuples;
+        std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>>> tuples;
         tupleEnum(gates, order, withGlitches, doPartialTuples, tuples);
 
         if (verbose) {
             std::cout << "# Number of tuples: " << tuples.size() << std::endl;
         }
 
-        for (const auto & t : tuples) {
-            //std::cout << "# Checking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
-
+        for (auto & t : tuples) {
             bool res;
             if (secProp == TPS) {
                 if (noFalsePositive) {
-                    res = tpsNoFalsePositive(*std::get<0>(t), true);
+                    res = tpsNoFalsePositive(std::get<0>(t), true);
                 }
                 else {
-                    res = tps(*std::get<0>(t), true);
+                    res = tps(std::get<0>(t), true);
                 }
             }
             else if (secProp == NI) {
-                //std::cout << "# checking NI for exps " << vecExpsStr(*std::get<0>(t)) << " and maxShareOcc = " << std::get<1>(t)->size() << std::endl;
                 if (noFalsePositive) {
-                    res = niNoFalsePositive(*std::get<0>(t), std::get<1>(t)->size(), true);
+                    res = niNoFalsePositive(std::get<0>(t), std::get<1>(t).size(), true);
                 }
                 else {
-                    res = ni(*std::get<0>(t), std::get<1>(t)->size(), true);
+                    res = ni(std::get<0>(t), std::get<1>(t).size(), true);
                 }
             }
             else if (secProp == RNI) {
-                //std::cout << "# checking RNI for exps " << vecExpsStr(*std::get<0>(t)) << " and maxShareOcc = (nbShares - 1) - " << (order - std::get<1>(t)->size()) << std::endl;
                 if (noFalsePositive) {
-                    res = rniNoFalsePositive(*std::get<0>(t), (order - std::get<1>(t)->size()));
+                    res = rniNoFalsePositive(std::get<0>(t), (order - std::get<1>(t).size()));
                 }
                 else {
-                    res = rni(*std::get<0>(t), (order - std::get<1>(t)->size()));
+                    res = rni(std::get<0>(t), (order - std::get<1>(t).size()));
                 }
             }
             else if (secProp == SNI) {
                 int32_t nbOutputProbes = 0;
-                for (const auto & probe : *std::get<1>(t)) {
+                for (const auto & probe : std::get<1>(t)) {
                     if (outputs.contains(probe)) {
                         nbOutputProbes += 1;
                     }
                 }
                 if (noFalsePositive) {
-                    res = niNoFalsePositive(*std::get<0>(t), std::get<1>(t)->size() - nbOutputProbes, true);
+                    res = niNoFalsePositive(std::get<0>(t), std::get<1>(t).size() - nbOutputProbes, true);
                 }
                 else {
-                    res = ni(*std::get<0>(t), std::get<1>(t)->size() - nbOutputProbes, true);
+                    res = ni(std::get<0>(t), std::get<1>(t).size() - nbOutputProbes, true);
                 }
             }
             else {
@@ -1219,20 +1199,16 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
             if (!res) {
                 if (verbose) {
-                    std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
+                    std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(std::get<1>(t)) << "): " << vecExpsStr(std::get<0>(t)) << std::endl;
                 }
-                leakingHwe.push_back(t);
-            }
-            else {
-                delete std::get<0>(t);
-                delete std::get<1>(t);
+                leakingHwe.push_back(std::move(t));
             }
         }
         *nbCheck = tuples.size();
     }
     else {
         assert(secProp == PINI || secProp == OPINI);
-        std::set<std::tuple<std::vector<Node *> *, std::vector<HWElement *> *, int32_t, std::set<int32_t>>> tuples;
+        std::vector<std::tuple<std::vector<Node *>, std::vector<HWElement *>, int32_t, std::set<int32_t>>> tuples;
         std::vector<HWElement *> internalGates;
         for (const auto & g : gates) {
             if (not outputs.contains(g)) {
@@ -1274,39 +1250,32 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             std::cout << "# Number of tuples: " << tuples.size() << std::endl;
         }
 
-        for (const auto & t : tuples) {
-            //std::cout << "# Checking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
-
+        for (auto & t : tuples) {
             bool res;
             std::set<int32_t> outputIndexes = std::get<3>(t);
             if (secProp == PINI) {
                 if (noFalsePositive) {
-                    res = piniNoFalsePositive(*std::get<0>(t), std::get<2>(t), outputIndexes, true);
+                    res = piniNoFalsePositive(std::get<0>(t), std::get<2>(t), outputIndexes, true);
                 }
                 else {
-                    res = pini(*std::get<0>(t), std::get<2>(t), outputIndexes, true);
+                    res = pini(std::get<0>(t), std::get<2>(t), outputIndexes, true);
                 }
             }
             else {
                 assert(secProp == OPINI);
                 if (noFalsePositive) {
-                    res = opiniNoFalsePositive(*std::get<0>(t), std::get<2>(t), outputIndexes, allOutputLeakages, true);
+                    res = opiniNoFalsePositive(std::get<0>(t), std::get<2>(t), outputIndexes, allOutputLeakages, true);
                 }
                 else {
-                    res = opini(*std::get<0>(t), std::get<2>(t), outputIndexes, allOutputLeakages, true);
+                    res = opini(std::get<0>(t), std::get<2>(t), outputIndexes, allOutputLeakages, true);
                 }
             }
 
             if (!res) {
                 if (verbose) {
-                    std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(t)) << "): " << vecExpsStr(*std::get<0>(t)) << std::endl;
+                    std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(std::get<1>(t)) << "): " << vecExpsStr(std::get<0>(t)) << std::endl;
                 }
-                std::tuple<std::vector<Node *> *, std::vector<HWElement *> * > subTuple = { std::get<0>(t), std::get<1>(t) };
-                leakingHwe.push_back(subTuple);
-            }
-            else {
-                delete std::get<0>(t);
-                delete std::get<1>(t);
+                leakingHwe.push_back({ std::move(std::get<0>(t)), std::move(std::get<1>(t)) });
             }
         }
         *nbCheck = tuples.size();
@@ -1316,9 +1285,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
     if (leakingHwe.size() != 0) {
         std::cout <<  "# Following Components\' outputs are not " << secProp2str(secProp) << " secure at order " << order << " " << (withGlitches ? "with" : "without") << " glitches:" << std::endl;
         for (const auto & hwe : leakingHwe) {
-            std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(*std::get<1>(hwe)) << "): " << vecExpsStr(*std::get<0>(hwe)) << std::endl;
-            delete std::get<0>(hwe);
-            delete std::get<1>(hwe);
+            std::cout << "# Leaking expression for component(s) (" << vecGatesNumStr(std::get<1>(hwe)) << "): " << vecExpsStr(std::get<0>(hwe)) << std::endl;
         }
     }
     else {
@@ -1327,5 +1294,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
     return res;
 }
+
+} // namespace vmsi
 
 

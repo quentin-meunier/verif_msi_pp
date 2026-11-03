@@ -19,6 +19,7 @@ Author(s): Quentin L. Meunier
 #include "simp_rules.hpp"
 
 
+namespace vmsi {
 
 static Node & simplifyCore(Node & node, bool useSingleBitVariables);
 
@@ -694,13 +695,24 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
     auto setSimpEqAndReturn = [useSingleBitVariables](Node & node, Node & simpEquiv) -> Node & {
         Node & simpEq = getEquiv(simpEquiv);
 
+        bool canCacheOnNode = true;
+        #if MEMORY_STRATEGY == DELETE_NODES
+            if (Node::modeTempNode && !Node::toDelete.contains(&node) && Node::toDelete.contains(&simpEq)) {
+                canCacheOnNode = false;
+            }
+        #endif
+
         if (useSingleBitVariables) {
-            node.simpEqUsbv = &simpEq;
+            if (canCacheOnNode) {
+                node.simpEqUsbv = &simpEq;
+            }
             simpEq.simpEq = &simpEq;
             simpEq.simpEqUsbv = &simpEq;
         }
         else {
-            node.simpEq = &simpEq;
+            if (canCacheOnNode) {
+                node.simpEq = &simpEq;
+            }
             simpEq.simpEq = &simpEq;
         }
         //std::cout << "# Returning " << simpEq << std::endl;
@@ -2790,6 +2802,8 @@ bool equivalence(Node & node0, Node & node1) {
     }
     return true;
 }
+
+} // namespace vmsi
 
 
 

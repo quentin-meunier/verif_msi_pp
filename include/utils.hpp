@@ -16,6 +16,8 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 #include "arrayexp.hpp"
 
+namespace vmsi {
+
 bool bitExpEnable();
 
 void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize);
@@ -55,6 +57,8 @@ int32_t width(Node & e);
 void printStats();
 void verifMSICleanup();
 void dumpConfig(std::ostream & os = std::cout);
+
+} // namespace vmsi
 
 
 #endif

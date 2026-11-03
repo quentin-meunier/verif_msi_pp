@@ -17,10 +17,10 @@ int32_t nbCheck = 0;
 int32_t nbLeak = 0;
 
 void checkExpLeakage(Node & e) {
-    nbCheck ++;
+    nbCheck += 1;
     bool res = checkTpsVal(e);
     if (!res) {
-        nbLeak ++;
+        nbLeak += 1;
         std::cout << "# Leakage in value for exp num " << nbCheck << ", Node " << e << std::endl;
     }
 }

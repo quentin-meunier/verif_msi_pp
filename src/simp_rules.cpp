@@ -7,9 +7,8 @@ Author(s): Quentin L. Meunier
 */
 
 
-#include <map>
-#include <deque>
 #include <cassert>
+#include <deque>
 
 
 #include "simp_rules.hpp"
@@ -19,7 +18,14 @@ Author(s): Quentin L. Meunier
 #include "concrev.hpp"
 
 
-std::map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, std::set<std::tuple<Node *, Node *>>> allRules;
+namespace vmsi {
+
+static std::map<std::tuple<uint64_t, uint64_t, uint64_t, uint64_t>, std::set<std::tuple<Node *, Node *>>> allRules;
+
+
+void clearSimpRules() {
+    allRules.clear();
+}
 
 
 static bool checkRule(Node & s) {
@@ -341,6 +347,8 @@ Node & getEquiv(Node & e, bool * found) {
     *found = false;
     return e;
 }
+
+} // namespace vmsi
 
 
 
