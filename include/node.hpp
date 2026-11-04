@@ -70,6 +70,10 @@ static inline bool propagateCstOnBuild() {
     return PROPAGATE_CST_ON_BUILD;
 }
 
+inline bool simplifyExtractOnBuild() {
+    return SIMPLIFY_EXTRACT_ON_BUILD;
+}
+
 
 template <class T>
 constexpr int bit_width(T x) {

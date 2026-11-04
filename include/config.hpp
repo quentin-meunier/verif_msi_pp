@@ -16,6 +16,7 @@ Author(s): Quentin L. Meunier
 #define MEMORY_STRATEGY         KEEP_NODES
 
 #define PROPAGATE_CST_ON_BUILD  true
+#define SIMPLIFY_EXTRACT_ON_BUILD true
 #define BIT_EXP_ENABLE          true
 #define EXTENDED_SIMPLIFY       true
 #define BIT_SIMPLIFY_PLUS       false

@@ -6,7 +6,7 @@ SPDX-License-Identifier: GPL-3.0-only
 Author(s): Quentin L. Meunier
 */
 
-
+#include <algorithm>
 #include <cassert>
 #include <iostream>
 #include <fstream>
@@ -17,7 +17,6 @@ Author(s): Quentin L. Meunier
 #include "config.hpp"
 #include "arrayexp.hpp"
 #include "SHA256.hpp"
-
 
 namespace vmsi {
 
@@ -46,18 +45,17 @@ Node::Node() {
     origSecret = NULL;
     pseudoShareEq = NULL;
 
-    preservedMask = { NULL, NULL };
+    preservedMask = {NULL, NULL};
     for (int32_t i = 0; i < 4; i += 1) {
         h[i] = 0;
     }
 }
 
-
 Node::~Node() {
-    //std::cout << "# Deleting node: " << *this << std::endl;
-    //if (symb != NULL) {
-    //    std::cout << "# deleting symbol " << *symb << std::endl;
-    //}
+    // std::cout << "# Deleting node: " << *this << std::endl;
+    // if (symb != NULL) {
+    //     std::cout << "# deleting symbol " << *symb << std::endl;
+    // }
     if (symb != NULL) {
         delete symb;
     }
@@ -68,13 +66,12 @@ Node::~Node() {
         delete children;
     }
     if (cst != NULL && nlimbs > 1) {
-        delete [] cst;
+        delete[] cst;
     }
     if (extractBit != NULL) {
-        delete [] extractBit;
+        delete[] extractBit;
     }
 }
-
 
 void Node::setModeTemporaryNodes() {
     Node::modeTempNode = true;
@@ -82,14 +79,13 @@ void Node::setModeTemporaryNodes() {
 
 void Node::setModePermanentNodes() {
     Node::modeTempNode = false;
-    #if MEMORY_STRATEGY == DELETE_NODES
-        for (const auto & node : toDelete) {
-            delete node;
-        }
-        toDelete.clear();
-    #endif
+#if MEMORY_STRATEGY == DELETE_NODES
+    for (const auto & node : toDelete) {
+        delete node;
+    }
+    toDelete.clear();
+#endif
 }
-
 
 void Node::cleanup() {
     for (const auto & node : toDelete) {
@@ -131,7 +127,6 @@ void Node::cleanup() {
     nodeNum = 0;
 }
 
-
 Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
     if (symb2node.contains(symb)) {
         return *symb2node[symb];
@@ -144,7 +139,7 @@ Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, in
     n->symb = new std::string(symb);
     n->symbType = symbType;
     n->width = width;
-    n->extractBit = new Node * [width];
+    n->extractBit = new Node *[width];
     for (int32_t i = 0; i < width; i += 1) {
         n->extractBit[i] = NULL;
     }
@@ -160,7 +155,6 @@ Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, in
     symb2node[symb] = n;
     return *n;
 }
-
 
 Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
     if (width <= 64) {
@@ -179,8 +173,8 @@ Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
         n->width = width;
         n->simpEq = n;
         SHA256 sha;
-        sha.update(reinterpret_cast<const uint8_t *> (&width), sizeof(width));
-        sha.update(reinterpret_cast<const uint8_t *> (&cst), sizeof(cst));
+        sha.update(reinterpret_cast<const uint8_t *>(&width), sizeof(width));
+        sha.update(reinterpret_cast<const uint8_t *>(&cst), sizeof(cst));
         sha.digest(n->h);
         cst2node[width].emplace(cst, n);
         return *n;
@@ -211,15 +205,14 @@ Node & Node::ConstNode(uint64_t cst, int32_t width, bool extendMSB) {
     }
 }
 
-
 Node & Node::ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width) {
     assert(nlimbs > 1);
     SHA256 sha;
-    sha.update(reinterpret_cast<const uint8_t *> (&width), sizeof(width));
-    sha.update(reinterpret_cast<const uint8_t *> (cst), nlimbs * sizeof(uint64_t));
+    sha.update(reinterpret_cast<const uint8_t *>(&width), sizeof(width));
+    sha.update(reinterpret_cast<const uint8_t *>(cst), nlimbs * sizeof(uint64_t));
     uint64_t h[4];
     sha.digest(h);
-    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
+    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t{h[0], h[1], h[2], h[3]};
     auto it = bigCst2node.find(t);
     if (it != bigCst2node.end()) {
         return *it->second;
@@ -241,11 +234,9 @@ Node & Node::ConstNode(uint64_t * cst, int32_t nlimbs, int32_t width) {
     return *n;
 }
 
-
 Node & Node::ConstNodeAuto(uint64_t cst) {
     return Const(cst, bit_width(cst));
 }
-
 
 Node & Node::StrNode(const std::string & s) {
     if (str2node.contains(s)) {
@@ -262,44 +253,42 @@ Node & Node::StrNode(const std::string & s) {
     return *n;
 }
 
-
 Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     // Local copy: the heap-allocated vector is only created if the node is not already in the cache
     std::vector<Node *> orderedChildren(children);
 
-
     if (associativeOps.contains(op)) {
         std::sort(orderedChildren.begin(), orderedChildren.end(), [](Node * a, Node * b) {
-                int32_t i = 0;
-                while (i < 4 && a->h[i] == b->h[i]) {
-                    i += 1;
-                }
-                return i < 4 && a->h[i] > b->h[i];
-                });
+            int32_t i = 0;
+            while (i < 4 && a->h[i] == b->h[i]) {
+                i += 1;
+            }
+            return i < 4 && a->h[i] > b->h[i];
+        });
     }
 
     // The hash is computed on the raw bytes of the operator and of the children hashes
     SHA256 sha;
     int32_t opInt = (int32_t) op;
-    sha.update(reinterpret_cast<const uint8_t *> (&opInt), sizeof(opInt));
+    sha.update(reinterpret_cast<const uint8_t *>(&opInt), sizeof(opInt));
     for (const auto & child : orderedChildren) {
-        sha.update(reinterpret_cast<const uint8_t *> (child->h), sizeof(child->h));
+        sha.update(reinterpret_cast<const uint8_t *>(child->h), sizeof(child->h));
     }
     uint64_t h[4];
     sha.digest(h);
-    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t {h[0], h[1], h[2], h[3]};
+    std::tuple<uint64_t, uint64_t, uint64_t, uint64_t> t{h[0], h[1], h[2], h[3]};
     auto cacheIt = cache.find(t);
     if (cacheIt != cache.end()) {
         return *cacheIt->second;
     }
     Node * n = new Node();
-    #if MEMORY_STRATEGY == KEEP_NODES
+#if MEMORY_STRATEGY == KEEP_NODES
+    cache.emplace(t, n);
+#else
+    if (!modeTempNode) {
         cache.emplace(t, n);
-    #else
-        if (!modeTempNode) {
-            cache.emplace(t, n);
-        }
-    #endif
+    }
+#endif
 
     for (int32_t i = 0; i < 4; i += 1) {
         n->h[i] = h[i];
@@ -309,7 +298,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     n->op = op;
     n->hasWordOp = wordOps.contains(op);
     if (!n->hasWordOp) {
-        for (const auto & c: children) {
+        for (const auto & c : children) {
             if (c->hasWordOp) {
                 n->hasWordOp = true;
                 break;
@@ -318,7 +307,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     }
     n->hasPlus = (op == PLUS);
     if (!n->hasPlus) {
-        for (const auto & c: children) {
+        for (const auto & c : children) {
             if (c->hasPlus) {
                 n->hasPlus = true;
                 break;
@@ -326,7 +315,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         }
     }
 
-    for (const auto & c: children) {
+    for (const auto & c : children) {
         if (c->wordAnalysisHasFailedOnSubExp) {
             n->wordAnalysisHasFailedOnSubExp = true;
             break;
@@ -342,7 +331,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     }
     else if (op == CONCAT) {
         int32_t width = 0;
-        for (const auto & child: children) {
+        for (const auto & child : children) {
             width += child->width;
         }
         n->width = width;
@@ -359,12 +348,11 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         exit(EXIT_FAILURE);
     }
 
-    n->extractBit = new Node * [n->width];
+    n->extractBit = new Node *[n->width];
     for (int32_t i = 0; i < n->width; i += 1) {
         n->extractBit[i] = NULL;
     }
 
-    
     n->setVarsOccurrences();
 
     // Examples to have in mind
@@ -379,12 +367,11 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     //                         |   k   m
     //                         m
 
-
     // Occurrences in currentlyMasking are also present in maskingMaskOcc
     // Mask in preservedMask is also present in otherMaskOcc
 
     // "Masking" mask occurrences
-    for (const auto & child: children) {
+    for (const auto & child : children) {
         for (const auto & [m, val0] : child->maskingMaskOcc) {
             for (const auto & [ctrBase, val1] : val0) {
                 for (const auto & [ctr, val2] : val1) {
@@ -410,28 +397,26 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         }
     }
 
-
     // For other mask occurrences, we do the union of all the children
     for (const auto & child : children) {
-        #if SEL_MSK_W_NON_MSKNG_OCC
-            for (const auto & [m, nbOcc0] : child->otherMaskOcc) {
-                if (nbOcc0.empty()) {
-                    // "child" is the mask m, i.e. mask m is a child of n
-                    n->otherMaskOcc[m].insert(n);
-                }
-                else {
-                    for (const auto & p : nbOcc0) {
-                        n->otherMaskOcc[m].insert(p);
-                    }
+#if SEL_MSK_W_NON_MSKNG_OCC
+        for (const auto & [m, nbOcc0] : child->otherMaskOcc) {
+            if (nbOcc0.empty()) {
+                // "child" is the mask m, i.e. mask m is a child of n
+                n->otherMaskOcc[m].insert(n);
+            }
+            else {
+                for (const auto & p : nbOcc0) {
+                    n->otherMaskOcc[m].insert(p);
                 }
             }
-        #else
-            for (const auto & m : child->otherMaskOcc) {
-                n->otherMaskOcc.insert(m);
-            }
-        #endif
+        }
+#else
+        for (const auto & m : child->otherMaskOcc) {
+            n->otherMaskOcc.insert(m);
+        }
+#endif
     }
-
 
     // currentlyMasking: Masks masking current node, value is ctrBase
     // preservedMask: bijection of a mask, can mask if a maskingNode is encountered. tuple if not None: (mask, parent)
@@ -479,8 +464,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
                 if (maskIsMasking) {
                     n->currentlyMasking.insert_or_assign(m, n);
 
-
-                    #if SEL_MSK_W_NON_MSKNG_OCC
+#if SEL_MSK_W_NON_MSKNG_OCC
                     // Removing mask occurrence from otherOccurrences
                     if (parent == NULL) {
                         parent = n;
@@ -488,12 +472,11 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
 
                     n->otherMaskOcc[m].erase(parent);
                     assert(n->otherMaskOcc[m].size() == 0); // set is empty
-                    n->otherMaskOcc.erase(m); // delete entry in map
+                    n->otherMaskOcc.erase(m);               // delete entry in map
 
-                    #else
+#else
                     n->otherMaskOcc.erase(m); // delete entry in set
-                    #endif
-
+#endif
 
                     // Adding mask to masking mask occurrences
                     n->maskingMaskOcc[m][n].emplace(n, std::make_pair(1, 0));
@@ -532,11 +515,11 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     // if node is neither a masking node nor a preserving node, currently masking masks and preserved masks are empty
 
     if (modeTempNode) {
-        #if MEMORY_STRATEGY == DELETE_NODES
-            toDelete.insert(n);
-        #else
-            opNodes.insert(n);
-        #endif
+#if MEMORY_STRATEGY == DELETE_NODES
+        toDelete.insert(n);
+#else
+        opNodes.insert(n);
+#endif
     }
     else {
         opNodes.insert(n);
@@ -545,68 +528,66 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     return *n;
 }
 
-
 const char * Node::op2strOp(NodeOp op) {
-    switch(op) {
-        case NOP:
-            return "NOP";
-        case BXOR:
-            return "^";
-        case BAND:
-            return "&";
-        case BOR:
-            return "|";
-        case BNOT:
-            return "~";
-        case LSHR:
-            return "LShR";
-        case LSHL:
-            return "<<";
-        case ASHR:
-            return ">>";
-        case SLSHR:
-            return "SLShR";
-        case SLSHL:
-            return "s<<";
-        case SASHR:
-            return "s>>";
-        case PLUS:
-            return "+";
-        case MINUS:
-            return "-";
-        case UMINUS:
-            return "-";
-        case IMUL:
-            return "*";
-        case IPOW:
-            return "**";
-        case GMUL:
-            return "M";
-        case GPOW:
-            return "P";
-        case GLOG:
-            return "L";
-        case GEXP:
-            return "X";
-        case ZEXT:
-            return "ZE";
-        case SEXT:
-            return "SE";
-        case CONCAT:
-            return "C";
-        case EXTRACT:
-            return "E";
-        case ARRAY:
-            return "A";
-        case INPUT:
-            return "I";
-        default:
-            std::cout << "*** Error: op " << op << " not defined" << std::endl;
-            return "Error";
-            //assert(false);
+    switch (op) {
+    case NOP:
+        return "NOP";
+    case BXOR:
+        return "^";
+    case BAND:
+        return "&";
+    case BOR:
+        return "|";
+    case BNOT:
+        return "~";
+    case LSHR:
+        return "LShR";
+    case LSHL:
+        return "<<";
+    case ASHR:
+        return ">>";
+    case SLSHR:
+        return "SLShR";
+    case SLSHL:
+        return "s<<";
+    case SASHR:
+        return "s>>";
+    case PLUS:
+        return "+";
+    case MINUS:
+        return "-";
+    case UMINUS:
+        return "-";
+    case IMUL:
+        return "*";
+    case IPOW:
+        return "**";
+    case GMUL:
+        return "M";
+    case GPOW:
+        return "P";
+    case GLOG:
+        return "L";
+    case GEXP:
+        return "X";
+    case ZEXT:
+        return "ZE";
+    case SEXT:
+        return "SE";
+    case CONCAT:
+        return "C";
+    case EXTRACT:
+        return "E";
+    case ARRAY:
+        return "A";
+    case INPUT:
+        return "I";
+    default:
+        std::cout << "*** Error: op " << op << " not defined" << std::endl;
+        return "Error";
+        // assert(false);
     }
 }
-
 
 void Node::printVarOcc() {
     std::cout << "Secrets: {";
@@ -620,7 +601,6 @@ void Node::printVarOcc() {
     }
     std::cout << "}" << std::endl;
 }
-
 
 void Node::printMaskOcc() {
     if (preservedMask.first != NULL) {
@@ -658,31 +638,29 @@ void Node::printMaskOcc() {
         }
     }
     std::cout << "# Other mask occurrences:" << std::endl;
-    #if SEL_MSK_W_NON_MSKNG_OCC
+#if SEL_MSK_W_NON_MSKNG_OCC
     for (const auto & [m, val0] : otherMaskOcc) {
         std::cout << "#    Mask " << *m << std::endl;
         for (const auto & p : val0) {
             std::cout << "#        Parent: " << *p << std::endl;
         }
     }
-    #else
+#else
     for (const auto & m : otherMaskOcc) {
         std::cout << "#    Mask " << *m << std::endl;
     }
-    #endif
+#endif
 }
-
-
 
 void Node::setVarsOccurrences() {
     if (nature == SYMB) {
         if (symbType == 'M') {
-            preservedMask = { this, NULL }; // (mask, parent)
-            #if SEL_MSK_W_NON_MSKNG_OCC
-            otherMaskOcc.insert({ this, std::set<Node *>() });
-            #else
+            preservedMask = {this, NULL}; // (mask, parent)
+#if SEL_MSK_W_NON_MSKNG_OCC
+            otherMaskOcc.insert({this, std::set<Node *>()});
+#else
             otherMaskOcc.insert(this);
-            #endif
+#endif
         }
         else if (symbType == 'P') {
             publicVarOcc.insert(this);
@@ -695,7 +673,7 @@ void Node::setVarsOccurrences() {
         }
         return;
     }
-    for (const auto & child: *children) {
+    for (const auto & child : *children) {
         for (const auto & p : child->publicVarOcc) {
             publicVarOcc.insert(p);
         }
@@ -710,22 +688,20 @@ void Node::setVarsOccurrences() {
     }
 }
 
-
 void Node::fillReachableNodes(Node * n, std::set<Node *> & rn) {
     if (not rn.contains(n)) {
         rn.insert(n);
         if (n->children != NULL) {
-            for (const auto & child: *n->children) {
+            for (const auto & child : *n->children) {
                 fillReachableNodes(child, rn);
             }
         }
     }
 }
 
-
 void Node::dumpNodes(const char * filename, std::set<Node *> & nodes) {
     std::string content = "digraph g {\n";
-    for (const auto & n: nodes) {
+    for (const auto & n : nodes) {
         std::string s;
         if (n->nature == SYMB) {
             s = std::string("Symbol: ") + *n->symb + " [" + n->symbType + "]";
@@ -768,7 +744,7 @@ void Node::dumpNodes(const char * filename, std::set<Node *> & nodes) {
         }
         content += std::string("   N") + std::to_string(n->num) + " [shape=record, label=\"{{" + s + "}}\"];\n";
         if (n->children != NULL) {
-            for (const auto & a: *n->children) {
+            for (const auto & a : *n->children) {
                 content += "   edge[tailclip=true];\n";
                 content += std::string("   N") + std::to_string(n->num) + " -> N" + std::to_string(a->num) + "\n";
             }
@@ -779,7 +755,6 @@ void Node::dumpNodes(const char * filename, std::set<Node *> & nodes) {
     out << content;
     out.close();
 }
-
 
 Node & Node::makeBitwiseNode(NodeOp op, Node * child0, Node * child1) {
     int32_t width = child0->width;
@@ -838,10 +813,7 @@ Node & Node::makeBitwiseNode(NodeOp op, Node * child0, Node * child1) {
     else {
         return Node::OpNode(op, {child0});
     }
-
 }
-
-
 
 void Node::dump(const char * filename) {
     std::set<Node *> reachableNodes;
@@ -886,7 +858,6 @@ Node & Node::operator-(Node & other) {
     return *this + (-other);
 }
 
-
 Node & Node::operator-() {
     if (propagateCstOnBuild() && nature == CONST) {
         uint64_t res[nlimbs];
@@ -905,7 +876,6 @@ Node & Node::operator-() {
     return Node::OpNode(UMINUS, args);
 }
 
-
 // We guaranty that the node used for the shift value is always identical for a given amount
 // In particular, it does not depend on the width of this value (which can be non-existant)
 Node & Node::operator<<(Node & other) {
@@ -915,7 +885,6 @@ Node & Node::operator<<(Node & other) {
     assert(other.nlimbs == 1);
     return *this << other.cst[0];
 }
-
 
 Node & Node::operator<<(int32_t shval) {
     if (shval > width) {
@@ -960,7 +929,6 @@ Node & Node::operator<<(int32_t shval) {
     return Node::OpNode(LSHL, {this, &sh});
 }
 
-
 Node & Node::operator>>(Node & other) {
     if (other.nature != CONST) {
         return Node::OpNode(SASHR, {this, &other});
@@ -968,7 +936,6 @@ Node & Node::operator>>(Node & other) {
     assert(other.nlimbs == 1);
     return *this >> other.cst[0];
 }
-
 
 Node & Node::operator>>(int32_t shval) {
     // Arith Shift Right
@@ -1038,14 +1005,12 @@ Node & Node::operator>>(int32_t shval) {
     return Node::OpNode(ASHR, {this, &sh});
 }
 
-
 Node & LShR(Node & child, Node & shval) {
     if (shval.nature != CONST) {
         return Node::OpNode(SLSHR, {&child, &shval});
     }
     return LShR(child, shval.cst[0]);
 }
-
 
 Node & LShR(Node & child, int32_t shval) {
     int32_t width = child.width;
@@ -1092,7 +1057,6 @@ Node & LShR(Node & child, int32_t shval) {
     return Node::OpNode(LSHR, {&child, &sh});
 }
 
-
 Node & RotateRight(Node & child, Node & shval) {
     if (shval.nature != CONST) {
         std::cerr << "***Error: Second operand of a RotateRight operation can only be a constant" << std::endl;
@@ -1100,7 +1064,6 @@ Node & RotateRight(Node & child, Node & shval) {
     }
     return RotateRight(child, shval.cst[0]);
 }
-
 
 Node & RotateRight(Node & child, int32_t shval) {
     int32_t width = child.width;
@@ -1111,8 +1074,6 @@ Node & RotateRight(Node & child, int32_t shval) {
     return Concat(Extract(shval - 1, 0, child), Extract(width - 1, shval, child));
 }
 
-
-
 Node & Node::operator*(Node & other) {
     assert(width == other.width);
     if (propagateCstOnBuild() && nature == CONST && other.nature == CONST) {
@@ -1121,16 +1082,13 @@ Node & Node::operator*(Node & other) {
     return Node::OpNode(IMUL, {this, &other});
 }
 
-
 std::string Node::toString() const {
     return expPrint(false, false);
 }
 
-
 std::string Node::verbatimPrint() const {
     return expPrint(false, true);
 }
-
 
 std::string Node::printCst() const {
     if (nlimbs == 0) {
@@ -1164,7 +1122,6 @@ std::string Node::printCst() const {
     }
     return s;
 }
-
 
 std::string Node::expPrint(bool parNeeded, bool verbatim) const {
     if (nature == SYMB) {
@@ -1277,18 +1234,13 @@ std::string Node::expPrint(bool parNeeded, bool verbatim) const {
     return res;
 }
 
-
-
-std::ostream& operator<<(std::ostream &strm, const Node & n) {
+std::ostream & operator<<(std::ostream & strm, const Node & n) {
     return strm << n.toString();
 }
 
-
-
-
 Node & Symb(const char * symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
     std::string s(symb);
-    for (char ch: Node::forbiddenChars) {
+    for (char ch : Node::forbiddenChars) {
         if (s.find(ch) != std::string::npos) {
             std::cerr << "*** Error: symbol name (" << s << ") cannot contain the '" << ch << "' character" << std::endl;
             exit(EXIT_FAILURE);
@@ -1301,25 +1253,21 @@ Node & Symb(const char * symb, char symbType, int32_t width, int32_t nbShares, i
     return SymbInternal(s, symbType, width, nbShares, shareNum, origSecret, pseudoShareEq);
 }
 
-
 Node & SymbInternal(std::string symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
     // FIXME: check width ?
     return Node::SymbNode(symb, symbType, width, nbShares, shareNum, origSecret, pseudoShareEq);
 }
 
-
 Node & SymbInternal(std::string symb, char symbType, int32_t width) {
     return SymbInternal(symb, symbType, width, 0, 0, NULL, NULL);
 }
-
 
 Node & Const(uint64_t * cst, int32_t nlimbs, int32_t width) {
     if (nlimbs == 1) {
         return Const(cst[0], width);
     }
     return Node::ConstNode(cst, nlimbs, width);
-} 
-
+}
 
 Node & Const(uint64_t cst, int32_t width, bool extendMSB) {
     // We want to accept constants in the interval [-2^(width - 1); 2^width - 1]
@@ -1357,12 +1305,9 @@ Node & Const(uint64_t cst, int32_t width, bool extendMSB) {
     }
 }
 
-
 Node & Str(const std::string & s) {
     return Node::StrNode(s);
 }
-
-
 
 Node & ConstNodeFromConcat(const std::vector<Node *> & children) {
     int32_t width = 0;
@@ -1422,7 +1367,6 @@ Node & ConstNodeFromConcat(const std::vector<Node *> & children) {
     return Const(res, nbLimbs, width);
 }
 
-
 Node & Concat(const std::vector<Node *> & children) {
     if (children.size() == 1) {
         return *children[0];
@@ -1430,7 +1374,7 @@ Node & Concat(const std::vector<Node *> & children) {
 
     if (propagateCstOnBuild()) {
         bool allChildrenCst = true;
-        for (const auto & child: children) {
+        for (const auto & child : children) {
             if (child->nature != CONST) {
                 allChildrenCst = false;
                 break;
@@ -1526,7 +1470,6 @@ Node & Concat(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, 
     return Concat({&n15, &n14, &n13, &n12, &n11, &n10, &n9, &n8, &n7, &n6, &n5, &n4, &n3, &n2, &n1, &n0});
 }
 
-
 /* Used also by simplify */
 /* FIXME: how to limit to the scope to internal uses? */
 Node & ConstNodeFromExtract(int32_t msb, int32_t lsb, const Node & n) {
@@ -1584,8 +1527,6 @@ Node & ConstNodeFromExtract(int32_t msb, int32_t lsb, const Node & n) {
     }
 }
 
-
-
 Node & Extract(Node & msbNode, Node & lsbNode, Node & child) {
     if (msbNode.nature != CONST || lsbNode.nature != CONST) {
         std::cerr << "*** Error: msb and lsb parameters of Extract must be integer constants" << std::endl;
@@ -1609,31 +1550,91 @@ Node & Extract(Node & msbNode, Node & lsbNode, Node & child) {
         return ConstNodeFromExtract(msb, lsb, child);
     }
 
+    if (simplifyExtractOnBuild()) {
+        if (lsb == 0 && msb == child.width - 1) {
+            return child;
+        }
+
+        if (child.op == EXTRACT) {
+            Node & gLsbNode = *child.children->at(1);
+            int32_t gLsb = (int32_t) gLsbNode.cst[0];
+            Node & gchild = *child.children->at(2);
+            return Extract(msb + gLsb, lsb + gLsb, gchild);
+        }
+
+        if (child.op == CONCAT) {
+            Node & concatNode = child;
+            int32_t startBitIdx = lsb;
+            int32_t removedBitsOnRight = 0;
+            int32_t i = 0;
+            while (concatNode.children->at(i)->width <= startBitIdx) {
+                Node & concatChild = *concatNode.children->at(i);
+                int32_t concatChildWidth = concatChild.width;
+                startBitIdx -= concatChildWidth;
+                removedBitsOnRight += concatChildWidth;
+                i += 1;
+            }
+
+            int32_t startChildIdx = i;
+            int32_t endBitIdx = msb - removedBitsOnRight;
+
+            i = startChildIdx;
+            int32_t currBitIdx = concatNode.children->at(i)->width - 1;
+            while (currBitIdx < endBitIdx) {
+                i += 1;
+                currBitIdx += concatNode.children->at(i)->width;
+            }
+            int32_t endChildIdx = i;
+
+            if (startChildIdx == endChildIdx) {
+                if (startBitIdx == 0 && endBitIdx == concatNode.children->at(startChildIdx)->width - 1) {
+                    return *concatNode.children->at(startChildIdx);
+                }
+                else {
+                    return Extract(endBitIdx, startBitIdx, *concatNode.children->at(startChildIdx));
+                }
+            }
+
+            if (startBitIdx == 0 && endBitIdx == currBitIdx) {
+                std::vector<Node *>::iterator it = concatNode.children->begin();
+                std::vector<Node *> concatChildren(it + startChildIdx, it + endChildIdx + 1);
+                return Concat(concatChildren);
+            }
+
+            if (startChildIdx > 0 || endChildIdx < (int32_t) concatNode.children->size() - 1) {
+                std::vector<Node *>::iterator it = concatNode.children->begin();
+                std::vector<Node *> concatChildren(it + startChildIdx, it + endChildIdx + 1);
+                Node & newConcatNode = Concat(concatChildren);
+                Node & newMsbNode = Node::ConstNodeAuto(endBitIdx);
+                Node & newLsbNode = Node::ConstNodeAuto(startBitIdx);
+                return Node::OpNode(EXTRACT, {&newMsbNode, &newLsbNode, &newConcatNode});
+            }
+        }
+    }
+
     if (msb == lsb and child.extractBit[lsb] != NULL) {
         return *child.extractBit[lsb];
     }
 
     Node & n = Node::OpNode(EXTRACT, {&msbNode, &lsbNode, &child});
     if (msb == lsb) {
-        #if MEMORY_STRATEGY == DELETE_NODES
-            if (!Node::modeTempNode || Node::toDelete.contains(&child) || !Node::toDelete.contains(&n)) {
-                child.extractBit[lsb] = &n;
-            }
-        #else
+#if MEMORY_STRATEGY == DELETE_NODES
+        if (!Node::modeTempNode || Node::toDelete.contains(&child) || !Node::toDelete.contains(&n)) {
             child.extractBit[lsb] = &n;
-        #endif
+        }
+#else
+        child.extractBit[lsb] = &n;
+#endif
     }
 
     return n;
 }
-
 
 Node & Extract(int32_t msb, int32_t lsb, Node & child) {
     Node & msbNode = Const((uint64_t) msb, bit_width((uint64_t) msb));
     Node & lsbNode = Const((uint64_t) lsb, bit_width((uint64_t) lsb));
     return Extract(msbNode, lsbNode, child);
 }
-
 
 Node & ConstNodeFromZeroExt(int32_t numZeros, Node & n) {
     assert(n.nature == CONST);
@@ -1676,7 +1677,6 @@ Node & ConstNodeFromZeroExt(int32_t numZeros, Node & n) {
     return Const(res, nbLimbs, width);
 }
 
-
 Node & ZeroExt(Node & numZeros, Node & child) {
     if (numZeros.nature != CONST) {
         std::cerr << "*** Error: numZeros parameter of ZeroExt must be an integer constant" << std::endl;
@@ -1684,7 +1684,6 @@ Node & ZeroExt(Node & numZeros, Node & child) {
     }
     return ZeroExt(numZeros.cst[0], child);
 }
-
 
 Node & ZeroExt(int32_t numZeros, Node & child) {
     if (numZeros <= 0) {
@@ -1699,7 +1698,6 @@ Node & ZeroExt(int32_t numZeros, Node & child) {
     return Node::OpNode(CONCAT, {&child, &Const(0ULL, numZeros)});
 }
 
-
 Node & SignExt(Node & numSignBits, Node & child) {
     if (numSignBits.nature != CONST) {
         std::cerr << "*** Error: numSignBits parameter of SignExt must be an integer constant" << std::endl;
@@ -1707,7 +1705,6 @@ Node & SignExt(Node & numSignBits, Node & child) {
     }
     return SignExt(numSignBits.cst[0], child);
 }
-
 
 Node & SignExt(int32_t numSignBits, Node & child) {
     if (numSignBits <= 0) {
@@ -1768,11 +1765,10 @@ Node & SignExt(int32_t numSignBits, Node & child) {
     return Node::OpNode(CONCAT, childrenList);
 }
 
-
 Node & GMul(std::vector<Node *> children) {
     assert(children.size() >= 2);
     bool allChildrenCst = true;
-    for (auto c: children) {
+    for (auto c : children) {
         if (c->nature != CONST) {
             allChildrenCst = false;
             break;
@@ -1787,7 +1783,6 @@ Node & GMul(std::vector<Node *> children) {
     }
     return Node::OpNode(GMUL, children);
 }
-
 
 /*
 template <typename T> Node & GMul(T t) {
@@ -1837,15 +1832,12 @@ Node & GMul(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, No
     return GMul({&n0, &n1, &n2, &n3, &n4, &n5, &n6, &n7});
 }
 
-
-
 Node & GPow(Node & c0, Node & c1) {
     if (propagateCstOnBuild() and c0.nature == CONST and c1.nature == CONST) {
         return gpow(c0, c1);
     }
     return Node::OpNode(GPOW, {&c0, &c1});
 }
-
 
 Node & GLog(Node & child) {
     if (propagateCstOnBuild() and child.nature == CONST) {
@@ -1854,7 +1846,6 @@ Node & GLog(Node & child) {
     return Node::OpNode(GLOG, {&child});
 }
 
-
 Node & GExp(Node & child) {
     if (propagateCstOnBuild() and child.nature == CONST) {
         return gexp(child);
@@ -1862,26 +1853,20 @@ Node & GExp(Node & child) {
     return Node::OpNode(GEXP, {&child});
 }
 
-
-
-
 Node & imul(Node & n0, Node & n1) {
     assert(n0.width == n1.width);
     return Const(imulInt(n0.cst[0], n1.cst[0], n0.width), n0.width);
 }
-
 
 uint64_t imulInt(uint64_t a, uint64_t b, int32_t w) {
     assert(w <= 64);
     return w == 64 ? (a * b) : (a * b) % (1ULL << w);
 }
 
-
 Node & ipow(Node & n0, Node & n1) {
     assert(n0.width == n1.width);
     return Const(ipowInt(n0.cst[0], n1.cst[0], n0.width), n0.width);
 }
-
 
 uint64_t ipowInt(uint64_t a, uint64_t b, int32_t w) {
     assert(w <= 64);
@@ -1903,13 +1888,10 @@ uint64_t ipowInt(uint64_t a, uint64_t b, int32_t w) {
     }
 }
 
-
-
 Node & gmul(Node & n0, Node & n1) {
     assert(n0.width == 8 and n1.width == 8);
     return Const(gmulInt(n0.cst[0], n1.cst[0]), 8);
 }
-
 
 uint64_t gmulInt(uint64_t a, uint64_t b) {
     assert(a >= 0 and a < 256);
@@ -1924,12 +1906,10 @@ uint64_t gmulInt(uint64_t a, uint64_t b) {
     return p;
 }
 
-
 Node & gpow(Node & n0, Node & n1) {
     assert(n0.width == 8 and n1.width == 8);
     return Const(gpowInt(n0.cst[0], n1.cst[0]), 8);
 }
-
 
 uint64_t gpowInt(uint64_t a, uint64_t b) {
     assert(a >= 0 and a < 256);
@@ -1942,24 +1922,20 @@ uint64_t gpowInt(uint64_t a, uint64_t b) {
     return p;
 }
 
-
 Node & gexp(Node & n) {
     assert(n.width == 8);
     return Const(gexpInt(n.cst[0]), 8);
 }
-
 
 uint64_t gexpInt(uint64_t a) {
     assert(a >= 0 and a < 256);
     return gpowInt(Node::gfBase, a);
 }
 
-
 Node & glog(Node & n) {
     assert(n.width == 8);
     return Const(glogInt(n.cst[0]), 8);
 }
-
 
 uint64_t glogInt(uint64_t a) {
     // ...
@@ -1979,7 +1955,6 @@ uint64_t glogInt(uint64_t a) {
     }
 }
 
-
 bool isZero(uint64_t * v, int32_t width) {
     int32_t nbLimbs = width / 64;
     if (nbLimbs * 64 != width) {
@@ -1992,7 +1967,6 @@ bool isZero(uint64_t * v, int32_t width) {
     }
     return true;
 }
-
 
 bool isAllOne(uint64_t * v, int32_t width) {
     int32_t nbLimbs = width / 64;
@@ -2014,8 +1988,6 @@ bool isAllOne(uint64_t * v, int32_t width) {
 
 } // namespace vmsi
 
-
-
 /*
 void expandConcat() {
     Node & p = Symb("p", 'P', 1, 0, NULL, NULL);
@@ -2023,6 +1995,3 @@ void expandConcat() {
     (void) n;
 }
 */
-
-
-
