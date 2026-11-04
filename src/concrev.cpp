@@ -8,36 +8,42 @@ Author(s): Quentin L. Meunier
 
 // Concrete Evaluation
 
-#include <cstdlib>
-#include <cassert>
-#include <random>
 #include <algorithm>
+#include <bit>
+#include <cassert>
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <random>
+#include <set>
+#include <string>
+#include <vector>
 
-
+#include "arrayexp.hpp"
 #include "concrev.hpp"
 #include "node.hpp"
+#include "simplify.hpp"
 #include "utils.hpp"
 #include "utils_private.hpp"
-#include "arrayexp.hpp"
-#include "simplify.hpp"
 
 
 namespace vmsi {
+
 
 int32_t getSymbolicBitsNum(Node & n) {
     std::set<Node *> allVars;
     for (const auto & [k, v] : n.maskingMaskOcc) {
         allVars.insert(k);
     }
-    #if SEL_MSK_W_NON_MSKNG_OCC
+#if SEL_MSK_W_NON_MSKNG_OCC
     for (const auto & [k, v] : n.otherMaskOcc) {
         allVars.insert(k);
     }
-    #else
+#else
     for (const auto & m : n.otherMaskOcc) {
         allVars.insert(m);
     }
-    #endif
+#endif
     for (const auto & k : n.secretVarOcc) {
         allVars.insert(k);
     }
@@ -63,15 +69,15 @@ int32_t getMaxSymbVarWidth(Node & n) {
     for (const auto & [k, v] : n.maskingMaskOcc) {
         allVars.insert(k);
     }
-    #if SEL_MSK_W_NON_MSKNG_OCC
+#if SEL_MSK_W_NON_MSKNG_OCC
     for (const auto & [k, v] : n.otherMaskOcc) {
         allVars.insert(k);
     }
-    #else
+#else
     for (const auto & m : n.otherMaskOcc) {
         allVars.insert(m);
     }
-    #endif
+#endif
     for (const auto & k : n.secretVarOcc) {
         allVars.insert(k);
     }
@@ -94,9 +100,6 @@ int32_t getMaxSymbVarWidth(Node & n) {
 }
 
 
-
-
-// FIXME: propagate in verif_msi (single bit variables for enumeration)
 // All variables in exps must be single bit
 static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVarsVec) {
     std::set<Node *> allVars;
@@ -104,15 +107,15 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
         for (const auto & [k, v] : e->maskingMaskOcc) {
             allVars.insert(k);
         }
-        #if SEL_MSK_W_NON_MSKNG_OCC
+#if SEL_MSK_W_NON_MSKNG_OCC
         for (const auto & [k, v] : e->otherMaskOcc) {
             allVars.insert(k);
         }
-        #else
+#else
         for (const auto & m : e->otherMaskOcc) {
             allVars.insert(m);
         }
-        #endif
+#endif
         for (const auto & k : e->secretVarOcc) {
             allVars.insert(k);
         }
@@ -127,7 +130,6 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
     }
 
     for (const auto & n : allVars) {
-        //std::cout << "# Var : " << *n->symb << std::endl;
         if (n->width != 1) {
             std::cerr << "*** Internal Error: variables found for exhaustive evaluation should all be 1-bit wide" << std::endl;
             assert(false);
@@ -135,19 +137,13 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
     }
 
     std::copy(allVars.begin(), allVars.end(), std::back_inserter(allVarsVec));
-    std::sort(allVarsVec.begin(), allVarsVec.end(), [](Node * a, Node * b) {
-            return a->symb->compare(*b->symb) < 0;
-    });
-
+    std::sort(allVarsVec.begin(), allVarsVec.end(), [](Node * a, Node * b) { return a->symb->compare(*b->symb) < 0; });
 }
 
 
 static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map<Node *, Node *> & expCache) {
-    //std::cout << "getExpValue(" << node << ")" << std::endl;
-
     if (node.nature == SYMB) {
         if (m.contains(&node)) {
-            //std::cout << "    return " << *m[&node] << std::endl;
             return *m[&node];
         }
 
@@ -155,21 +151,17 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
         if (pos != std::string::npos) {
             std::string symb = node.symb->substr(0, pos);
             Node & n = *Node::symb2node[symb];
-            //std::cout << "    n : " << n << std::endl;
             int32_t bit = std::stoi(node.symb->substr(pos + 1));
             if (m.contains(&n)) {
-                //std::cout << "    m contains " << n << std::endl;
-                //std::cout << "    return " << Extract(bit, bit, *m[&n]) << std::endl;
                 return Extract(bit, bit, *m[&n]);
             }
         }
-        
+
         std::cout << "*** Error: Value for symbol " << node << " not specified" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     if (node.nature == CONST) {
-        //std::cout << "    return " << node << std::endl;
         return node;
     }
 
@@ -178,7 +170,6 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
     }
 
     if (expCache.contains(&node)) {
-        //std::cout << "    return " << *expCache[&node] << std::endl;
         return *expCache[&node];
     }
 
@@ -187,7 +178,7 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
     for (const auto & child : *node.children) {
         newChildren.push_back(&getExpValueRec(*child, m, expCache));
     }
- 
+
     Node * res;
     if (op == EXTRACT) {
         res = &Extract(*newChildren[0], *newChildren[1], *newChildren[2]);
@@ -215,7 +206,9 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
     }
     else if (op == ARRAY) {
         if (ArrayExp::allArrays[*newChildren[0]->strn]->content == NULL) {
-            std::cerr  << "*** Error: concrete evaluation of an array access is only possible with an initialized content" << std::endl;
+            std::cerr << "*** Error: concrete evaluation of an array access is only "
+                         "possible with an initialized content"
+                      << std::endl;
             exit(EXIT_FAILURE);
         }
         res = &Const(ArrayExp::allArrays[*newChildren[0]->strn]->getContent(newChildren[1]->cst[0]), ArrayExp::allArrays[*newChildren[0]->strn]->outWidth);
@@ -298,10 +291,8 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
     }
 
     expCache[&node] = res;
-    //std::cout << "    return " << *res << std::endl;
     return *res;
 }
-
 
 
 Node & getExpValue(Node & node, std::map<Node *, Node *> & m) {
@@ -310,41 +301,508 @@ Node & getExpValue(Node & node, std::map<Node *, Node *> & m) {
 }
 
 
+// Fast topological instruction set for expressions <= 64 bits
+enum class FastOp : uint8_t {
+    VAR,
+    CONST,
+    BXOR,
+    BAND,
+    BOR,
+    BNOT,
+    LSHR,
+    LSHL,
+    ASHR,
+    PLUS,
+    IMUL,
+    GMUL,
+    UMINUS,
+    EXTRACT,
+    ZEXT,
+    SEXT,
+    CONCAT,
+    ARRAY
+};
 
-static bool compareExpsWithExevRec(Node & e0, Node & e1, std::vector<Node *> & allVars, int32_t idx, std::map<Node *, Node *> & m, std::map<Node *, Node *> & res, uint64_t * v0, uint64_t * v1) {
+
+struct FastInstr {
+    FastOp op;
+    int32_t outReg = -1;
+    int32_t inReg1 = -1;
+    int32_t inReg2 = -1;
+    int32_t width = 0;
+    uint64_t cstVal = 0;
+    const std::string * arrayName = nullptr;
+    std::vector<int32_t> multiIn;
+    std::vector<int32_t> childWidths;
+};
+
+
+class FastCircuit {
+  public:
+    std::vector<FastInstr> code;
+    std::map<Node *, int32_t> var2reg;
+    std::map<Node *, int32_t> node2reg;
+    int32_t numRegs = 0;
+    int32_t outReg = -1;
+    bool isBitsliceable = true;
+
+    int32_t compileNode(Node & n) {
+        auto it = node2reg.find(&n);
+        if (it != node2reg.end()) {
+            return it->second;
+        }
+
+        if (n.nature == CONST) {
+            int32_t r = numRegs++;
+            node2reg[&n] = r;
+            FastInstr instr;
+            instr.op = FastOp::CONST;
+            instr.outReg = r;
+            instr.width = n.width;
+            instr.cstVal = (n.nlimbs > 1) ? n.cst[0] : n.inlineCst;
+            code.push_back(instr);
+            return r;
+        }
+
+        if (n.nature == STR) {
+            int32_t r = numRegs++;
+            node2reg[&n] = r;
+            FastInstr instr;
+            instr.op = FastOp::CONST;
+            instr.outReg = r;
+            instr.width = 0;
+            instr.cstVal = 0;
+            instr.arrayName = n.strn;
+            code.push_back(instr);
+            isBitsliceable = false;
+            return r;
+        }
+
+        if (n.nature == SYMB) {
+            auto itv = var2reg.find(&n);
+            if (itv != var2reg.end()) {
+                node2reg[&n] = itv->second;
+                return itv->second;
+            }
+            int32_t r = numRegs++;
+            var2reg[&n] = r;
+            node2reg[&n] = r;
+            FastInstr instr;
+            instr.op = FastOp::VAR;
+            instr.outReg = r;
+            instr.width = n.width;
+            code.push_back(instr);
+            return r;
+        }
+
+        std::vector<int32_t> childRegs;
+        std::vector<int32_t> childWidths;
+        if (n.children != nullptr) {
+            for (Node * c : *n.children) {
+                childRegs.push_back(compileNode(*c));
+                childWidths.push_back(c->width);
+            }
+        }
+
+        int32_t r = numRegs++;
+        node2reg[&n] = r;
+        FastInstr instr;
+        instr.outReg = r;
+        instr.width = n.width;
+
+        switch (n.op) {
+        case BXOR:
+            instr.op = FastOp::BXOR;
+            instr.multiIn = std::move(childRegs);
+            break;
+        case BAND:
+            instr.op = FastOp::BAND;
+            instr.multiIn = std::move(childRegs);
+            break;
+        case BOR:
+            instr.op = FastOp::BOR;
+            instr.multiIn = std::move(childRegs);
+            break;
+        case BNOT:
+            instr.op = FastOp::BNOT;
+            instr.inReg1 = childRegs[0];
+            break;
+        case LSHR:
+        case SLSHR:
+            instr.op = FastOp::LSHR;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            isBitsliceable = false;
+            break;
+        case LSHL:
+        case SLSHL:
+            instr.op = FastOp::LSHL;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            isBitsliceable = false;
+            break;
+        case ASHR:
+        case SASHR:
+            instr.op = FastOp::ASHR;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            isBitsliceable = false;
+            break;
+        case PLUS:
+            instr.op = FastOp::PLUS;
+            instr.multiIn = std::move(childRegs);
+            isBitsliceable = false;
+            break;
+        case IMUL:
+            instr.op = FastOp::IMUL;
+            instr.multiIn = std::move(childRegs);
+            isBitsliceable = false;
+            break;
+        case GMUL:
+            instr.op = FastOp::GMUL;
+            instr.multiIn = std::move(childRegs);
+            isBitsliceable = false;
+            break;
+        case UMINUS:
+            instr.op = FastOp::UMINUS;
+            instr.inReg1 = childRegs[0];
+            isBitsliceable = false;
+            break;
+        case EXTRACT:
+            instr.op = FastOp::EXTRACT;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            instr.multiIn = {childRegs[2]};
+            if (n.width != 1 || childWidths[2] != 1) {
+                isBitsliceable = false;
+            }
+            break;
+        case ZEXT:
+            instr.op = FastOp::ZEXT;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            isBitsliceable = false;
+            break;
+        case SEXT:
+            instr.op = FastOp::SEXT;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            isBitsliceable = false;
+            break;
+        case CONCAT:
+            instr.op = FastOp::CONCAT;
+            instr.multiIn = std::move(childRegs);
+            instr.childWidths = std::move(childWidths);
+            isBitsliceable = false;
+            break;
+        case ARRAY:
+            instr.op = FastOp::ARRAY;
+            instr.inReg1 = childRegs[0];
+            instr.inReg2 = childRegs[1];
+            instr.arrayName = (*n.children)[0]->strn;
+            isBitsliceable = false;
+            break;
+        default:
+            std::cerr << "Unsupported op: " << n.op << std::endl;
+            assert(false);
+        }
+        code.push_back(instr);
+        return r;
+    }
+
+
+    void compile(Node & root) {
+        code.clear();
+        var2reg.clear();
+        node2reg.clear();
+        numRegs = 0;
+        isBitsliceable = (root.width == 1);
+        outReg = compileNode(root);
+    }
+
+
+    inline uint64_t eval_scalar(uint64_t * regs) const {
+        for (const auto & instr : code) {
+            switch (instr.op) {
+            case FastOp::VAR:
+                break;
+            case FastOp::CONST:
+                regs[instr.outReg] = instr.cstVal;
+                break;
+            case FastOp::BXOR: {
+                uint64_t val = 0;
+                for (int32_t inR : instr.multiIn) {
+                    val ^= regs[inR];
+                }
+                regs[instr.outReg] = val;
+                break;
+            }
+            case FastOp::BAND: {
+                uint64_t val = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
+                for (int32_t inR : instr.multiIn) {
+                    val &= regs[inR];
+                }
+                regs[instr.outReg] = val;
+                break;
+            }
+            case FastOp::BOR: {
+                uint64_t val = 0;
+                for (int32_t inR : instr.multiIn) {
+                    val |= regs[inR];
+                }
+                regs[instr.outReg] = val;
+                break;
+            }
+            case FastOp::BNOT: {
+                uint64_t mask = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
+                regs[instr.outReg] = (~regs[instr.inReg1]) & mask;
+                break;
+            }
+            case FastOp::LSHR:
+                regs[instr.outReg] = regs[instr.inReg1] >> regs[instr.inReg2];
+                break;
+            case FastOp::LSHL: {
+                uint64_t mask = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
+                regs[instr.outReg] = (regs[instr.inReg1] << regs[instr.inReg2]) & mask;
+                break;
+            }
+            case FastOp::ASHR: {
+                uint64_t v = regs[instr.inReg1];
+                int32_t sh = regs[instr.inReg2];
+                int32_t w = instr.width;
+                bool sign = (v >> (w - 1)) & 1;
+                uint64_t res = v >> sh;
+                if (sign && sh > 0) {
+                    uint64_t signBits = (sh >= 64) ? ~0ULL : ((1ULL << sh) - 1);
+                    res |= (signBits << (w - sh));
+                }
+                uint64_t mask = (w == 64) ? ~0ULL : ((1ULL << w) - 1);
+                regs[instr.outReg] = res & mask;
+                break;
+            }
+            case FastOp::PLUS: {
+                uint64_t sum = 0;
+                for (int32_t inR : instr.multiIn) {
+                    sum += regs[inR];
+                }
+                uint64_t mask = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
+                regs[instr.outReg] = sum & mask;
+                break;
+            }
+            case FastOp::IMUL: {
+                uint64_t prod = 1;
+                for (int32_t inR : instr.multiIn) {
+                    prod *= regs[inR];
+                }
+                uint64_t mask = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
+                regs[instr.outReg] = prod & mask;
+                break;
+            }
+            case FastOp::GMUL: {
+                uint64_t prod = 1;
+                for (int32_t inR : instr.multiIn) {
+                    prod = gmulInt(prod, regs[inR]);
+                }
+                regs[instr.outReg] = prod & 0xFF;
+                break;
+            }
+            case FastOp::UMINUS: {
+                uint64_t mask = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
+                regs[instr.outReg] = (-regs[instr.inReg1]) & mask;
+                break;
+            }
+            case FastOp::EXTRACT: {
+                uint64_t high = regs[instr.inReg1];
+                uint64_t low = regs[instr.inReg2];
+                uint64_t val = regs[instr.multiIn[0]];
+                uint64_t w = high - low + 1;
+                uint64_t mask = (w == 64) ? ~0ULL : ((1ULL << w) - 1);
+                regs[instr.outReg] = (val >> low) & mask;
+                break;
+            }
+            case FastOp::ZEXT:
+                regs[instr.outReg] = regs[instr.inReg2];
+                break;
+            case FastOp::SEXT: {
+                uint64_t val = regs[instr.inReg2];
+                int32_t origW = instr.inReg1;
+                bool sign = (val >> (origW - 1)) & 1;
+                if (sign) {
+                    uint64_t top = (1ULL << instr.width) - (1ULL << origW);
+                    val |= top;
+                }
+                regs[instr.outReg] = val;
+                break;
+            }
+            case FastOp::CONCAT: {
+                uint64_t val = 0;
+                int32_t shift = 0;
+                for (int i = (int) instr.multiIn.size() - 1; i >= 0; --i) {
+                    int32_t inR = instr.multiIn[i];
+                    int32_t w = instr.childWidths[i];
+                    uint64_t mask = (w == 64) ? ~0ULL : ((1ULL << w) - 1);
+                    val |= ((regs[inR] & mask) << shift);
+                    shift += w;
+                }
+                regs[instr.outReg] = val;
+                break;
+            }
+            case FastOp::ARRAY: {
+                auto & arr = ArrayExp::allArrays[*instr.arrayName];
+                regs[instr.outReg] = arr->getContent(regs[instr.inReg2]);
+                break;
+            }
+            }
+        }
+        return regs[outReg];
+    }
+
+
+    inline uint64_t eval_bitsliced(uint64_t * regs) const {
+        for (const auto & instr : code) {
+            switch (instr.op) {
+            case FastOp::VAR:
+                break;
+            case FastOp::CONST:
+                regs[instr.outReg] = instr.cstVal ? ~0ULL : 0ULL;
+                break;
+            case FastOp::BXOR: {
+                uint64_t v = 0;
+                for (int32_t inR : instr.multiIn) {
+                    v ^= regs[inR];
+                }
+                regs[instr.outReg] = v;
+                break;
+            }
+            case FastOp::BAND: {
+                uint64_t v = ~0ULL;
+                for (int32_t inR : instr.multiIn) {
+                    v &= regs[inR];
+                }
+                regs[instr.outReg] = v;
+                break;
+            }
+            case FastOp::BOR: {
+                uint64_t v = 0;
+                for (int32_t inR : instr.multiIn) {
+                    v |= regs[inR];
+                }
+                regs[instr.outReg] = v;
+                break;
+            }
+            case FastOp::BNOT:
+                regs[instr.outReg] = ~regs[instr.inReg1];
+                break;
+            case FastOp::EXTRACT:
+                regs[instr.outReg] = regs[instr.multiIn[0]];
+                break;
+            default:
+                assert(false);
+            }
+        }
+        return regs[outReg];
+    }
+};
+
+
+static void fastGetDistrib(const FastCircuit & fc, const std::vector<int32_t> & maskRegs, uint64_t * regs, std::vector<uint64_t> & distrib, int32_t outWidth) {
+    int32_t numMasks = (int32_t) maskRegs.size();
+    if (fc.isBitsliceable && outWidth == 1) {
+        distrib.assign(2, 0);
+        const uint64_t PATTERNS[6] = {0xAAAAAAAAAAAAAAAAULL, 0xCCCCCCCCCCCCCCCCULL,
+                                      0xF0F0F0F0F0F0F0F0ULL, 0xFF00FF00FF00FF00ULL,
+                                      0xFFFF0000FFFF0000ULL, 0xFFFFFFFF00000000ULL};
+
+        if (numMasks == 0) {
+            uint64_t out = fc.eval_bitsliced(regs);
+            if (out & 1) {
+                distrib[1] = 1;
+            }
+            else {
+                distrib[0] = 1;
+            }
+            return;
+        }
+
+        if (numMasks <= 6) {
+            uint64_t activeCount = 1ULL << numMasks;
+            uint64_t activeMask = (activeCount == 64) ? ~0ULL : ((1ULL << activeCount) - 1);
+            for (int32_t i = 0; i < numMasks; i += 1) {
+                regs[maskRegs[i]] = PATTERNS[i] & activeMask;
+            }
+            uint64_t out = fc.eval_bitsliced(regs) & activeMask;
+            uint64_t ones = (uint64_t) std::popcount(out);
+            distrib[1] = ones;
+            distrib[0] = activeCount - ones;
+            return;
+        }
+
+        uint64_t numBlocks = 1ULL << (numMasks - 6);
+        for (int32_t i = 0; i < 6; i += 1) {
+            regs[maskRegs[i]] = PATTERNS[i];
+        }
+        for (uint64_t b = 0; b < numBlocks; b += 1) {
+            for (int32_t i = 6; i < numMasks; i += 1) {
+                regs[maskRegs[i]] = ((b >> (i - 6)) & 1ULL) ? ~0ULL : 0ULL;
+            }
+            uint64_t out = fc.eval_bitsliced(regs);
+            uint64_t ones = (uint64_t) std::popcount(out);
+            distrib[1] += ones;
+            distrib[0] += (64 - ones);
+        }
+        return;
+    }
+
+    // Scalar fallback
+    uint64_t total = 1ULL << numMasks;
+    distrib.assign(1ULL << outWidth, 0);
+    for (uint64_t v = 0; v < total; v += 1) {
+        for (int32_t i = 0; i < numMasks; i += 1) {
+            regs[maskRegs[i]] = (v >> i) & 1ULL;
+        }
+        uint64_t out = fc.eval_scalar(regs);
+        distrib[out] += 1;
+    }
+}
+
+
+static bool fastCompareExpsWithExevRec(const FastCircuit & fc0, const FastCircuit & fc1, const std::vector<int32_t> & varRegs0, const std::vector<int32_t> & varRegs1, const std::vector<Node *> & allVars, int32_t idx, uint64_t * regs0, uint64_t * regs1, std::map<Node *, Node *> & res, uint64_t * v0, uint64_t * v1) {
     if (idx < (int32_t) allVars.size()) {
         Node & var = *allVars[idx];
+        int32_t r0 = varRegs0[idx];
+        int32_t r1 = varRegs1[idx];
         for (int64_t val = 0; val < (1LL << var.width); val += 1) {
-            m[&var] = &Const(val, var.width);
-            //std::cout << var << " = " << *m[&var] << std::endl;
-            bool retval = compareExpsWithExevRec(e0, e1, allVars, idx + 1, m, res, v0, v1);
+            if (r0 >= 0) {
+                regs0[r0] = val;
+            }
+            if (r1 >= 0) {
+                regs1[r1] = val;
+            }
+            bool retval = fastCompareExpsWithExevRec(fc0, fc1, varRegs0, varRegs1, allVars, idx + 1, regs0, regs1, res, v0, v1);
             if (!retval) {
                 return false;
             }
-            m[&var] = NULL;
         }
         return true;
     }
     else {
-        Node & n0 = getExpValue(e0, m);
-        //std::cout << "n0 : " << n0 << std::endl;
-        Node & n1 = getExpValue(e1, m);
-        //std::cout << "n1 : " << n1 << std::endl;
-        if (equivalence(n0, n1)) {
+        uint64_t val0 = fc0.eval_scalar(regs0);
+        uint64_t val1 = fc1.eval_scalar(regs1);
+        if (val0 == val1) {
             return true;
         }
         else {
-            res = m;
-            for (int32_t i = 0; i < n0.nlimbs; i += 1) {
-                v0[i] = n0.cst[i];
-                v1[i] = n1.cst[i];
+            for (size_t i = 0; i < allVars.size(); i += 1) {
+                uint64_t v = (varRegs0[i] >= 0) ? regs0[varRegs0[i]] : regs1[varRegs1[i]];
+                res[allVars[i]] = &Const(v, allVars[i]->width);
             }
+            v0[0] = val0;
+            v1[0] = val1;
             return false;
         }
     }
 }
 
- 
 
 bool compareExpsWithExev(Node & e0, Node & e1) {
     if (e0.width != e1.width) {
@@ -367,18 +825,33 @@ bool compareExpsWithExev(Node & e0, Node & e1, std::map<Node *, Node *> & res, u
         return false;
     }
     assert(e0.width <= 64);
-    
+
     Node & e0r = replaceSharesWithSecretsAndMasks(e0);
     Node & e1r = replaceSharesWithSecretsAndMasks(e1);
 
     Node & e0b = getBitDecomposition(e0r);
     Node & e1b = getBitDecomposition(e1r);
 
-    std::vector<Node *> exps {&e0b, &e1b};
+    std::vector<Node *> exps{&e0b, &e1b};
     std::vector<Node *> allVarsVec;
     getVarsList(exps, allVarsVec);
-    std::map<Node *, Node *> m;
-    compareExpsWithExevRec(e0b, e1b, allVarsVec, 0, m, res, v0, v1);
+
+    FastCircuit fc0;
+    FastCircuit fc1;
+    fc0.compile(e0b);
+    fc1.compile(e1b);
+
+    std::vector<int32_t> varRegs0;
+    std::vector<int32_t> varRegs1;
+    for (Node * v : allVarsVec) {
+        varRegs0.push_back(fc0.var2reg.contains(v) ? fc0.var2reg[v] : -1);
+        varRegs1.push_back(fc1.var2reg.contains(v) ? fc1.var2reg[v] : -1);
+    }
+
+    std::vector<uint64_t> regs0(fc0.numRegs, 0);
+    std::vector<uint64_t> regs1(fc1.numRegs, 0);
+
+    fastCompareExpsWithExevRec(fc0, fc1, varRegs0, varRegs1, allVarsVec, 0, regs0.data(), regs1.data(), res, v0, v1);
     return res.size() == 0;
 }
 
@@ -399,41 +872,55 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval) {
 
 
 bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *, Node *> & res, uint64_t * v0, uint64_t * v1) {
-    // Random Evaluations
-
-    //std::cout << "e0 : " << e0 << std::endl;
-    //std::cout << "e1 : " << e1 << std::endl;
     Node & e0r = replaceSharesWithSecretsAndMasks(e0);
     Node & e1r = replaceSharesWithSecretsAndMasks(e1);
 
     Node & e0b = getBitDecomposition(e0r);
     Node & e1b = getBitDecomposition(e1r);
 
-    std::vector<Node *> exps {&e0b, &e1b};
+    std::vector<Node *> exps{&e0b, &e1b};
     std::vector<Node *> allVarsVec;
     getVarsList(exps, allVarsVec);
-    std::map<Node *, Node *> m;
 
-    std::random_device rd;  // a seed source for the random number engine
-    std::mt19937 gen(rd()); // mersenne_twister_engine seeded with rd()
+    FastCircuit fc0;
+    FastCircuit fc1;
+    fc0.compile(e0b);
+    fc1.compile(e1b);
+
+    std::vector<int32_t> varRegs0;
+    std::vector<int32_t> varRegs1;
+    for (Node * v : allVarsVec) {
+        varRegs0.push_back(fc0.var2reg.contains(v) ? fc0.var2reg[v] : -1);
+        varRegs1.push_back(fc1.var2reg.contains(v) ? fc1.var2reg[v] : -1);
+    }
+
+    std::vector<uint64_t> regs0(fc0.numRegs, 0);
+    std::vector<uint64_t> regs1(fc1.numRegs, 0);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
     for (int32_t i = 0; i < nbEval; i += 1) {
-        m.clear();
-        for (const auto & v : allVarsVec) {
-            std::uniform_int_distribution<> distrib(0, (1ULL << v->width) - 1);
-            m.insert_or_assign(v, &Const(distrib(gen), v->width));
-            //std::cout << *v << " <- " << *m[v] << std::endl;
+        for (size_t vi = 0; vi < allVarsVec.size(); vi += 1) {
+            uint64_t val = gen() & 1ULL;
+            if (varRegs0[vi] >= 0) {
+                regs0[varRegs0[vi]] = val;
+            }
+            if (varRegs1[vi] >= 0) {
+                regs1[varRegs1[vi]] = val;
+            }
         }
 
-        Node & n0 = getExpValue(e0b, m);
-        //std::cout << "n0 : " << n0 << " (width = " << n0.width << ")" << std::endl;
-        Node & n1 = getExpValue(e1b, m);
-        //std::cout << "n1 : " << n1 << " (width = " << n1.width << ")" << std::endl;
-        if (!equivalence(n0, n1)) {
-            res = m;
-            for (int32_t i = 0; i < n0.nlimbs; i += 1) {
-                v0[i] = n0.cst[i];
-                v1[i] = n1.cst[i];
+        uint64_t val0 = fc0.eval_scalar(regs0.data());
+        uint64_t val1 = fc1.eval_scalar(regs1.data());
+        if (val0 != val1) {
+            res.clear();
+            for (size_t vi = 0; vi < allVarsVec.size(); vi += 1) {
+                uint64_t v = (varRegs0[vi] >= 0) ? regs0[varRegs0[vi]] : regs1[varRegs1[vi]];
+                res[allVarsVec[vi]] = &Const(v, allVarsVec[vi]->width);
             }
+            v0[0] = val0;
+            v1[0] = val1;
             return false;
         }
     }
@@ -441,75 +928,26 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
 }
 
 
-
-
-
-
-static void getDistribRefBis(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
-    if (idx < (int32_t) maskVars.size()) {
-        Node & var = *maskVars[idx];
-        assert(var.width == 1);
-        for (int64_t val = 0; val < (1LL << var.width); val += 1) {
-            m.insert_or_assign(&var, &Const(val, var.width));
-            getDistribRefBis(e0, distribRef, maskVars, idx + 1, m);
-        }
-    }
-    else {
-        uint64_t v = getExpValue(e0, m).cst[0];
-        distribRef[v] += 1;
-    }
-}
-
-
-static void getDistribRef(Node & e0, std::vector<Node *> & secretVars, std::vector<Node *> & maskVars, std::map<uint64_t, uint64_t> & distribRef, std::map<Node *, Node *> & m) {
-    for (const auto & k : secretVars) {
-        assert(k->width == 1);
-        m[k] = &Const(0, k->width);
-    }
-
-    for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
-        distribRef.insert_or_assign(v, 0);
-    }
-    getDistribRefBis(e0, distribRef, maskVars, 0, m);
-}
-
-
-static void getDistribWithExevRecBis(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
-    if (idx < (int32_t) maskVars.size()) {
-        Node & var = *maskVars[idx];
-        assert(var.width == 1);
-        for (int64_t val = 0; val < (1LL << var.width); val += 1) {
-            m.insert_or_assign(&var, &Const(val, var.width));
-            getDistribWithExevRecBis(e0, distrib, maskVars, idx + 1, m);
-        }
-    }
-    else {
-        uint64_t v = getExpValue(e0, m).cst[0];
-        distrib[v] += 1;
-    }
-}
-
-
-static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & distribRef, std::vector<Node *> & secretVars, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m, bool * rud) {
-    if (idx < (int32_t) secretVars.size()) {
-        Node & var = *secretVars[idx];
-        for (int64_t val = 0; val < (1LL << var.width); val += 1) {
-            m.insert_or_assign(&var, &Const(val, var.width));
-            bool sid = getDistribWithExevRec(e0, distribRef, secretVars, maskVars, idx + 1, m, rud);
-            if (!sid) {
+static bool fastGetDistribWithExevRec(const FastCircuit & fc, const std::vector<uint64_t> & distribRef, const std::vector<int32_t> & secretRegs, const std::vector<int32_t> & maskRegs, int32_t idx, uint64_t * regs, int32_t outWidth, bool * rud) {
+    if (idx < (int32_t) secretRegs.size()) {
+        int32_t r = secretRegs[idx];
+        if (r >= 0) {
+            regs[r] = 0;
+            if (!fastGetDistribWithExevRec(fc, distribRef, secretRegs, maskRegs, idx + 1, regs, outWidth, rud)) {
                 return false;
             }
+            regs[r] = (fc.isBitsliceable && outWidth == 1) ? ~0ULL : 1ULL;
+            return fastGetDistribWithExevRec(fc, distribRef, secretRegs, maskRegs, idx + 1, regs, outWidth, rud);
         }
-        return true;
+        else {
+            return fastGetDistribWithExevRec(fc, distribRef, secretRegs, maskRegs, idx + 1, regs, outWidth, rud);
+        }
     }
     else {
-        std::map<uint64_t, uint64_t> distrib;
-        for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
-            distrib.insert_or_assign(v, 0);
-        }
-        getDistribWithExevRecBis(e0, distrib, maskVars, 0, m);
+        std::vector<uint64_t> distrib;
+        fastGetDistrib(fc, maskRegs, regs, distrib, outWidth);
         *rud = true;
-        for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
+        for (size_t v = 0; v < distrib.size(); v += 1) {
             if (distrib[v] != distribRef[0]) {
                 *rud = false;
             }
@@ -523,27 +961,33 @@ static bool getDistribWithExevRec(Node & e0, std::map<uint64_t, uint64_t> & dist
 }
 
 
-
-static bool enumeratePublicVarsRec(Node & e0, std::vector<Node *> & publicVars, std::vector<Node *> & secretVars, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m, bool * rud) {
-    if (idx < (int32_t) publicVars.size()) {
-        Node & publicVar = *publicVars[idx];
-        assert(publicVar.width == 1);
-        for (int64_t val = 0; val < (1LL << publicVar.width); val += 1) {
-            m.insert_or_assign(&publicVar, &Const(val, publicVar.width));
-            bool sid = enumeratePublicVarsRec(e0, publicVars, secretVars, maskVars, idx + 1, m, rud);
-            if (!sid) {
+static bool fastEnumeratePublicVarsRec(const FastCircuit & fc, const std::vector<int32_t> & publicRegs, const std::vector<int32_t> & secretRegs, const std::vector<int32_t> & maskRegs, int32_t idx, uint64_t * regs, int32_t outWidth, bool * rud) {
+    if (idx < (int32_t) publicRegs.size()) {
+        int32_t r = publicRegs[idx];
+        if (r >= 0) {
+            regs[r] = 0;
+            if (!fastEnumeratePublicVarsRec(fc, publicRegs, secretRegs, maskRegs, idx + 1, regs, outWidth, rud)) {
                 return false;
             }
+            regs[r] = (fc.isBitsliceable && outWidth == 1) ? ~0ULL : 1ULL;
+            return fastEnumeratePublicVarsRec(fc, publicRegs, secretRegs, maskRegs, idx + 1, regs, outWidth, rud);
         }
-        return true;
+        else {
+            return fastEnumeratePublicVarsRec(fc, publicRegs, secretRegs, maskRegs, idx + 1, regs, outWidth, rud);
+        }
     }
     else {
-        // Computing distribution for each combination of values for public variables
-        std::map<uint64_t, uint64_t> distribRef;
-        getDistribRef(e0, secretVars, maskVars, distribRef, m);
-    
+        // Compute reference distribution with secrets = 0
+        for (int32_t sr : secretRegs) {
+            if (sr >= 0) {
+                regs[sr] = 0;
+            }
+        }
+        std::vector<uint64_t> distribRef;
+        fastGetDistrib(fc, maskRegs, regs, distribRef, outWidth);
+
         bool rudLocal;
-        bool res = getDistribWithExevRec(e0, distribRef, secretVars, maskVars, 0, m, &rudLocal);
+        bool res = fastGetDistribWithExevRec(fc, distribRef, secretRegs, maskRegs, 0, regs, outWidth, &rudLocal);
         if (!rudLocal || !res) {
             *rud = false;
         }
@@ -552,44 +996,46 @@ static bool enumeratePublicVarsRec(Node & e0, std::vector<Node *> & publicVars, 
 }
 
 
-
-
-
-
 bool getDistribWithExev(Node & e, bool * rud) {
     assert(e.width <= 64);
 
     secPropValidity(e, TPS);
     Node & e0 = getBitDecomposition(e);
-    
+
     std::vector<Node *> allVarsVec;
-    std::vector<Node *> exp {&e0};
+    std::vector<Node *> exp{&e0};
     getVarsList(exp, allVarsVec);
 
-    std::vector<Node *> secretVars;
-    std::vector<Node *> publicVars;
-    std::vector<Node *> maskVars;
+    FastCircuit fc;
+    fc.compile(e0);
+
+    std::vector<int32_t> secretRegs;
+    std::vector<int32_t> publicRegs;
+    std::vector<int32_t> maskRegs;
 
     for (const auto & v : allVarsVec) {
+        int32_t r = fc.var2reg.contains(v) ? fc.var2reg[v] : -1;
         if (v->symbType == 'S') {
-            secretVars.push_back(v);
+            if (r >= 0) {
+                secretRegs.push_back(r);
+            }
         }
         else if (v->symbType == 'P') {
-            publicVars.push_back(v);
+            if (r >= 0) {
+                publicRegs.push_back(r);
+            }
         }
         else {
             assert(v->symbType == 'M');
-            maskVars.push_back(v);
+            if (r >= 0) {
+                maskRegs.push_back(r);
+            }
         }
     }
-    //std::cout << "# getDistribWithExev:" << std::endl;
-    //std::cout << "#     Expression: " << e << std::endl;
-    //std::cout << "#     Modified expression: " << e0 << std::endl;
-    //std::cout << "#     enumerating on " << secretVars.size() + publicVars.size() + maskVars.size() << " bits" << std::endl;
 
     *rud = true;
-    std::map<Node *, Node *> m;
-    return enumeratePublicVarsRec(e0, publicVars, secretVars, maskVars, 0, m, rud);
+    std::vector<uint64_t> regs(fc.numRegs, 0);
+    return fastEnumeratePublicVarsRec(fc, publicRegs, secretRegs, maskRegs, 0, regs.data(), e0.width, rud);
 }
 
 
@@ -599,64 +1045,31 @@ bool isTPSWithExev(Node & e) {
 }
 
 
-/////////// NI Test //////////
-
-
-
-static void getDistribRec(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
-    if (idx < (int32_t) maskVars.size()) {
-        Node & var = *maskVars[idx];
-        assert(var.width == 1);
-        for (int64_t val = 0; val < (1LL << var.width); val += 1) {
-            m.insert_or_assign(&var, &Const(val, var.width));
-            getDistribRec(e0, distrib, maskVars, idx + 1, m);
+// Returns true if the share s is effective, i.e. if it has no impact on the exp
+// distribution, false otherwise
+static bool fastShareIsEffective(const FastCircuit & fc, const std::vector<int32_t> & sharesWithFixedValRegs, int32_t sReg, const std::vector<int32_t> & maskRegs, int32_t idx, uint64_t * regs, int32_t outWidth) {
+    if (idx < (int32_t) sharesWithFixedValRegs.size()) {
+        int32_t r = sharesWithFixedValRegs[idx];
+        regs[r] = 0;
+        if (fastShareIsEffective(fc, sharesWithFixedValRegs, sReg, maskRegs, idx + 1, regs, outWidth)) {
+            return true;
         }
+        regs[r] = (fc.isBitsliceable && outWidth == 1) ? ~0ULL : 1ULL;
+        return fastShareIsEffective(fc, sharesWithFixedValRegs, sReg, maskRegs, idx + 1, regs, outWidth);
     }
     else {
-        uint64_t v = getExpValue(e0, m).cst[0];
-        distrib[v] += 1;
-    }
-}
+        std::vector<uint64_t> distrib0;
+        std::vector<uint64_t> distrib1;
 
+        regs[sReg] = 0;
+        fastGetDistrib(fc, maskRegs, regs, distrib0, outWidth);
 
-static void getDistrib(Node & e0, std::map<uint64_t, uint64_t> & distrib, std::vector<Node *> & maskVars, std::map<Node *, Node *> & m) {
-    for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
-        distrib.insert_or_assign(v, 0);
-    }
-    getDistribRec(e0, distrib, maskVars, 0, m);
-}
+        regs[sReg] = (fc.isBitsliceable && outWidth == 1) ? ~0ULL : 1ULL;
+        fastGetDistrib(fc, maskRegs, regs, distrib1, outWidth);
 
-
-// Returns true if the share s is effective, i.e. if it has no impact on the exp distribution, false otherwise
-static bool shareIsEffective(Node & e0, std::vector<Node *> & sharesWithFixedVal, Node & s, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m) {
-    // Enumerating on relevant shares except the tested share
-    if (idx < (int32_t) sharesWithFixedVal.size()) {
-        Node & shareWithFixedVal = *sharesWithFixedVal[idx];
-        assert(shareWithFixedVal.width == 1);
-        for (int64_t val = 0; val < (1LL << shareWithFixedVal.width); val += 1) {
-            m.insert_or_assign(&shareWithFixedVal, &Const(val, shareWithFixedVal.width));
-            bool isEffective = shareIsEffective(e0, sharesWithFixedVal, s, maskVars, idx + 1, m);
-            if (isEffective) {
-                return true;
-            }
-        }
-        return false;
-    }
-    else {
-        // Computing distribution for both values of the tested relevant share
-        std::map<uint64_t, uint64_t> distrib0;
-        std::map<uint64_t, uint64_t> distrib1;
-
-        assert(s.width == 1);
-        m.insert_or_assign(&s, &Const(0, 1));
-        getDistrib(e0, distrib0, maskVars, m);
-        m.insert_or_assign(&s, &Const(1, 1));
-        getDistrib(e0, distrib1, maskVars, m);
-
-        for (int64_t v = 0; v < (1LL << e0.width); v += 1) {
+        for (size_t v = 0; v < distrib0.size(); v += 1) {
             if (distrib0[v] != distrib1[v]) {
                 return true;
-                break;
             }
         }
         return false;
@@ -664,28 +1077,29 @@ static bool shareIsEffective(Node & e0, std::vector<Node *> & sharesWithFixedVal
 }
 
 
-static void getEffectiveShares(Node & e0, std::vector<Node *> & publicVars, std::vector<Node *> & shareVars, std::vector<Node *> & maskVars, int32_t idx, std::map<Node *, Node *> & m, std::set<Node *> & effectiveShares) {
-    // Enumerating on public variables and non relevant shares
-    if (idx < (int32_t) publicVars.size()) {
-        Node & publicVar = *publicVars[idx];
-        assert(publicVar.width == 1);
-        for (int64_t val = 0; val < (1LL << publicVar.width); val += 1) {
-            m.insert_or_assign(&publicVar, &Const(val, publicVar.width));
-            getEffectiveShares(e0, publicVars, shareVars, maskVars, idx + 1, m, effectiveShares);
-        }
+static void fastGetEffectiveShares(const FastCircuit & fc, const std::vector<int32_t> & publicRegs, const std::vector<Node *> & shareVars, const std::vector<int32_t> & maskRegs, int32_t idx, uint64_t * regs, int32_t outWidth, std::set<Node *> & effectiveShares) {
+    if (idx < (int32_t) publicRegs.size()) {
+        int32_t r = publicRegs[idx];
+        regs[r] = 0;
+        fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, idx + 1, regs, outWidth, effectiveShares);
+        regs[r] = (fc.isBitsliceable && outWidth == 1) ? ~0ULL : 1ULL;
+        fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, idx + 1, regs, outWidth, effectiveShares);
     }
     else {
-        // For each relevant share, we compute its effectiveness w.r.t masks for each valuation of other relevant shares
-        std::vector<Node *> sharesWithFixedVal;
-        for (const auto & s : shareVars) {
-            if (not effectiveShares.contains(s)) {
+        std::vector<int32_t> sharesWithFixedVal;
+        for (Node * s : shareVars) {
+            if (!effectiveShares.contains(s)) {
+                if (!fc.var2reg.contains(s)) {
+                    continue;
+                }
+                int32_t sReg = fc.var2reg.at(s);
                 sharesWithFixedVal.clear();
-                for (const auto & rs : shareVars) {
-                    if (rs != s) {
-                        sharesWithFixedVal.push_back(rs);
+                for (Node * rs : shareVars) {
+                    if (rs != s && fc.var2reg.contains(rs)) {
+                        sharesWithFixedVal.push_back(fc.var2reg.at(rs));
                     }
                 }
-                bool sIsEffective = shareIsEffective(e0, sharesWithFixedVal, *s, maskVars, 0, m);
+                bool sIsEffective = fastShareIsEffective(fc, sharesWithFixedVal, sReg, maskRegs, 0, regs, outWidth);
                 if (sIsEffective) {
                     effectiveShares.insert(s);
                 }
@@ -695,15 +1109,14 @@ static void getEffectiveShares(Node & e0, std::vector<Node *> & publicVars, std:
 }
 
 
-
 bool isNIWithExev(Node & e, int32_t maxShareOcc) {
     assert(e.width <= 64);
 
     secPropValidity(e, NI);
     Node & e0 = getBitDecomposition(e);
-    
+
     std::vector<Node *> allVarsVec;
-    std::vector<Node *> exp {&e0};
+    std::vector<Node *> exp{&e0};
     getVarsList(exp, allVarsVec);
 
     std::vector<Node *> shareVarsOrig;
@@ -743,7 +1156,6 @@ bool isNIWithExev(Node & e, int32_t maxShareOcc) {
             }
         }
         else {
-            // shares whose number for the same variable in the expression is less than maxShareOcc are regarded as public variables
             for (const auto & sh : shareVarsOrig) {
                 if (sh->origSecret == v) {
                     publicVars.push_back(sh);
@@ -752,41 +1164,33 @@ bool isNIWithExev(Node & e, int32_t maxShareOcc) {
         }
     }
 
-    //std::cout << "# isNIWithExev:" << std::endl;
-    //std::cout << "#     Expression: " << e << std::endl;
-    //std::cout << "#     Modified expression: " << e0 << std::endl;
-    //std::cout << "#     Public Vars or irrelevant shares: ";
-    //for (const auto & v : publicVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << "#     Share Vars: ";
-    //for (const auto & v : shareVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << "#     Mask Vars: ";
-    //for (const auto & v : maskVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
+    FastCircuit fc;
+    fc.compile(e0);
 
-    //std::cout << "#     Enumerating on " << publicVars.size() + shareVars.size() + maskVars.size() << " bits in total" << std::endl;
+    std::vector<int32_t> publicRegs;
+    for (Node * pv : publicVars) {
+        if (fc.var2reg.contains(pv)) {
+            publicRegs.push_back(fc.var2reg[pv]);
+        }
+    }
+    std::vector<int32_t> maskRegs;
+    for (Node * mv : maskVars) {
+        if (fc.var2reg.contains(mv)) {
+            maskRegs.push_back(fc.var2reg[mv]);
+        }
+    }
 
-    std::map<Node *, Node *> m;
+    std::vector<uint64_t> regs(fc.numRegs, 0);
     std::set<Node *> effectiveShares;
-    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
+    fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, 0, regs.data(), e0.width, effectiveShares);
+
     for (const auto & s : secretVars) {
         int32_t nbEffectiveShares = 0;
-        //std::cout << "# Effective shares for " << *s << ": ";
         for (const auto & sh : shareVars) {
             if (sh->origSecret == s and effectiveShares.contains(sh)) {
-                //std::cout << *sh << ", ";
                 nbEffectiveShares += 1;
             }
         }
-        //std::cout << std::endl;
-        //std::cout << std::endl << "# Total: " << nbEffectiveShares << std::endl;
         if (nbEffectiveShares > maxShareOcc) {
             return false;
         }
@@ -800,9 +1204,9 @@ bool isRNIWithExev(Node & e, int32_t diff) {
 
     secPropValidity(e, RNI);
     Node & e0 = getBitDecomposition(e);
-    
+
     std::vector<Node *> allVarsVec;
-    std::vector<Node *> exp {&e0};
+    std::vector<Node *> exp{&e0};
     getVarsList(exp, allVarsVec);
 
     std::vector<Node *> shareVarsOrig;
@@ -845,7 +1249,6 @@ bool isRNIWithExev(Node & e, int32_t diff) {
             }
         }
         else {
-            // shares whose number for the same ariable in the expression is less than maxShareOcc are regarded as public variables
             for (const auto & sh : shareVarsOrig) {
                 if (sh->origSecret == v) {
                     publicVars.push_back(sh);
@@ -854,42 +1257,34 @@ bool isRNIWithExev(Node & e, int32_t diff) {
         }
     }
 
-    //std::cout << "# isRNIWithExev:" << std::endl;
-    //std::cout << "#     Expression: " << e << std::endl;
-    //std::cout << "#     Modified expression: " << e0 << std::endl;
-    //std::cout << "#     Public Vars or irrelevant shares: ";
-    //for (const auto & v : publicVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << "#     Share Vars: ";
-    //for (const auto & v : shareVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << "#     Mask Vars: ";
-    //for (const auto & v : maskVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
+    FastCircuit fc;
+    fc.compile(e0);
 
-    //std::cout << "#     Enumerating on " << publicVars.size() + shareVars.size() + maskVars.size() << " bits in total" << std::endl;
+    std::vector<int32_t> publicRegs;
+    for (Node * pv : publicVars) {
+        if (fc.var2reg.contains(pv)) {
+            publicRegs.push_back(fc.var2reg[pv]);
+        }
+    }
+    std::vector<int32_t> maskRegs;
+    for (Node * mv : maskVars) {
+        if (fc.var2reg.contains(mv)) {
+            maskRegs.push_back(fc.var2reg[mv]);
+        }
+    }
 
-    std::map<Node *, Node *> m;
+    std::vector<uint64_t> regs(fc.numRegs, 0);
     std::set<Node *> effectiveShares;
-    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
+    fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, 0, regs.data(), e0.width, effectiveShares);
+
     for (const auto & s : secretVars) {
         int32_t nbTotalShares = s->nbShares;
         int32_t nbEffectiveShares = 0;
-        //std::cout << "# Effective shares for " << *s << ": ";
         for (const auto & sh : shareVars) {
             if (sh->origSecret == s and effectiveShares.contains(sh)) {
-                //std::cout << *sh << ", ";
                 nbEffectiveShares += 1;
             }
         }
-        //std::cout << std::endl;
-        //std::cout << std::endl << "# Total: " << nbEffectiveShares << std::endl;
         if (nbEffectiveShares + diff >= nbTotalShares) {
             return false;
         }
@@ -898,20 +1293,16 @@ bool isRNIWithExev(Node & e, int32_t diff) {
 }
 
 
-
-
-
 bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes) {
     assert(e.width <= 64);
 
     secPropValidity(e, PINI);
     Node & e0 = getBitDecomposition(e);
-    
+
     std::vector<Node *> allVarsVec;
-    std::vector<Node *> exp {&e0};
+    std::vector<Node *> exp{&e0};
     getVarsList(exp, allVarsVec);
 
-    //std::vector<Node *> shareVarsOrig;
     std::vector<Node *> shareVars;
     std::vector<Node *> publicVars;
     std::vector<Node *> maskVars;
@@ -933,44 +1324,32 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
         secretVars.insert(v->origSecret);
     }
 
-    //std::cout << "# isPINIWithExev:" << std::endl;
-    //std::cout << "#     maxShareOcc: " << maxShareOcc << std::endl;
-    //std::cout << "#     Expression: " << e << std::endl;
-    //std::cout << "#     Modified expression: " << e0 << std::endl;
-    //std::cout << "#     Public Vars: ";
-    //for (const auto & v : publicVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << "#     Share Vars: ";
-    //for (const auto & v : shareVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
-    //std::cout << "#     Mask Vars: ";
-    //for (const auto & v : maskVars) {
-    //    std::cout << *v << " (" << v->width << " bits), ";
-    //}
-    //std::cout << std::endl;
+    FastCircuit fc;
+    fc.compile(e0);
 
-    //std::cout << "#     enumerating on " << publicVars.size() + shareVars.size() + maskVars.size() << " bits in total" << std::endl;
+    std::vector<int32_t> publicRegs;
+    for (Node * pv : publicVars) {
+        if (fc.var2reg.contains(pv)) {
+            publicRegs.push_back(fc.var2reg[pv]);
+        }
+    }
+    std::vector<int32_t> maskRegs;
+    for (Node * mv : maskVars) {
+        if (fc.var2reg.contains(mv)) {
+            maskRegs.push_back(fc.var2reg[mv]);
+        }
+    }
 
-    std::map<Node *, Node *> m;
+    std::vector<uint64_t> regs(fc.numRegs, 0);
     std::set<Node *> effectiveShares;
-    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
-    
-    std::set<int> effectiveShareIndexesNotInOutputIndexes;
+    fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, 0, regs.data(), e0.width, effectiveShares);
 
-    //std::cout << "# Effective Shares: ";
+    std::set<int> effectiveShareIndexesNotInOutputIndexes;
     for (const auto & sh : effectiveShares) {
-        //std::cout << *sh << ", " << std::endl;
         if (!outputIndexes.contains(sh->shareNum)) {
             effectiveShareIndexesNotInOutputIndexes.insert(sh->shareNum);
         }
     }
-    //std::cout << std::endl;
-
-    //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << effectiveShareIndexesNotInOutputIndexes.size() << std::endl;
 
     return (int32_t) effectiveShareIndexesNotInOutputIndexes.size() <= maxShareOcc;
 }
@@ -979,12 +1358,11 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
 bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes, std::set<int> & additionalInputIndexes) {
     assert(e.width <= 64);
 
-    //std::cout << "# isOPINIWithExev: " << e << std::endl;
     secPropValidity(e, OPINI);
     Node & e0 = getBitDecomposition(e);
-    
+
     std::vector<Node *> allVarsVec;
-    std::vector<Node *> exp {&e0};
+    std::vector<Node *> exp{&e0};
     getVarsList(exp, allVarsVec);
 
     std::vector<Node *> shareVars;
@@ -1008,25 +1386,33 @@ bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexe
         secretVars.insert(v->origSecret);
     }
 
-    std::map<Node *, Node *> m;
+    FastCircuit fc;
+    fc.compile(e0);
+
+    std::vector<int32_t> publicRegs;
+    for (Node * pv : publicVars) {
+        if (fc.var2reg.contains(pv)) {
+            publicRegs.push_back(fc.var2reg[pv]);
+        }
+    }
+    std::vector<int32_t> maskRegs;
+    for (Node * mv : maskVars) {
+        if (fc.var2reg.contains(mv)) {
+            maskRegs.push_back(fc.var2reg[mv]);
+        }
+    }
+
+    std::vector<uint64_t> regs(fc.numRegs, 0);
     std::set<Node *> effectiveShares;
-    getEffectiveShares(e0, publicVars, shareVars, maskVars, 0, m, effectiveShares);
-    
-    //std::cout << "# Effective Shares: ";
+    fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, 0, regs.data(), e0.width, effectiveShares);
+
     for (const auto & sh : effectiveShares) {
-        //std::cout << *sh << ", ";
         if (!outputIndexes.contains(sh->shareNum)) {
             additionalInputIndexes.insert(sh->shareNum);
         }
     }
-    //std::cout << std::endl;
-
-    //std::cout << "# Size of effective share indexes (t2) not in output shares (t1): " << additionalInputIndexes.size() << std::endl;
 
     return (int32_t) additionalInputIndexes.size() <= maxShareOcc;
 }
 
 } // namespace vmsi
-
-
-
