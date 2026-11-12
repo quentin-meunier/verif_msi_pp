@@ -1703,6 +1703,31 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                 }
             }
             {
+                // simplify (a & b) | (~a & ~b) to ~(a ^ b)
+                // note: this also covers (a & ~b) | (~a & b) to a ^ b by simplification of ~(a ^ ~b)
+                if (op == BOR && newChildren.size() == 2) {
+                    Node * c0 = newChildren[0];
+                    Node * c1 = newChildren[1];
+                    if (c0->op == BAND && c1->op == BAND &&
+                        c0->children->size() == 2 && c1->children->size() == 2) {
+                        Node * f0 = c0->children->at(0);
+                        Node * f1 = c0->children->at(1);
+                        Node * g0 = c1->children->at(0);
+                        Node * g1 = c1->children->at(1);
+                        auto isComplement = [](Node * x, Node * y) {
+                            return (x->op == BNOT && equivalence(*x->children->at(0), *y)) ||
+                                   (y->op == BNOT && equivalence(*x, *y->children->at(0)));
+                        };
+                        if ((isComplement(f0, g0) && isComplement(f1, g1)) ||
+                            (isComplement(f0, g1) && isComplement(f1, g0))) {
+                            Node & xorNode = Node::OpNode(BXOR, {f0, f1});
+                            Node & res = simplifyCore(Node::OpNode(BNOT, {&xorNode}), useSingleBitVariables);
+                            return setSimpEqAndReturn(node, res);
+                        }
+                    }
+                }
+            }
+            {
                 // FIXME: propagate in VerifMSI
                 // Simplify  a &  (a ^ b) to  a & ~b
                 //          ~a &  (a ^ b) to ~a &  b
