@@ -3,7 +3,7 @@
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include <verif_msi_pp.hpp>
- 
+
 #include <optional>
 #include <map>
 
@@ -115,7 +115,7 @@ py::tuple bindCheckSecurity(int32_t order, bool withGlitches, const std::string 
             }
             cppOutputList.push_back(outputShares);
         }
-    } 
+    }
     else {
         // Python call looked like checkSecurity(..., share1, share2, share3)
         std::vector<HWElement *> outputShares;
@@ -163,7 +163,10 @@ py::object bindLitteralInteger(Node & e) {
 }
 
 
-void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py::object addr, int32_t size, std::function<Node&(Node &)> & func, std::optional<py::list> content) {
+static std::vector<uint8_t *> pyAllocatedArrays;
+
+
+void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py::object addr, int32_t size, std::function<Node &(Node &)> & func, std::optional<py::list> content) {
 
     int32_t elemSize = 0;
     uint8_t * cppContent = NULL;
@@ -202,8 +205,17 @@ void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py
 
     registerArray(name, inWidth, outWidth, cppAddr, size, func, cppContent, elemSize);
     if (cppContent != NULL) {
-        free(cppContent);
+        pyAllocatedArrays.push_back(cppContent);
     }
+}
+
+
+void bindVerifMSICleanup() {
+    for (uint8_t * ptr : pyAllocatedArrays) {
+        free(ptr);
+    }
+    pyAllocatedArrays.clear();
+    verifMSICleanup();
 }
 
 
@@ -390,7 +402,6 @@ Node & bindGetSymbolByName(std::string & name) {
 }
 
 
-
 PYBIND11_MODULE(_core, m) {
     m.doc() = "_core plugin";
     py::class_<Node>(m, "Node")
@@ -413,7 +424,7 @@ PYBIND11_MODULE(_core, m) {
         .def("getSymbExp", &HWElement::getSymbExp, py::return_value_policy::reference);
     py::class_<ArrayExp>(m, "ArrayExp")
         .def("__getitem__", &ArrayExp::operator[], py::return_value_policy::reference);
-        
+
     m.def("LShR", py::overload_cast<Node &, int>(&LShR), "Desc.", py::return_value_policy::reference);
     m.def("LShR", py::overload_cast<Node &, Node &>(&LShR), "Desc.", py::return_value_policy::reference);
     m.def("RotateRight", py::overload_cast<Node &, int>(&RotateRight), "Desc.", py::return_value_policy::reference);
@@ -439,7 +450,7 @@ PYBIND11_MODULE(_core, m) {
     m.def("checkRNITrans", &bindCheckRNITrans, "Desc.");
     m.def("checkPINITrans", &bindCheckPINITrans, "Desc.");
     m.def("checkOPINITrans", &bindCheckOPINITrans, "Desc.");
-    
+
     m.def("compareExpsWithExev", &bindCompareExpsWithExev, "Desc.");
     m.def("compareExpsWithRandev", &bindCompareExpsWithRandev, "Desc.");
     m.def("getDistribWithExev", &bindGetDistribWithExev, "Desc.");
@@ -455,7 +466,7 @@ PYBIND11_MODULE(_core, m) {
 
     m.def("getBitDecomposition", &getBitDecomposition, "Desc.", py::return_value_policy::reference);
     m.def("simplify", py::overload_cast<Node &, bool>(&simplify), "Desc.", py::arg("Node"), py::arg("useSingleBitVariables") = false, py::return_value_policy::reference);
-    //m.def("simplifyCore", &simplifyCore, "Desc.", py::return_value_policy::reference);
+    // m.def("simplifyCore", &simplifyCore, "Desc.", py::return_value_policy::reference);
     m.def("equivalence", &equivalence, "Desc.");
 
     m.def("tps", py::overload_cast<Node &, bool, bool>(&tps), "Desc.", py::arg("nodeIn"), py::arg("bitDecompose") = false, py::arg("verbose") = false);
@@ -483,7 +494,5 @@ PYBIND11_MODULE(_core, m) {
     m.def("getRealShares", &bindGetRealShares, "Desc.");
 
     m.def("printStats", &printStats, "Desc.");
-    m.def("verifMSICleanup", &verifMSICleanup, "Desc.");
+    m.def("verifMSICleanup", &bindVerifMSICleanup, "Desc.");
 }
-
-

@@ -9,7 +9,6 @@ Author(s): Quentin L. Meunier
 
 #include <cassert>
 #include <cstdlib>
-#include <cstring>
 
 #include "arrayexp.hpp"
 #include "node.hpp"
@@ -24,13 +23,7 @@ ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, 
     this->addr = addr;
     this->size = size;
     this->func = func;
-    if (content != NULL && size > 0) {
-        this->content = malloc(size);
-        memcpy(this->content, content, size);
-    }
-    else {
-        this->content = NULL;
-    }
+    this->content = content;
     this->elemSize = elemSize;
 
     if (allArrays.contains(name)) {
@@ -62,9 +55,6 @@ ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth) 
 
 
 ArrayExp::~ArrayExp() {
-    if (content != NULL) {
-        free(content);
-    }
 }
 
 
@@ -103,9 +93,6 @@ uint64_t ArrayExp::getContent(uint64_t idx) {
     }
     else {
         assert(false);
-    }
-    if (outWidth < 64) {
-        val &= (1ULL << outWidth) - 1;
     }
     return val;
 }
