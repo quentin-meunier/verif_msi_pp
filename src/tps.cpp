@@ -6,6 +6,7 @@ SPDX-License-Identifier: GPL-3.0-only
 Author(s): Quentin L. Meunier
 */
 
+#include <algorithm>
 #include <cassert>
 
 #include "tps.hpp"

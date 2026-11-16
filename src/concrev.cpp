@@ -144,7 +144,12 @@ static void getVarsList(std::vector<Node *> & exps, std::vector<Node *> & allVar
 static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map<Node *, Node *> & expCache) {
     if (node.nature == SYMB) {
         if (m.contains(&node)) {
-            return *m[&node];
+            Node & valNode = *m[&node];
+            if (valNode.nature != CONST || valNode.width != node.width) {
+                std::cerr << "*** Error: Value " << valNode << " (width " << valNode.width << ") for symbol " << node << " (width " << node.width << ") in getExpValue is not a constant of matching width" << std::endl;
+                assert(false);
+            }
+            return valNode;
         }
 
         std::string::size_type pos = node.symb->find('#');
@@ -269,7 +274,7 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
                 int carry = 0;
                 for (int32_t i = 0; i < nlimbs; i += 1) {
                     intRes[i] += child->cst[i] + carry;
-                    carry = intRes[i] < child->cst[i] ? 1 : 0;
+                    carry = (intRes[i] < child->cst[i] || (carry == 1 && intRes[i] == child->cst[i])) ? 1 : 0;
                 }
                 if (width % 64 != 0) {
                     intRes[nlimbs - 1] = intRes[nlimbs - 1] & ((1ULL << (width % 64)) - 1);

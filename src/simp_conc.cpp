@@ -25,6 +25,7 @@ static bool abortAll;
 
 static void traverseExpRec(Node & n) {
     if (n.nature != OP) {
+        abortAll = true;
         return;
     }
     if (n.op == EXTRACT and (n.children->at(2)->nature == SYMB or n.children->at(2)->op == ARRAY)) {
@@ -49,6 +50,10 @@ static void traverseExpRec(Node & n) {
         else if (nextCurrBit != (int32_t) n.children->at(0)->cst[0]) {
             abortAll = true;
         }
+        return;
+    }
+    if (not Node::bitwiseOps.contains(n.op)) {
+        abortAll = true;
         return;
     }
     for (const auto & child : *n.children) {
@@ -150,7 +155,6 @@ static bool rawEquivalence(Node & node0, Node & node1) {
 }
 
 
-
 Node * extendedMergeConcatExtract(std::vector<Node *> & children, bool * ok) {
 
     abortAll = false;
@@ -201,4 +205,3 @@ Node * extendedMergeConcatExtract(std::vector<Node *> & children, bool * ok) {
 
 
 // FIXME: set temporary mode and delete temporary nodes?
-

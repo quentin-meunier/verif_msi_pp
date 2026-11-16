@@ -118,7 +118,8 @@ static bool enumMappingsRec(std::map<Node *, Node *> & m, std::deque<Node *> & e
             }
         }
 
-        if (child.h == exp.children->at(k)->h) {
+        
+        if (child.h[0] == exp.children->at(k)->h[0] and child.h[1] == exp.children->at(k)->h[1] and child.h[2] == exp.children->at(k)->h[2] and child.h[3] == exp.children->at(k)->h[3]) {
             if (child.nature == SYMB) {
                 if (not m.contains(&child)) {
                     m.emplace(&child, exp.children->at(k));

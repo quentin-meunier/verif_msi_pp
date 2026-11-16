@@ -41,7 +41,7 @@ ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth, 
     allArrays[name] = this;
 }
 
-    
+
 ArrayExp::ArrayExp(const std::string & name, int32_t inWidth, int32_t outWidth) {
     this->name = name;
     this->inWidth = inWidth;
@@ -66,7 +66,7 @@ ArrayExp::~ArrayExp() {
         free(content);
     }
 }
- 
+
 
 Node & ArrayExp::operator[](Node & child) {
     if (child.width != inWidth) {
@@ -104,6 +104,9 @@ uint64_t ArrayExp::getContent(uint64_t idx) {
     else {
         assert(false);
     }
+    if (outWidth < 64) {
+        val &= (1ULL << outWidth) - 1;
+    }
     return val;
 }
 
@@ -119,5 +122,3 @@ void ArrayExp::cleanup() {
 }
 
 } // namespace vmsi
-
-
