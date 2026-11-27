@@ -42,7 +42,110 @@ std::string secProp2str(SecurityProperty secProp) {
 
 
 
-static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToReplace, std::map<Node *, Node *> & m) {
+// Contents of the inverse arrays created by getInverseArray()
+static std::map<std::string, std::vector<uint8_t>> inverseArraysContent;
+
+
+// Returns the array which is the inverse of the permutation arr, creating it if needed.
+// The content is computed if the content of arr is known; otherwise the inverse is
+// a declared permutation without content
+static ArrayExp & getInverseArray(ArrayExp & arr) {
+    std::string invName = arr.name + "_inv";
+    auto it = ArrayExp::allArrays.find(invName);
+    if (it != ArrayExp::allArrays.end()) {
+        return *it->second;
+    }
+    assert(arr.maskPreserving);
+    void * content = NULL;
+    int32_t size = 0;
+    int32_t elemSize = 0;
+    if (arr.content != NULL) {
+        uint64_t nbElems = 1ULL << arr.inWidth;
+        elemSize = arr.elemSize;
+        size = (int32_t) (nbElems * elemSize);
+        std::vector<uint8_t> & buf = inverseArraysContent[invName];
+        buf.assign(size, 0);
+        for (uint64_t i = 0; i < nbElems; i += 1) {
+            uint64_t v = arr.getContent(i);
+            if (elemSize == 1) {
+                ((uint8_t *) buf.data())[v] = (uint8_t) i;
+            }
+            else if (elemSize == 2) {
+                ((uint16_t *) buf.data())[v] = (uint16_t) i;
+            }
+            else if (elemSize == 4) {
+                ((uint32_t *) buf.data())[v] = (uint32_t) i;
+            }
+            else {
+                ((uint64_t *) buf.data())[v] = i;
+            }
+        }
+        content = buf.data();
+    }
+    // The constructor checks that the content (if any) is a permutation
+    return *new ArrayExp(invName, arr.inWidth, arr.outWidth, 0, size, NULL, content, elemSize, true);
+}
+
+
+// When the mask m is selected and ctr is replaced by m, the other occurrences of m
+// must be replaced by the expression of the former m as a function of the new one,
+// i.e. by f^-1(m) if ctr = f(m). Swapping ctr and m is only correct when f is an
+// involution (e.g. a chain of '^' and '~'), but not for '+' for instance:
+// in (m + k) + (k - m), replacing m + k by m requires to replace the other m by m - k.
+// f^-1 is built by going down from ctr to m. Each node on the path has exactly one
+// child containing m, the other children (S) do not contain m:
+// - '^':   f(m) = g(m) ^ XOR(S)  ->  apply ^ XOR(S)
+// - '+':   f(m) = g(m) + SUM(S)  ->  apply - SUM(S)
+// - '~', unary '-': self-inverse
+// - permutation array T: apply T^-1
+// ctr is a masking occurrence of m, so by construction (see Node::OpNode) f is always
+// invertible: ctr is a '^' or '+' node, and the path from ctr to m only contains '^', '+',
+// '~', unary '-' and permutation arrays, with m in exactly one child of each node
+static Node & getMaskInverse(Node & ctr, Node & mask) {
+    Node * acc = &mask;
+    Node * cur = &ctr;
+    while (cur != &mask) {
+        assert(cur->nature == OP);
+        Node * maskChild = NULL;
+        std::vector<Node *> others;
+        for (Node * c : *cur->children) {
+            bool containsMask = (c == &mask || c->maskingMaskOcc.contains(&mask) || c->otherMaskOcc.contains(&mask));
+            if (containsMask) {
+                assert(maskChild == NULL);
+                maskChild = c;
+            }
+            else {
+                others.push_back(c);
+            }
+        }
+        assert(maskChild != NULL);
+        if (cur->op == BXOR) {
+            others.push_back(acc);
+            acc = &Node::OpNode(BXOR, others);
+        }
+        else if (cur->op == PLUS) {
+            Node * sum = (others.size() == 1) ? others[0] : &Node::OpNode(PLUS, others);
+            acc = &(*acc - *sum);
+        }
+        else if (cur->op == BNOT) {
+            acc = &~*acc;
+        }
+        else if (cur->op == UMINUS) {
+            acc = &Node::OpNode(UMINUS, {acc});
+        }
+        else {
+            assert(cur->op == ARRAY);
+            ArrayExp & arr = ArrayExp::getByName(*cur->children->at(0)->strn);
+            assert(arr.maskPreserving && maskChild == cur->children->at(1));
+            acc = &getInverseArray(arr)[*acc];
+        }
+        cur = maskChild;
+    }
+    return *acc;
+}
+
+
+static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToReplace, Node & maskInverse, std::map<Node *, Node *> & m) {
     if (node.nature != OP) {
         return node;
     }
@@ -53,7 +156,7 @@ static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToRep
             continue;
         }
         if (child == &selMask) {
-            children.push_back(&childToReplace);
+            children.push_back(&maskInverse);
             continue;
         }
         if (child == &childToReplace) {
@@ -61,7 +164,7 @@ static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToRep
             continue;
         }
         if (child->maskingMaskOcc.contains(&selMask) || child->otherMaskOcc.contains(&selMask)) {
-            Node & newChild = getReplacedGraphRec(*child, selMask, childToReplace, m);
+            Node & newChild = getReplacedGraphRec(*child, selMask, childToReplace, maskInverse, m);
             children.push_back(&newChild);
         }
         else {
@@ -74,9 +177,10 @@ static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToRep
 }
 
 
-static Node & getReplacedGraph(Node & node, Node & selMask, Node & childToReplace) {
+// Replaces childToReplace by selMask, and the other occurrences of selMask by maskInverse
+static Node & getReplacedGraph(Node & node, Node & selMask, Node & childToReplace, Node & maskInverse) {
     std::map<Node *, Node *> m;
-    return getReplacedGraphRec(node, selMask, childToReplace, m);
+    return getReplacedGraphRec(node, selMask, childToReplace, maskInverse, m);
 }
 
 
@@ -401,12 +505,20 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         //        we can for example take the min or max of the node number
         //        I still expect this to slow down the execution time a little...
 
+        // If the mask has other occurrences than in selCtr, they must be replaced by the inverse function
+        Node * maskInverse = selCtr;
+        if (minMaskingOcc + minOtherOcc > 1) {
+            maskInverse = &getMaskInverse(*selCtr, *selMask);
+        }
+
         masksTaken.insert(selMask);
-        node = &getReplacedGraph(*node, *selMask, *selCtr);
+        node = &getReplacedGraph(*node, *selMask, *selCtr, *maskInverse);
 
         if (verbose) {
             std::cout << "# Replacing " << *selCtr << " with " << *selMask << std::endl;
-            std::cout << "# and other occurrences of " << *selMask << " with " << *selCtr << std::endl;
+            if (minMaskingOcc + minOtherOcc > 1) {
+                std::cout << "# and other occurrences of " << *selMask << " with " << *maskInverse << std::endl;
+            }
         }
 
         // Simplify

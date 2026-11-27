@@ -494,7 +494,8 @@ static Node & getBitDecompositionVarSingleBit(Node & node, int32_t bit) {
         res = &SymbInternal(s, 'A', 1, node.nbShares, node.shareNum, &getBitDecompositionVar(*node.origSecret, bit, bit), &simplifyCore(Extract(bit, bit, *node.pseudoShareEq), true));
     }
     else {
-        res = &SymbInternal(s, node.symbType, 1);
+        // nbShares is used by RNI (and its exhaustive evaluation) on the secret of a bit share
+        res = &SymbInternal(s, node.symbType, 1, node.nbShares, 0, NULL, NULL);
     }
     //std::cout << "# Setting simpEqUsbv bit " << bit << " of node '" << node << "' to: " << *res << std::endl;
     extractNode.simpEqUsbv = res;
