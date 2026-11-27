@@ -350,7 +350,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         // - Among the masking occurrences of m, choose CTR that has the minimum number of occurrences 
         // - For this CTR Base, choose the CTR with the max height for the same count
         // FIXME: change map copies to an alias, check that this is ok
-        std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> & maskingMaskOcc = node->maskingMaskOcc;
+        NodeMap<NodeMap<NodeMap<std::pair<uint64_t, int32_t>>>> & maskingMaskOcc = node->maskingMaskOcc;
         #if SEL_MSK_W_NON_MSKNG_OCC
         std::map<Node *, std::set<Node *>> & otherMaskOcc = node->otherMaskOcc;
         #else
@@ -461,7 +461,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
 
         uint64_t minCount = std::numeric_limits<uint64_t>::max();
         Node * selCtrBase = NULL;
-        std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>> & occs = maskingMaskOcc[selMask];
+        NodeMap<NodeMap<std::pair<uint64_t, int32_t>>> & occs = maskingMaskOcc[selMask];
         for (const auto & [ctrBase, val] : occs) { // val is occs[ctrBase]
             if (val.at(ctrBase).first < minCount) {
                 minCount = val.at(ctrBase).first;
@@ -500,11 +500,8 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             std::cout << "# Choosing following ctr with a height of " << maxHeight << ": " << *selCtr << std::endl;
         }
 
-        // FIXME: currently the results is not deterministic, and a some verifications can either
-        //        succeed or fail, even if it is a very rare case
-        //        There are three non deterministic choices, and in order to make them deterministic,
-        //        we can for example take the min or max of the node number
-        //        I still expect this to slow down the execution time a little...
+        // The three choices above (mask, ctr base, ctr) are deterministic: maskingMaskOcc
+        // is ordered by node number (NodeNumLess), not by address
 
         // If the mask has other occurrences than in selCtr, they must be replaced by the inverse function
         Node * maskInverse = selCtr;

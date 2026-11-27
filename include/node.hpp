@@ -91,6 +91,14 @@ struct HashTuple {
 };
 
 
+class Node;
+// Orders nodes by creation number instead of address, so that the iteration order
+// (and thus the choices made in checkProperty) does not depend on memory layout (ASLR)
+struct NodeNumLess {
+    bool operator()(const Node * a, const Node * b) const;
+};
+template <typename T> using NodeMap = std::map<Node *, T, NodeNumLess>;
+
 class Node {
 
     public:
@@ -154,7 +162,7 @@ class Node {
     // maskingMaskOcc[mask][ctrBase][ctr] = {count, height}
     // count  : number of occurrences
     // height : height of ctr starting from ctrBase (0 for ctrBase)
-    std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> maskingMaskOcc;
+    NodeMap<NodeMap<NodeMap<std::pair<uint64_t, int32_t>>>> maskingMaskOcc;
 
     #if SEL_MSK_W_NON_MSKNG_OCC
     // otherMaskOcc[mask] = set() containing all parents in sub-expression
@@ -226,6 +234,10 @@ class Node {
     std::string expPrint(bool parNeeded, bool verbatim) const;
 
 };
+
+inline bool NodeNumLess::operator()(const Node * a, const Node * b) const {
+    return a->num < b->num;
+}
 
 
 Node & Symb(const char * symb, char symbType, int32_t width, int32_t shareNum, Node * origSecret, Node * pseudoShareEq);

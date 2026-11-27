@@ -21,6 +21,24 @@ Author(s): Quentin L. Meunier
 
 namespace vmsi {
 
+
+// Width mismatches are errors in the expressions built by the user:
+// they are checked explicitly so that the check remains with NDEBUG
+static void checkSameWidth(const char * opStr, const Node & n0, const Node & n1) {
+    if (n0.width != n1.width) {
+        std::cerr << "*** Error: operands of '" << opStr << "' must have the same width (got " << n0.width << " and " << n1.width << "): " << n0 << ", " << n1 << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+static void checkWidth8(const char * opStr, const Node & n) {
+    if (n.width != 8) {
+        std::cerr << "*** Error: operands of '" << opStr << "' must be 8-bit wide (got " << n.width << "): " << n << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
 Node::Node() {
     num = nodeNum;
     nodeNum += 1;
@@ -332,7 +350,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
     if (op == PLUS or op == MINUS or op == UMINUS or op == BAND or op == BOR or op == BXOR or op == BNOT or op == LSHL or op == ASHR or op == LSHR or op == SLSHL or op == SASHR or op == SLSHR or op == IMUL or op == IPOW or op == GMUL or op == GPOW or op == GLOG or op == GEXP) {
         if (op == PLUS or op == MINUS or op == BAND or op == BOR or op == BXOR or op == IMUL or op == IPOW or op == GMUL or op == GPOW) {
             for (const auto & c : children) {
-                assert(c->width == children[0]->width);
+                checkSameWidth(op2strOp(op), *children[0], *c);
             }
         }
         n->width = children[0]->width;
@@ -778,7 +796,9 @@ void Node::dumpNodes(const char * filename, std::set<Node *> & nodes) {
 
 Node & Node::makeBitwiseNode(NodeOp op, Node * child0, Node * child1) {
     int32_t width = child0->width;
-    assert(child1 == NULL || child0->width == child1->width);
+    if (child1 != NULL) {
+        checkSameWidth(op2strOp(op), *child0, *child1);
+    }
 
     if (propagateCstOnBuild() && child0->nature == CONST && (child1 == NULL || child1->nature == CONST)) {
         int32_t nlimbs = child0->nlimbs;
@@ -1093,7 +1113,7 @@ Node & RotateRight(Node & child, int32_t shval) {
 
 
 Node & Node::operator*(Node & other) {
-    assert(width == other.width);
+    checkSameWidth("*", *this, other);
     if (propagateCstOnBuild() && nature == CONST && other.nature == CONST) {
         return imul(*this, other);
     }
@@ -1823,6 +1843,9 @@ Node & SignExt(int32_t numSignBits, Node & child) {
 
 Node & GMul(std::vector<Node *> children) {
     assert(children.size() >= 2);
+    for (auto c : children) {
+        checkWidth8("GMul", *c);
+    }
     bool allChildrenCst = true;
     for (auto c : children) {
         if (c->nature != CONST) {
@@ -1899,6 +1922,8 @@ Node & GMul(Node & n0, Node & n1, Node & n2, Node & n3, Node & n4, Node & n5, No
 
 
 Node & GPow(Node & c0, Node & c1) {
+    checkWidth8("GPow", c0);
+    checkWidth8("GPow", c1);
     if (propagateCstOnBuild() and c0.nature == CONST and c1.nature == CONST) {
         return gpow(c0, c1);
     }
@@ -1907,6 +1932,7 @@ Node & GPow(Node & c0, Node & c1) {
 
 
 Node & GLog(Node & child) {
+    checkWidth8("GLog", child);
     if (propagateCstOnBuild() and child.nature == CONST) {
         return glog(child);
     }
@@ -1915,6 +1941,7 @@ Node & GLog(Node & child) {
 
 
 Node & GExp(Node & child) {
+    checkWidth8("GExp", child);
     if (propagateCstOnBuild() and child.nature == CONST) {
         return gexp(child);
     }

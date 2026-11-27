@@ -41,7 +41,7 @@ void checkMaskOcc(
     Node & n,
     std::pair<Node *, Node *> expPreservedMask,
     const std::map<Node *, Node *> & expCurrentlyMasking,
-    const std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> & expMaskingMaskOcc,
+    const NodeMap<NodeMap<NodeMap<std::pair<uint64_t, int32_t>>>> & expMaskingMaskOcc,
     const std::map<Node *, std::set<Node *>> & expOtherMaskOcc
 );
 

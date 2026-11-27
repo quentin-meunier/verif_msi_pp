@@ -406,8 +406,9 @@ static std::string vecExpsStr(const std::vector<Node *> & t) {
 
 
 void getReachableGates(HWElement * g, std::set<HWElement *> & rg) {
-    if (!rg.contains(g)) {
-        rg.insert(g);
+    // If g was already in rg, its inputs have already been visited
+    if (!rg.insert(g).second) {
+        return;
     }
     for (const auto & child : g->inputs) {
         getReachableGates(child, rg);
