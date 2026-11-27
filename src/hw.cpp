@@ -970,6 +970,53 @@ static void removeAiBjProbes(std::set<HWElement *> & gatesToVerify, std::set<HWE
 
 
 
+// Without glitches, the leakage of a gate is its expression: gates with the same
+// expression (in practice, the input and output of a register) are equivalent probes.
+// Only one of them is kept (an output if one of them is an output, for SNI, PINI and OPINI)
+static void removeSameExpProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, bool verbose) {
+    std::vector<HWElement *> gates(gatesToVerify.begin(), gatesToVerify.end());
+    std::sort(gates.begin(), gates.end(), [](HWElement * a, HWElement * b) {
+        return a->num < b->num;
+    });
+    std::map<Node *, std::vector<HWElement *>> byExp;
+    for (const auto & g : gates) {
+        byExp[g->symbExp].push_back(g);
+    }
+    int32_t nbRemoved = 0;
+    for (const auto & [exp, sameExpGates] : byExp) {
+        if (sameExpGates.size() < 2) {
+            continue;
+        }
+        bool hasOutput = false;
+        for (const auto & g : sameExpGates) {
+            if (outputs.contains(g)) {
+                hasOutput = true;
+            }
+        }
+        bool kept = false;
+        for (const auto & g : sameExpGates) {
+            bool keep;
+            if (outputs.contains(g)) {
+                keep = true;
+            }
+            else {
+                keep = !hasOutput && !kept;
+            }
+            if (keep) {
+                kept = true;
+            }
+            else {
+                gatesToVerify.erase(g);
+                nbRemoved += 1;
+            }
+        }
+    }
+    if (verbose) {
+        std::cout << "# Removed " << nbRemoved << " probe(s) with the same expression as another probe" << std::endl;
+    }
+}
+
+
 // Remove the gate / probe if it has no non-masking randoms, exactly the same masking randoms and the same or a subset of the input shares of another gate
 static void removeRedundantProbes(std::set<HWElement *> & gatesToVerify, std::set<HWElement *> & outputs, SecurityProperty secProp, bool verbose) {
     // FIXME: why sorting? the only interest would be not to make all cross comparisons, based on the fact that children nodes are traversed first
@@ -1075,6 +1122,10 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
 
     if (withGlitches && HWElement::remProbesOpt) {
         removeIncludedProbes(gatesToVerify, outputs, secProp, verbose);
+    }
+
+    if (!withGlitches && HWElement::remProbesOpt) {
+        removeSameExpProbes(gatesToVerify, outputs, verbose);
     }
 
     if ((secProp == NI || secProp == RNI || secProp == SNI || secProp == PINI) && HWElement::remProbesOpt) {
