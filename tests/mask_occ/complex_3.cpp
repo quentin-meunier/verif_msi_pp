@@ -7,7 +7,7 @@ int main() {
     Node & k = symbol("k", 'S', 8);
     Node & p = symbol("p", 'P', 8);
 
-    ArrayExp a = ArrayExp("a", 8, 8);
+    ArrayExp a = ArrayExp("a", 8, 8, true); // declared permutation: the access preserves masking
 
 
     //           &

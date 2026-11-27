@@ -155,7 +155,12 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
         std::string::size_type pos = node.symb->find('#');
         if (pos != std::string::npos) {
             std::string symb = node.symb->substr(0, pos);
-            Node & n = *Node::symb2node[symb];
+            auto it = Node::symb2node.find(symb);
+            if (it == Node::symb2node.end()) {
+                std::cerr << "*** Error: No symbol named " << symb << " (base of bit symbol " << *node.symb << ")" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+            Node & n = *it->second;
             int32_t bit = std::stoi(node.symb->substr(pos + 1));
             if (m.contains(&n)) {
                 return Extract(bit, bit, *m[&n]);
@@ -210,13 +215,14 @@ static Node & getExpValueRec(Node & node, std::map<Node *, Node *> & m, std::map
         res = &(-(*newChildren[0]));
     }
     else if (op == ARRAY) {
-        if (ArrayExp::allArrays[*newChildren[0]->strn]->content == NULL) {
+        ArrayExp & arr = ArrayExp::getByName(*newChildren[0]->strn);
+        if (arr.content == NULL) {
             std::cerr << "*** Error: concrete evaluation of an array access is only "
                          "possible with an initialized content"
                       << std::endl;
             exit(EXIT_FAILURE);
         }
-        res = &Const(ArrayExp::allArrays[*newChildren[0]->strn]->getContent(newChildren[1]->cst[0]), ArrayExp::allArrays[*newChildren[0]->strn]->outWidth);
+        res = &Const(arr.getContent(newChildren[1]->cst[0]), arr.outWidth);
     }
     else {
         int32_t width = node.width;
@@ -337,6 +343,7 @@ struct FastInstr {
     int32_t width = 0;
     uint64_t cstVal = 0;
     const std::string * arrayName = nullptr;
+    ArrayExp * array = nullptr; // resolved at compile time (ARRAY only)
     std::vector<int32_t> multiIn;
     std::vector<int32_t> childWidths;
 };
@@ -505,6 +512,7 @@ class FastCircuit {
             instr.inReg1 = childRegs[0];
             instr.inReg2 = childRegs[1];
             instr.arrayName = (*n.children)[0]->strn;
+            instr.array = &ArrayExp::getByName(*instr.arrayName);
             isBitsliceable = false;
             break;
         default:
@@ -563,25 +571,47 @@ class FastCircuit {
                 regs[instr.outReg] = (~regs[instr.inReg1]) & mask;
                 break;
             }
-            case FastOp::LSHR:
-                regs[instr.outReg] = regs[instr.inReg1] >> regs[instr.inReg2];
+            // Shift amounts can be symbolic and take any value during enumeration:
+            // shifting by an amount >= width gives 0 (logical) or only sign bits (arithmetic)
+            case FastOp::LSHR: {
+                uint64_t sh = regs[instr.inReg2];
+                if (sh >= (uint64_t) instr.width) {
+                    regs[instr.outReg] = 0;
+                }
+                else {
+                    regs[instr.outReg] = regs[instr.inReg1] >> sh;
+                }
                 break;
+            }
             case FastOp::LSHL: {
+                uint64_t sh = regs[instr.inReg2];
                 uint64_t mask = (instr.width == 64) ? ~0ULL : ((1ULL << instr.width) - 1);
-                regs[instr.outReg] = (regs[instr.inReg1] << regs[instr.inReg2]) & mask;
+                if (sh >= (uint64_t) instr.width) {
+                    regs[instr.outReg] = 0;
+                }
+                else {
+                    regs[instr.outReg] = (regs[instr.inReg1] << sh) & mask;
+                }
                 break;
             }
             case FastOp::ASHR: {
                 uint64_t v = regs[instr.inReg1];
-                int32_t sh = regs[instr.inReg2];
+                uint64_t sh = regs[instr.inReg2];
                 int32_t w = instr.width;
                 bool sign = (v >> (w - 1)) & 1;
-                uint64_t res = v >> sh;
-                if (sign && sh > 0) {
-                    uint64_t signBits = (sh >= 64) ? ~0ULL : ((1ULL << sh) - 1);
-                    res |= (signBits << (w - sh));
-                }
                 uint64_t mask = (w == 64) ? ~0ULL : ((1ULL << w) - 1);
+                uint64_t res;
+                if (sh >= (uint64_t) w) {
+                    res = sign ? mask : 0;
+                }
+                else {
+                    // here 0 <= sh < w <= 64, so all shifts below are < 64
+                    res = v >> sh;
+                    if (sign && sh > 0) {
+                        uint64_t signBits = (1ULL << sh) - 1;
+                        res |= (signBits << (w - sh));
+                    }
+                }
                 regs[instr.outReg] = res & mask;
                 break;
             }
@@ -642,7 +672,8 @@ class FastCircuit {
             case FastOp::CONCAT: {
                 uint64_t val = 0;
                 int32_t shift = 0;
-                for (int i = (int) instr.multiIn.size() - 1; i >= 0; --i) {
+                // children[0] is the least significant part (same convention as ConstNodeFromConcat and getExpValue)
+                for (int32_t i = 0; i < (int32_t) instr.multiIn.size(); i += 1) {
                     int32_t inR = instr.multiIn[i];
                     int32_t w = instr.childWidths[i];
                     uint64_t mask = (w == 64) ? ~0ULL : ((1ULL << w) - 1);
@@ -653,8 +684,7 @@ class FastCircuit {
                 break;
             }
             case FastOp::ARRAY: {
-                auto & arr = ArrayExp::allArrays[*instr.arrayName];
-                regs[instr.outReg] = arr->getContent(regs[instr.inReg2]);
+                regs[instr.outReg] = instr.array->getContent(regs[instr.inReg2]);
                 break;
             }
             }
@@ -710,9 +740,53 @@ class FastCircuit {
 };
 
 
-static void fastGetDistrib(const FastCircuit & fc, const std::vector<int32_t> & maskRegs, uint64_t * regs, std::vector<uint64_t> & distrib, int32_t outWidth) {
+// Distribution of an expression over all the values of the masks.
+// Two representations, chosen only from (outWidth, numMasks), so that all
+// the distributions compared during a given check have the same one:
+// - dense: histogram with 2^outWidth bins (bin v = number of mask values giving v);
+//   used when the histogram is at most 2^EXEV_DENSE_MARGIN times larger than the
+//   number of evaluations (2^numMasks), which keeps its cost proportional to them
+// - sparse: sorted list of the 2^numMasks output values (canonical form of the
+//   multiset of outputs); used otherwise, avoids allocating and scanning 2^outWidth bins
+struct Distrib {
+    bool dense = true;
+    std::vector<uint64_t> v;
+
+    bool operator==(const Distrib & other) const {
+        assert(dense == other.dense);
+        return v == other.v;
+    }
+
+    // True if the distribution is uniform over the 2^outWidth output values
+    bool isUniform() const {
+        if (!dense) {
+            // Sparse is only used when 2^outWidth > 2^numMasks: some values are never reached
+            return false;
+        }
+        for (uint64_t c : v) {
+            if (c != v[0]) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+
+static bool useDenseDistrib(int32_t outWidth, int32_t numMasks) {
+    return outWidth <= numMasks + EXEV_DENSE_MARGIN;
+}
+
+
+static void fastGetDistrib(const FastCircuit & fc, const std::vector<int32_t> & maskRegs, uint64_t * regs, Distrib & d, int32_t outWidth) {
     int32_t numMasks = (int32_t) maskRegs.size();
+    if (numMasks > EXEV_MAX_MASKS) {
+        std::cerr << "*** Error: exhaustive evaluation over " << numMasks << " mask bits is not tractable (limit: EXEV_MAX_MASKS = " << EXEV_MAX_MASKS << ")" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::vector<uint64_t> & distrib = d.v;
     if (fc.isBitsliceable && outWidth == 1) {
+        d.dense = true;
         distrib.assign(2, 0);
         const uint64_t PATTERNS[6] = {0xAAAAAAAAAAAAAAAAULL, 0xCCCCCCCCCCCCCCCCULL,
                                       0xF0F0F0F0F0F0F0F0ULL, 0xFF00FF00FF00FF00ULL,
@@ -760,13 +834,26 @@ static void fastGetDistrib(const FastCircuit & fc, const std::vector<int32_t> & 
 
     // Scalar fallback
     uint64_t total = 1ULL << numMasks;
-    distrib.assign(1ULL << outWidth, 0);
-    for (uint64_t v = 0; v < total; v += 1) {
-        for (int32_t i = 0; i < numMasks; i += 1) {
-            regs[maskRegs[i]] = (v >> i) & 1ULL;
+    d.dense = useDenseDistrib(outWidth, numMasks);
+    if (d.dense) {
+        distrib.assign(1ULL << outWidth, 0);
+        for (uint64_t v = 0; v < total; v += 1) {
+            for (int32_t i = 0; i < numMasks; i += 1) {
+                regs[maskRegs[i]] = (v >> i) & 1ULL;
+            }
+            uint64_t out = fc.eval_scalar(regs);
+            distrib[out] += 1;
         }
-        uint64_t out = fc.eval_scalar(regs);
-        distrib[out] += 1;
+    }
+    else {
+        distrib.resize(total);
+        for (uint64_t v = 0; v < total; v += 1) {
+            for (int32_t i = 0; i < numMasks; i += 1) {
+                regs[maskRegs[i]] = (v >> i) & 1ULL;
+            }
+            distrib[v] = fc.eval_scalar(regs);
+        }
+        std::sort(distrib.begin(), distrib.end());
     }
 }
 
@@ -933,7 +1020,7 @@ bool compareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval, std::map<Node *
 }
 
 
-static bool fastGetDistribWithExevRec(const FastCircuit & fc, const std::vector<uint64_t> & distribRef, const std::vector<int32_t> & secretRegs, const std::vector<int32_t> & maskRegs, int32_t idx, uint64_t * regs, int32_t outWidth, bool * rud) {
+static bool fastGetDistribWithExevRec(const FastCircuit & fc, const Distrib & distribRef, const std::vector<int32_t> & secretRegs, const std::vector<int32_t> & maskRegs, int32_t idx, uint64_t * regs, int32_t outWidth, bool * rud) {
     if (idx < (int32_t) secretRegs.size()) {
         int32_t r = secretRegs[idx];
         if (r >= 0) {
@@ -949,18 +1036,13 @@ static bool fastGetDistribWithExevRec(const FastCircuit & fc, const std::vector<
         }
     }
     else {
-        std::vector<uint64_t> distrib;
+        Distrib distrib;
         fastGetDistrib(fc, maskRegs, regs, distrib, outWidth);
-        *rud = true;
-        for (size_t v = 0; v < distrib.size(); v += 1) {
-            if (distrib[v] != distribRef[0]) {
-                *rud = false;
-            }
-            if (distrib[v] != distribRef[v]) {
-                *rud = false;
-                return false;
-            }
+        if (!(distrib == distribRef)) {
+            *rud = false;
+            return false;
         }
+        *rud = distrib.isUniform();
         return true;
     }
 }
@@ -988,7 +1070,7 @@ static bool fastEnumeratePublicVarsRec(const FastCircuit & fc, const std::vector
                 regs[sr] = 0;
             }
         }
-        std::vector<uint64_t> distribRef;
+        Distrib distribRef;
         fastGetDistrib(fc, maskRegs, regs, distribRef, outWidth);
 
         bool rudLocal;
@@ -1063,8 +1145,8 @@ static bool fastShareIsEffective(const FastCircuit & fc, const std::vector<int32
         return fastShareIsEffective(fc, sharesWithFixedValRegs, sReg, maskRegs, idx + 1, regs, outWidth);
     }
     else {
-        std::vector<uint64_t> distrib0;
-        std::vector<uint64_t> distrib1;
+        Distrib distrib0;
+        Distrib distrib1;
 
         regs[sReg] = 0;
         fastGetDistrib(fc, maskRegs, regs, distrib0, outWidth);
@@ -1072,12 +1154,7 @@ static bool fastShareIsEffective(const FastCircuit & fc, const std::vector<int32
         regs[sReg] = (fc.isBitsliceable && outWidth == 1) ? ~0ULL : 1ULL;
         fastGetDistrib(fc, maskRegs, regs, distrib1, outWidth);
 
-        for (size_t v = 0; v < distrib0.size(); v += 1) {
-            if (distrib0[v] != distrib1[v]) {
-                return true;
-            }
-        }
-        return false;
+        return !(distrib0 == distrib1);
     }
 }
 

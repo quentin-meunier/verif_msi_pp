@@ -562,7 +562,7 @@ int main(int argc, const char ** argv) {
         for (int i = 0; i < 256; i += 1) {
             sboxp[i] = sbox[i ^ m->cst[0]] ^ mp->cst[0];
         }
-        registerArray("sbox", 8, 8, 0x0, 512, NULL, sbox, 1);
+        registerArray("sbox", 8, 8, 0x0, 256, NULL, sbox, 1); // uint8_t sbox[256]: 256 bytes
         registerArray("sboxp", 8, 8, 0x0, 256, sboxp_func, sboxp, 1);
     }
     else {
@@ -589,7 +589,7 @@ int main(int argc, const char ** argv) {
             mt[i] = &symbol(mtSymb, 'M', 8);
         }
 
-        registerArray("sbox", 8, 8, 0x0, 512, NULL, sbox, 1);
+        registerArray("sbox", 8, 8, 0x0, 256, NULL, sbox, 1); // uint8_t sbox[256]: 256 bytes
         registerArray("sboxp", 8, 8, 0x0, 256, sboxp_func, sboxp, 1);
     }
 

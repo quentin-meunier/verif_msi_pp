@@ -205,12 +205,33 @@ Symbolic array accesses can be modeled in VerifMSI++ expressions. Currently, onl
 * Input width (in bits)
 * Output width (in bits)
 * Array base address: useful for running low-level software implementations, for which adresses can be emitted in the form of the sum of an array base address and a symoblic offset. In that case, the function `getArrayAndOffset()` can be used to retrieve the array accessed along with the symbolic offset from an expression corresponding to the memory address accessed.
-* Array size (in bytes): can be used to detect out of bounds accesses, unused in provided functions
+* Array size (in bytes): used to check concrete accesses (constant indexes and concrete evaluation) against the array bounds, and to check that the address ranges of registered arrays do not overlap
 * Array function: if the array implements a function of the index accessed, this can be used to transform an array access to the corresponding expression.
 * Array concrete content: concrete values for the array, for concrete evalution
 * Element size (1, 2, 4 or 8, in bytes): represents the size of elements in the concrete array, in order to access them correctly for concrete evaluation
+* `isPermutation` (optional, default `false`): declares that the array is a permutation of `[0, 2^inWidth[` (see below). If the content is given, the declaration is checked against it.
 
 The minimal required arguments are the name, input width and output width.
+
+The following checks are made upon registration, and stop the execution with an error message if they fail: the name and base address must not be already used, the address range `[addr, addr + size[` must not overlap with the one of another registered array, the size must be a positive multiple of the element size, the number of elements must not exceed `2^inWidth`, and each value of the content must fit on `outWidth` bits. Accessing a registered array by an unknown name or address (`getArrayByName()`, `getArrayByAddr()`, `getArrayAndOffset()`) also stops the execution with an error message.
+
+#### Arrays and masking
+
+When a mask `m` is uniformly distributed, `T[m]` is only uniformly distributed over the `outWidth` output bits if `T` is a permutation. VerifMSI++ thus only considers that an array access preserves masking (i.e. that `T[m]` can be used as a mask, or that `T[k ^ m]` remains uniform and can mask another value) for arrays which are permutations. Injectivity is not sufficient: for example, with an injective array `T` from 8 to 16 bits, `k ^ T[m]` leaks information on the 16-bit secret `k`.
+
+Each array is classified upon creation in one of the following categories:
+
+| Category | Condition | Masking preserved |
+|---|---|---|
+| Function | a function is provided (accesses are replaced by the function result, no array node is created) | n/a (the returned expression is analysed) |
+| Known permutation | content given, `2^inWidth` elements, `inWidth == outWidth` and all values distinct | yes |
+| Known function | content given, not a permutation | no |
+| Declared permutation | no content, `isPermutation` is `true` (requires `inWidth == outWidth`) | yes |
+| Opaque function | no content, `isPermutation` is `false` | no |
+
+For arrays which do not preserve masking, the access is processed as any other operation: the verification remains precise in most practical cases since the replacement of a masked index occurs below the array access (e.g. `T[k ^ m]` becomes `T[m]`). The category of an array can be retrieved with `kindStr()` (C++) or `kind()` (Python), and the `maskPreserving` attribute.
+
+Arrays whose content depends on masks, as the masked tables recomputed at each execution in table-based masking schemes (e.g. `SBox'[x ^ m] = SBox[x] ^ m'`), cannot be described with a concrete content, since their values are not constants: they must be modeled with an array function, as shown in the example below.
 
 It is advised to specify the content of the array upon registration whenever possible, as this allows to evaluate the expression for concrete input values. This is very useful for checking an implementation, as it is sufficient to replace symbolic variables with constants in order to check the correctness of an implementation. This also allows to use the **concrete evaluation** module functions.
 
@@ -267,7 +288,7 @@ Node & sboxp_func(Node & idx) {
 }
 
 int main() {
-    registerArray("sbox", 8, 8, 0x0, 256, NULL, NULL, 1);
+    registerArray("sbox", 8, 8, 0x0, 256, NULL, NULL, 1, true); // the AES SBox is a permutation
     registerArray("sboxp", 8, 8, 0x0, 256, sboxp_func, NULL, 1);
     ArrayExp & sboxp = getArrayByName("sboxp");
 
@@ -300,6 +321,10 @@ The concrev module provides functions based on concrete evaluation. This comes i
 * `getSymbolicBitsNum()`: returns the total number of symbolic bits in an expression (may be useful to decide if enumerate or not).
 * `getMaxSymbVarWidth()`: returns the maximum width among all symbolic variables width in an expression.
 
+Exhaustive evaluation is made on the bit-decomposed expression. As a consequence, the input values returned by `compareExpsWithExev()` for the first non-equivalence case are given on the single-bit symbols (e.g. `x#0`, ..., `x#7`), not on the original symbols. Shift operations with a symbolic shift amount follow the same semantics as for constants: shifting by an amount greater than or equal to the width gives `0` (logical shifts) or only sign bits (arithmetic shift).
+
+The distribution of an expression over the mask values is stored as a histogram of `2^outWidth` counters when this is at most `2^EXEV_DENSE_MARGIN` times the number of mask values, and as the sorted list of the output values otherwise, so that expressions with a large output width can be evaluated. Exhaustive evaluation stops with an error message when the number of mask bits to enumerate exceeds `EXEV_MAX_MASKS`.
+
 
 ### Verification
 
@@ -308,6 +333,8 @@ For gadgets and hardware circuits, the main verification function is `checkSecur
 * `withGlitches`: boolean indicating if glitches are propagated through gates;
 * `secProp`: security property to verify, must be one on 'TPS', 'NI', 'SNI', 'RNI', 'PINI', 'OPINI';
 * `outputs`: vector of wires/gate outputs (`HWElement *`) corresponding to the outputs of the gadget. If this parameter has the type `vector<HWElement *>`, then the gadget is assumed to contain a single output, and the elements of the vector are its ordered shares. If the gadget contains several outputs, then a `vector<vector<HWElement *>>` can be passed as parameter, the first dimension being the different outputs and the second the shares.
+
+The verification stops with an error message if not all the input shares are reachable from the outputs (incomplete gadget). From Python, an unknown security property raises a `ValueError`.
 
 At a lower level, i.e. for verifying a tuple of expressions, the following function are defined:
 * `tps`, `ni`, `rni`, `pini`, `opini` which verify the corresponding properties, either on a single node, or on a `vector<Node *>`. Note that there is no `sni` function, as it is implemented as making a `ni` verification with a potentially different number of maximum occurrences per share. All of these functions come with a `NoFalsePositive` version, which makes an exhaustive enumeration in case of detected leakage. It is actually useful to perform the exhaustive enumeration just when the verification fails (and not after the verification returns), since the expression which has undergone replacements in the verification process is likely to contain much less symbolic variables due to the replacements which have already occurred.
@@ -326,15 +353,25 @@ VerifMSI++ has several configurations options, in the form of compilation flags,
 * `BIT_SIMPLIFY_PLUS`: if activated, in case of bit decomposition, addition operators will be decomposed using boolean expressions. For example a bit decomposition of the expression ` k + m` on 2 bits will produce `Concat((m#0 & k#0) ^ m#1 ^ k#1, m#0 ^ k#0)` . If this flag is deactivated, the resulting expression will be: `Concat(k#1, k#0) + Concat(m#1, m#0)`. Activating or not this flag depends on the context, but since it produces larger expressions, it should be deactivated when possible.
 * `EXTENDED_MERGE_CONCAT`: if activated, uses additional simplification rules to reconstruct expressions consisting in a concatenation of bitwise operations on the extraction of each bit of symbols or array expressions. This should be activated in most cases.
 * `SEL_MSK_W_NON_MSKNG_OCC`: if activated, allows the selection in the verification algorithm of a mask with non-masking occurrences. For example, in the expression `(m ^ k) | (m & p)`, symbol `m` has two occurrences: a masking one (first occurrence, which masks `k`), and a non masking one. If this flag is activated, `m` can be selected for a replacing the first sub-expression, while it will be ignored if this flag is false. The rationale behind is that in most cases, if masks have non masking occurrences, selecting a masking occurrence of this mask will make the expression grow and will not allow to conclude anyway. The gain brought by deactivating this flag is that it is no more required to precisely track the location of these occurrences in an expression (time + memory).
-* `VERIF_REMOVE_CST_IN_ADD`: if activated, removes constant operands from addition operations in the verification process. The rationale behind is that at the word level, adding constants to an expression does not change its distribution, while allowing more simplifications. However, considering individually the bits at the output of an addition can lead to different results. This flags should thus be enabled when the outputs of all addition are analysed word-wise.
+* `VERIF_REMOVE_CST_IN_ADD`: if activated, removes constant operands from addition operations in the verification process. The rationale behind is that at the word level, adding constants to an expression does not change its distribution, while allowing more simplifications. **This is an approximation, which can lead to a wrong "secure" conclusion.** It is only exact when the probed expression is the addition itself, observed as a whole word: the distribution of `x + c` is then the one of `x`, shifted by `c`. It is not exact anymore when:
+    * only a subset of the bits of the addition result is considered (bit decomposition, `Extract`, shift, or operation with a constant mask), e.g. `((k & 1) + 1) & 2`, which becomes `0` although its bit 1 is equal to bit 0 of `k`;
+    * the addition result is an operand of another operation involving the same variables, e.g. `a ^ (a + 3)`, which becomes `a ^ a = 0` although its value depends on `a`.
+
+    In both examples, `tps()` concludes that the expression is secure when `k` and `a` are secrets.
+
+    This flag should thus only be enabled when the outputs of all additions are analysed word-wise and are not combined with other expressions depending on the same variables.
 * `REM_SINGLE_INPUT_PROBES`: if activated, applies the optimisation of removing single input probes for gadget verification with shares. This should be set to `true`.
 * `REM_REDUNDANT_PROBES`:
+* `EXEV_MAX_MASKS`: maximum number of mask bits enumerated by the exhaustive evaluation (default `32`). Beyond this value, the execution stops with an error message.
+* `EXEV_DENSE_MARGIN`: the distribution computed by the exhaustive evaluation is stored as a histogram if `outWidth <= numMasks + EXEV_DENSE_MARGIN`, and as a sorted list of values otherwise (default `2`).
 * `BARTHE_OPT`:  if activated, tries to reduce the number of verifications made for a VerifMSI++ gadget by considering larger sets of probes than those required, following the approach introduced in [20], and with the error fix explained in the VerifMSI article. From our experience, this optimisation as it is implemented in VerifMSI++ does not bring much, if any, from a performance point of view.
 
 
 ## Python binding
 
 VerifMSI++ can be compiled as a python library, to enable using the C++ implementation from a python VerifMSI program. In order to do so, it is required to change the `from verif_msi import *` in the VerifMSI file to `from verif_msi_pp import *`. In order to enable the compilation of the python library, the flag `BUILD_PYTHON` in the Makefile must be set.
+
+In Python, `registerArray()` takes the same parameters as in C++, without the element size (deduced from the size and the number of elements of the content list); `isPermutation` is a keyword argument. Invalid parameters (empty content, size which is not 1, 2, 4 or 8 times the number of elements) raise a `ValueError`.
 
 
 ## Benchmarks

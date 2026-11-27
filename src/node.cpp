@@ -356,7 +356,7 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         n->width = children[0]->cst[0] - children[1]->cst[0] + 1;
     }
     else if (op == ARRAY) {
-        n->width = ArrayExp::allArrays[*children[0]->strn]->outWidth;
+        n->width = ArrayExp::getByName(*children[0]->strn).outWidth;
     }
     else {
         std::cerr << "*** Error op = " << op << std::endl;
@@ -500,7 +500,8 @@ Node & Node::OpNode(NodeOp op, const std::vector<Node *> & children) {
         }
     }
 
-    else if (preserveMaskingOps.contains(op)) {
+    // An array access only preserves masking if the array is a permutation (see ArrayExp::classify)
+    else if (preserveMaskingOps.contains(op) and (op != ARRAY or ArrayExp::getByName(*children[0]->strn).maskPreserving)) {
         Node * child;
         if (op == ARRAY) {
             child = children[1];
@@ -982,49 +983,30 @@ Node & Node::operator>>(int32_t shval) {
         int32_t limb_shift = shval / 64;
         int32_t limb_rem = shval % 64;
         int32_t mslWidth = ((width - 1) % 64) + 1; // Width of Most Significant Limb
-        if (limb_rem == 0) {
-            uint64_t w;
-            if (mslWidth == 64) {
-                w = ((int64_t) cst[nlimbs - 1]) >> 63;
-            }
-            else {
-                w = ((int64_t) (cst[nlimbs - 1] << (64 - mslWidth))) >> 63;
-            }
-            for (int32_t i = 0; i < nlimbs; i += 1) {
-                if (i + limb_shift >= nlimbs) {
-                    res[i] = w;
-                }
-                else if (i + limb_shift == nlimbs - 1 && mslWidth != 64) {
-                    res[i] = cst[nlimbs - 1] | (w << mslWidth);
-                }
-                else {
-                    res[i] = cst[i + limb_shift];
-                }
-            }
+        // Sign word: all ones if the sign bit is set, all zeros otherwise
+        uint64_t w;
+        if (mslWidth == 64) {
+            w = ((int64_t) cst[nlimbs - 1]) >> 63;
         }
         else {
-            for (int32_t i = 0; i < nlimbs; i += 1) {
-                if (i + limb_shift >= nlimbs) {
-                    uint64_t w;
-                    if (mslWidth == 64) {
-                        w = ((int64_t) cst[nlimbs - 1]) >> 63;
-                    }
-                    else {
-                        w = ((int64_t) (cst[nlimbs - 1] << (64 - mslWidth))) >> 63;
-                    }
-                    res[i] = w;
-                }
-                else if (i + limb_shift == nlimbs - 1) {
-                    if (limb_rem >= mslWidth) {
-                        res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> 63;
-                    }
-                    else {
-                        res[i] = cst[nlimbs - 1] >> limb_rem | (int64_t) ((cst[nlimbs - 1] >> (mslWidth - 1)) << 63) >> (limb_rem + 64 - mslWidth);
-                    }
-                }
-                else {
-                    res[i] = cst[i + limb_shift] >> limb_rem | cst[i + limb_shift + 1] << (64 - limb_rem);
-                }
+            w = ((int64_t) (cst[nlimbs - 1] << (64 - mslWidth))) >> 63;
+        }
+        // Limb j of the value sign-extended to an infinite width
+        auto extLimb = [&](int32_t j) -> uint64_t {
+            if (j >= nlimbs) {
+                return w;
+            }
+            if (j == nlimbs - 1 && mslWidth != 64) {
+                return cst[j] | (w << mslWidth);
+            }
+            return cst[j];
+        };
+        for (int32_t i = 0; i < nlimbs; i += 1) {
+            if (limb_rem == 0) {
+                res[i] = extLimb(i + limb_shift);
+            }
+            else {
+                res[i] = extLimb(i + limb_shift) >> limb_rem | extLimb(i + limb_shift + 1) << (64 - limb_rem);
             }
         }
         if (width % 64 != 0) {

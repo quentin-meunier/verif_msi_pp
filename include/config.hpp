@@ -29,5 +29,11 @@ Author(s): Quentin L. Meunier
 #define REM_REDUNDANT_PROBES    false
 #define BARTHE_OPT              false
 
+// Exhaustive evaluation (concrev.cpp)
+// Max number of mask bits enumerated (2^EXEV_MAX_MASKS evaluations per distribution)
+#define EXEV_MAX_MASKS          32
+// Dense histogram used if outWidth <= numMasks + EXEV_DENSE_MARGIN, sorted outputs otherwise
+#define EXEV_DENSE_MARGIN       2
+
 #endif
 

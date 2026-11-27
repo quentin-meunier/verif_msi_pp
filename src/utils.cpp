@@ -7,6 +7,7 @@ Author(s): Quentin L. Meunier
 */
 
 
+#include <algorithm>
 #include <cassert>
 #include <sys/time.h>
 
@@ -28,12 +29,21 @@ bool bitExpEnable() {
 
 
 
-void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize) {
+void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize, bool isPermutation) {
 
     if (addr != 0) {
         if (ArrayExp::registeredArraysByAddr.contains(addr)) {
             std::cerr << "*** Error: Array with base address 0x" << std::hex << addr << std::dec << " already registered" << std::endl;
             exit(EXIT_FAILURE);
+        }
+        // Address ranges [addr, addr + size[ must not overlap, otherwise getArrayAndOffset may select the wrong array
+        for (const auto & [otherAddr, other] : ArrayExp::registeredArraysByAddr) {
+            uint64_t end = addr + (uint64_t) std::max(size, 1);
+            uint64_t otherEnd = otherAddr + (uint64_t) std::max(other->size, 1);
+            if (addr < otherEnd and otherAddr < end) {
+                std::cerr << "*** Error: Address range of array " << name << " [0x" << std::hex << addr << ", 0x" << end << "[ overlaps with array " << other->name << " [0x" << otherAddr << ", 0x" << otherEnd << "[" << std::dec << std::endl;
+                exit(EXIT_FAILURE);
+            }
         }
     }
 
@@ -52,7 +62,7 @@ void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t
         exit(EXIT_FAILURE);
     }
 
-    ArrayExp * arr = new ArrayExp(name, inWidth, outWidth, addr, size, func, content, elemSize);
+    ArrayExp * arr = new ArrayExp(name, inWidth, outWidth, addr, size, func, content, elemSize, isPermutation);
 
     if (addr != 0x0) {
         ArrayExp::registeredArraysByAddr.emplace(addr, arr);
@@ -63,32 +73,52 @@ void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t
 
 
 
+static ArrayExp * findArrayByAddr(uint64_t addr) {
+    auto it = ArrayExp::registeredArraysByAddr.find(addr);
+    if (it == ArrayExp::registeredArraysByAddr.end()) {
+        std::cerr << "*** Error: No array registered at address 0x" << std::hex << addr << std::dec << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return it->second;
+}
+
+
+static ArrayExp * findArrayByName(const std::string & name) {
+    auto it = ArrayExp::registeredArraysByName.find(name);
+    if (it == ArrayExp::registeredArraysByName.end()) {
+        std::cerr << "*** Error: No array registered with name " << name << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return it->second;
+}
+
+
 ArrayExp & getArrayByAddr(uint64_t addr) {
-    return *ArrayExp::registeredArraysByAddr[addr];
+    return *findArrayByAddr(addr);
 }
 
 
 ArrayExp & getArrayByName(std::string name) {
-    return *ArrayExp::registeredArraysByName[name];
+    return *findArrayByName(name);
 }
 
 
 int32_t getArraySizeByAddr(uint64_t addr) {
-    return ArrayExp::registeredArraysByAddr[addr]->size;
+    return findArrayByAddr(addr)->size;
 }
 
 
 int32_t getArraySizeByName(std::string name) {
-    return ArrayExp::registeredArraysByName[name]->size;
+    return findArrayByName(name)->size;
 }
 
 
 std::function<Node &(Node &)> & getArrayFuncByAddr(uint64_t addr) {
-    return ArrayExp::registeredArraysByAddr[addr]->func;
+    return findArrayByAddr(addr)->func;
 }
 
 std::function<Node &(Node &)> & getArrayFuncByName(std::string name) {
-    return ArrayExp::registeredArraysByName[name]->func;
+    return findArrayByName(name)->func;
 }
 
 
@@ -197,7 +227,12 @@ Node & symbol(std::string symb, char symbType, int32_t width) {
 
 
 Node & getSymbolByName(std::string symb) {
-    return *Node::symbolsByName[symb];
+    auto it = Node::symbolsByName.find(symb);
+    if (it == Node::symbolsByName.end()) {
+        std::cerr << "*** Error: No symbol named " << symb << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return *it->second;
 }
 
 

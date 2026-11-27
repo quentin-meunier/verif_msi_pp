@@ -671,6 +671,12 @@ bool factorize(NodeOp mulOp, NodeOp addOp, std::vector<Node *> & newChildren, in
                         modified = true;
                         break;
                     }
+                    if (hasChanged) {
+                        // Absorption case: newChildren[i] (firstMul) has been erased, so i and
+                        // firstMul are no longer valid: the next iteration must restart from scratch
+                        // (continuing erased another child, e.g. (a & b) & (a | b) gave a instead of a & b)
+                        break;
+                    }
                     j += 1;
                 }
             }
@@ -1244,6 +1250,13 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
         if (op != PLUS) {
             m = mergeConcatChildren(op, newChildren, &op, useSingleBitVariables);
             modified = modified || m;
+            if (op == CONCAT and addNotNode) {
+                // The '^' has been transformed into a Concat: the '~' removed from the children
+                // of the '^' must be applied to the resulting Concat, otherwise it is lost
+                // (e.g. ~Concat(a, b) ^ Concat(a, b) was simplified to 0 instead of ~0)
+                Node & concatNode = simplifyCore(Node::OpNode(CONCAT, newChildren), useSingleBitVariables);
+                return setSimpEqAndReturn(node, simplifyCore(Node::OpNode(BNOT, {&concatNode}), useSingleBitVariables));
+            }
         }
     }
 
@@ -1721,7 +1734,11 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                 while (i < (int32_t) newChildren.size()) {
                     Node * child0 = newChildren[i];
                     if (child0->op == BXOR or (child0->op == BNOT and child0->children->at(0)->op == BXOR)) {
-                        bool xorHasNot = (op == BOR);
+                        // In a '&' (resp. '|'), the other operands can be considered equal to all ones (resp. 0):
+                        // XORing child0 with an operand equal to all ones complements it. A plain operand is all
+                        // ones in a '&' and 0 in a '|', a complemented one is 0 in a '&' and all ones in a '|'
+                        // (the previous initialisation to (op == BOR) was only right for one operand in a '|')
+                        bool xorHasNot = false;
                         if (child0->op == BNOT) {
                             child0 = child0->children->at(0);
                             xorHasNot = !xorHasNot;
@@ -1764,9 +1781,16 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                                 }
 
                                 if (allPresent) {
-                                    // Copy the temporary indexes to remove in idxToRemove
-                                    idxToRemove.insert(tempIdxToRemove.begin(), tempIdxToRemove.end());
-                                    xorHasNot = xorHasNot ^ (!varHasNot);
+                                    // XOR the children of child1 with the current children of child0:
+                                    // an index already removed by a previous child must be added back
+                                    // (symmetric difference), e.g. (a2 ^ r1) & (r0 ^ r1) & (a0 ^ a2 ^ r0 ^ r1)
+                                    // gives (a2 ^ r1) & (r0 ^ r1) & ~(a0 ^ r1), not ... & ~a0
+                                    for (int32_t idx : tempIdxToRemove) {
+                                        if (!idxToRemove.erase(idx)) {
+                                            idxToRemove.insert(idx);
+                                        }
+                                    }
+                                    xorHasNot = xorHasNot ^ (op == BAND ? !varHasNot : varHasNot);
                                 }
                             }
                             else {
@@ -1774,8 +1798,11 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                                 while (j < (int32_t) child0->children->size()) {
                                     Node & xorChild = *child0->children->at(j);
                                     if (equivalence(*child1, xorChild)) {
-                                        idxToRemove.insert(j);
-                                        xorHasNot = xorHasNot ^ (!varHasNot);
+                                        // Symmetric difference, as above
+                                        if (!idxToRemove.erase(j)) {
+                                            idxToRemove.insert(j);
+                                        }
+                                        xorHasNot = xorHasNot ^ (op == BAND ? !varHasNot : varHasNot);
                                         break;
                                     }
                                     j += 1;
@@ -1822,7 +1849,11 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                 while (i < (int32_t) newChildren.size()) {
                     Node * child0 = newChildren[i];
                     if (child0->op == BXOR or (child0->op == BNOT and child0->children->at(0)->op == BXOR)) {
-                        bool xorHasNot = (op == BOR);
+                        // In a '&' (resp. '|'), the other operands can be considered equal to all ones (resp. 0):
+                        // XORing child0 with an operand equal to all ones complements it. A plain operand is all
+                        // ones in a '&' and 0 in a '|', a complemented one is 0 in a '&' and all ones in a '|'
+                        // (the previous initialisation to (op == BOR) was only right for one operand in a '|')
+                        bool xorHasNot = false;
                         if (child0->op == BNOT) {
                             child0 = child0->children->at(0);
                             xorHasNot = !xorHasNot;
@@ -1845,7 +1876,7 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                                 }
                                 if (equivalence(*child1, xorChild)) {
                                     idxToRemove.insert(j);
-                                    xorHasNot = xorHasNot ^ (!varHasNot);
+                                    xorHasNot = xorHasNot ^ (op == BAND ? !varHasNot : varHasNot);
                                     break;
                                 } 
                                 k += 1;
@@ -1976,7 +2007,10 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                             }
                             Node * newChild;
                             if (newGrandChildren.size() == 0) {
-                                newChild = cst1;
+                                // All the operands of the inner op1 node are neutral for op1 in this context
+                                // (0 for an inner '|' in a '&', all ones for an inner '&' in a '|'), so
+                                // the inner node is equal to cst0, e.g. (~d & c) & (d | ~c) is 0
+                                newChild = cst0;
                             }
                             else if (newGrandChildren.size() == 1) {
                                 newChild = newGrandChildren[0];
@@ -2026,7 +2060,10 @@ static Node & simplifyCore(Node & node, bool useSingleBitVariables) {
                             }
                             Node * newChild;
                             if (newGrandChildren.size() == 0) {
-                                newChild = cst1;
+                                // All the operands of the inner op1 node are neutral for op1 in this context
+                                // (0 for an inner '|' in a '&', all ones for an inner '&' in a '|'), so
+                                // the inner node is equal to cst0, e.g. (~d & c) & (d | ~c) is 0
+                                newChild = cst0;
                             }
                             else if (newGrandChildren.size() == 1) {
                                 newChild = newGrandChildren[0];

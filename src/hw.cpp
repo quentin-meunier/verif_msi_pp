@@ -1062,6 +1062,7 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
     bool completeGadget = allInputSharesAreAccessible(gatesToVerify, verbose);
     if (not completeGadget) {
         std::cerr << "# Error: Not all input shares are accessible, cannot verify the gadget" << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     if (verbose) {
@@ -1174,10 +1175,10 @@ int32_t checkSecurity(int32_t order, bool withGlitches, SecurityProperty secProp
             }
             else if (secProp == RNI) {
                 if (noFalsePositive) {
-                    res = rniNoFalsePositive(std::get<0>(t), (order - std::get<1>(t).size()));
+                    res = rniNoFalsePositive(std::get<0>(t), (order - std::get<1>(t).size()), true);
                 }
                 else {
-                    res = rni(std::get<0>(t), (order - std::get<1>(t).size()));
+                    res = rni(std::get<0>(t), (order - std::get<1>(t).size()), true);
                 }
             }
             else if (secProp == SNI) {

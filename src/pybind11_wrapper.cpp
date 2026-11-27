@@ -40,7 +40,7 @@ py::tuple bindCompareExpsWithExev(Node & e0, Node & e1) {
     else {
         py::dict pyres;
         for (const auto & [k, v] : res) {
-            pyres[py::cast<Node &>(*k)] = py::cast<Node &>(*v);
+            pyres[py::cast(k, py::return_value_policy::reference)] = py::cast(v, py::return_value_policy::reference);
         }
         return py::make_tuple(pyres, v0, v1);
     }
@@ -58,7 +58,7 @@ py::tuple bindCompareExpsWithRandev(Node & e0, Node & e1, int32_t nbEval) {
     else {
         py::dict pyres;
         for (const auto & [k, v] : res) {
-            pyres[py::cast<Node &>(*k)] = py::cast<Node &>(*v);
+            pyres[py::cast(k, py::return_value_policy::reference)] = py::cast(v, py::return_value_policy::reference);
         }
         return py::make_tuple(pyres, v0, v1);
     }
@@ -103,7 +103,7 @@ py::tuple bindCheckSecurity(int32_t order, bool withGlitches, const std::string 
         sp = OPINI;
     }
     else {
-        std::cout << "*** Error: Unknown security property " << secProp << std::endl;
+        throw py::value_error("Unknown security property '" + secProp + "' (expected: tps, ni, sni, rni, pini or opini)");
     }
     std::vector<std::vector<HWElement *>> cppOutputList;
     if (outputs.size() > 0 && py::isinstance<py::list>(outputs[0])) {
@@ -166,13 +166,19 @@ py::object bindLitteralInteger(Node & e) {
 static std::vector<uint8_t *> pyAllocatedArrays;
 
 
-void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py::object addr, int32_t size, std::function<Node &(Node &)> & func, std::optional<py::list> content) {
+void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py::object addr, int32_t size, std::function<Node &(Node &)> & func, std::optional<py::list> content, bool isPermutation) {
 
     int32_t elemSize = 0;
     uint8_t * cppContent = NULL;
     if (content.has_value()) {
-        elemSize = size / (int32_t) content.value().size();
-        assert(size == elemSize * (int32_t) content.value().size());
+        int32_t nbElems = (int32_t) content.value().size();
+        if (nbElems == 0) {
+            throw py::value_error("registerArray: content of array '" + name + "' is empty (pass None for an array without content)");
+        }
+        elemSize = size / nbElems;
+        if (size != elemSize * nbElems or (elemSize != 1 and elemSize != 2 and elemSize != 4 and elemSize != 8)) {
+            throw py::value_error("registerArray: size (" + std::to_string(size) + " bytes) of array '" + name + "' is not 1, 2, 4 or 8 times its number of elements (" + std::to_string(nbElems) + ")");
+        }
         cppContent = (uint8_t *) malloc(size);
         int32_t i = 0;
         for (const auto & v : content.value()) {
@@ -203,7 +209,7 @@ void bindRegisterArray(std::string & name, int32_t inWidth, int32_t outWidth, py
         cppAddr = py::cast<uint64_t>(addr);
     }
 
-    registerArray(name, inWidth, outWidth, cppAddr, size, func, cppContent, elemSize);
+    registerArray(name, inWidth, outWidth, cppAddr, size, func, cppContent, elemSize, isPermutation);
     if (cppContent != NULL) {
         pyAllocatedArrays.push_back(cppContent);
     }
@@ -223,7 +229,7 @@ py::tuple bindGetArrayAndOffset(Node & addr) {
     Node * offset;
     ArrayExp & arr = getArrayAndOffset(addr, &offset);
     Node & off = *offset;
-    return py::make_tuple(arr, off);
+    return py::make_tuple(py::cast(&arr, py::return_value_policy::reference), py::cast(&off, py::return_value_policy::reference));
 }
 
 
@@ -423,7 +429,9 @@ PYBIND11_MODULE(_core, m) {
         .def("__str__", &HWElement::toString)
         .def("getSymbExp", &HWElement::getSymbExp, py::return_value_policy::reference);
     py::class_<ArrayExp>(m, "ArrayExp")
-        .def("__getitem__", &ArrayExp::operator[], py::return_value_policy::reference);
+        .def("__getitem__", &ArrayExp::operator[], py::return_value_policy::reference)
+        .def("kind", &ArrayExp::kindStr)
+        .def_readonly("maskPreserving", &ArrayExp::maskPreserving);
 
     m.def("LShR", py::overload_cast<Node &, int>(&LShR), "Desc.", py::return_value_policy::reference);
     m.def("LShR", py::overload_cast<Node &, Node &>(&LShR), "Desc.", py::return_value_policy::reference);
@@ -478,7 +486,7 @@ PYBIND11_MODULE(_core, m) {
     m.def("getSymbolByName", &bindGetSymbolByName, "Desc.", py::return_value_policy::reference);
     m.def("constant", &constant, "Desc.", py::return_value_policy::reference);
     m.def("litteralInteger", &bindLitteralInteger, "Desc.");
-    m.def("registerArray", &bindRegisterArray, "Desc.");
+    m.def("registerArray", &bindRegisterArray, "Desc.", py::arg("name"), py::arg("inWidth"), py::arg("outWidth"), py::arg("addr"), py::arg("size"), py::arg("func"), py::arg("content"), py::arg("isPermutation") = false);
     m.def("getArrayByAddr", &getArrayByAddr, "Desc.", py::return_value_policy::reference);
     m.def("getArrayByName", &getArrayByName, "Desc.", py::return_value_policy::reference);
     m.def("getArrayFuncByAddr", &getArrayFuncByAddr);

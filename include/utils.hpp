@@ -20,7 +20,7 @@ namespace vmsi {
 
 bool bitExpEnable();
 
-void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize);
+void registerArray(std::string name, int32_t inWidth, int32_t outWidth, uint64_t addr, int32_t size, std::function<Node &(Node &)> func, void * content, int32_t elemSize, bool isPermutation = false);
 ArrayExp & getArrayByAddr(uint64_t addr);
 ArrayExp & getArrayByName(std::string name);
 int32_t getArraySizeByAddr(uint64_t addr);

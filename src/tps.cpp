@@ -241,8 +241,8 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
         }
  
         // Choice of CTR:
-        // - Choose mask m which minimizes the number of nodes with occurrence of m (CTR Bases + other Occ)
-        // - For this m, choose CTR Base with the highest count
+        // - Choose m depending of its number of masking and non-masking occurrences
+        // - Among the masking occurrences of m, choose CTR that has the minimum number of occurrences 
         // - For this CTR Base, choose the CTR with the max height for the same count
         // FIXME: change map copies to an alias, check that this is ok
         std::map<Node *, std::map<Node *, std::map<Node *, std::pair<uint64_t, int32_t>>>> & maskingMaskOcc = node->maskingMaskOcc;
@@ -587,7 +587,9 @@ bool piniNoFalsePositive(std::vector<Node *> & nodes, int maxShareOcc, std::set<
 }
 
 
-static bool opini_internal(std::vector<Node *> & nodes, int maxShareOcc, std::set<int> & outputIndexes, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose, bool noFalsePositive) {
+static bool opini_internal(std::vector<Node *> & nodes, int maxShareOcc, const std::set<int> & outputIndexesIn, std::vector<std::vector<Node *>> & allOutputsLeakages, bool bitDecompose, bool verbose, bool noFalsePositive) {
+    // Local copy: the output indexes added during the iterations must not be visible from the caller
+    std::set<int> outputIndexes = outputIndexesIn;
     PropParams pp;
     pp.maxShareOcc = maxShareOcc;
     pp.outputIndexes = &outputIndexes;
@@ -610,7 +612,7 @@ static bool opini_internal(std::vector<Node *> & nodes, int maxShareOcc, std::se
             //std::cout << "# debug: additionalIndex: " << idx << std::endl;
             outputIndexes.insert(idx);
             for (const auto & output : allOutputsLeakages) {
-                probesLeakagesWithNewOutputs.push_back(output[idx]);
+                probesLeakagesWithNewOutputs.push_back(output.at(idx));
             }
         }
         additionalInputIndexes.clear();
