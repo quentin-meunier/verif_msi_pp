@@ -41,6 +41,7 @@ benchmarks/hw/pini_mult/bin
 benchmarks/hw/pini_mult/*.cpp
 benchmarks/hw/tsm/bin
 benchmarks/hw/tsm_plus/bin
+benchmarks/sw/aes_herbst/bin
 
 verif_msi_pp.cpython-*.so
 _core.cpython-*.so

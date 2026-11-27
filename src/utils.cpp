@@ -14,6 +14,7 @@ Author(s): Quentin L. Meunier
 #include "utils.hpp"
 #include "node.hpp"
 #include "arrayexp.hpp"
+#include "sharing.hpp"
 #include "simplify.hpp"
 #include "check_leakage.hpp"
 #include "config.hpp"
@@ -220,7 +221,7 @@ void checkResults(Node & res, Node & ref, bool usbv) {
 
 
 Node & symbol(std::string symb, char symbType, int32_t width) {
-    Node & s = Symb(symb.c_str(), symbType, width, 0, 0, NULL, NULL);
+    Node & s = Symb(symb.c_str(), symbType, width, 0, NULL, NULL);
     Node::symbolsByName.emplace(symb, &s);
     return s;
 }
@@ -399,7 +400,6 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
         exit(EXIT_FAILURE);
     }
     Node::secretShared.insert(&s);
-    s.nbShares = nbShares;
     std::vector<Node *> pseudoShares = getPseudoSharesInternal(s, nbShares);
     std::vector<Node *> res;
     for (int32_t i = 0; i < nbShares; i += 1) {
@@ -412,10 +412,11 @@ std::vector<Node *> getRealShares(Node & s, int nbShares) {
             str = str + "[" + std::to_string(i) + "]";
         }
 
-        Node & a = SymbInternal(str, 'A', s.width, nbShares, i, &s, pseudoShares[i]);
+        Node & a = SymbInternal(str, 'A', s.width, i, &s, pseudoShares[i]);
         Node::symbolsByName.emplace(str, &a);
         res.push_back(&a);
     }
+    Sharing::registerSecretShares(s, res);
     return res;
 }
 
@@ -466,7 +467,7 @@ Node & replaceSharesWithSecretsAndMasks(Node & e) {
     std::map<Node *, Node *> m;
     for (const auto & [s, v] : e.shareOcc) {
         for (const auto & [sh, w] : v) {
-            m[sh] = sh->pseudoShareEq;
+            m[sh] = Sharing::getShareInfo(*sh).pseudoShareEq;
         }
     }
 

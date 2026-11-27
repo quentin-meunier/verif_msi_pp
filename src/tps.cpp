@@ -11,6 +11,7 @@ Author(s): Quentin L. Meunier
 
 #include "tps.hpp"
 #include "node.hpp"
+#include "sharing.hpp"
 #include "simplify.hpp"
 #include "concrev.hpp"
 #include "utils_private.hpp"
@@ -311,7 +312,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             bool isRNI = true;
             for (const auto & [s, shares] : node->shareOcc) {
                 // shares is node->shareOcc[s]
-                int nbTotalShares = s->nbShares;
+                int nbTotalShares = Sharing::getNbShares(*s);
                 if ((int32_t) shares.size() + diff >= nbTotalShares) {
                     isRNI = false;
                     break;
@@ -326,7 +327,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
             std::set<int32_t> internalSharesIndexes;
             for (const auto & [s, shares] : node->shareOcc) {
                 for (const auto & [sh, val] : shares) {
-                    int32_t num = sh->shareNum;
+                    int32_t num = Sharing::getShareNum(*sh);
                     if (not outputIndexes->contains(num)) {
                         internalSharesIndexes.insert(num);
                     }
@@ -403,7 +404,7 @@ static bool checkProperty(Node & nodeIn, SecurityProperty secProp, PropParams & 
                 std::set<int32_t> internalSharesIndexes;
                 for (const auto & [s, shares] : node->shareOcc) {
                     for (const auto & [sh, val] : shares) {
-                        int32_t num = sh->shareNum;
+                        int32_t num = Sharing::getShareNum(*sh);
                         if (not outputIndexes->contains(num)) {
                             internalSharesIndexes.insert(num);
                         }

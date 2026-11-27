@@ -16,6 +16,7 @@ Author(s): Quentin L. Meunier
 #include "node.hpp"
 #include "config.hpp"
 #include "arrayexp.hpp"
+#include "sharing.hpp"
 #include "SHA256.hpp"
 
 namespace vmsi {
@@ -25,8 +26,6 @@ Node::Node() {
     nodeNum += 1;
     width = 0;
     children = NULL;
-    nbShares = 0;
-    shareNum = 0;
     symb = NULL;
     symbType = '\0';
     nature = NONE;
@@ -42,8 +41,6 @@ Node::Node() {
 
     simpEq = NULL;
     simpEqUsbv = NULL;
-    origSecret = NULL;
-    pseudoShareEq = NULL;
 
     preservedMask = {NULL, NULL};
     for (int32_t i = 0; i < 4; i += 1) {
@@ -128,15 +125,15 @@ void Node::cleanup() {
 
     secretShared.clear();
     symbolsByName.clear();
+    Sharing::cleanup();
     nodeNum = 0;
 }
 
 
-Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
+Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
     if (symb2node.contains(symb)) {
         return *symb2node[symb];
     }
-    assert(symbType != 'A' or nbShares != 0);
     assert(symbType != 'A' or origSecret != NULL);
     assert(symbType != 'A' or pseudoShareEq != NULL);
     Node * n = new Node();
@@ -148,10 +145,10 @@ Node & Node::SymbNode(const std::string & symb, char symbType, int32_t width, in
     for (int32_t i = 0; i < width; i += 1) {
         n->extractBit[i] = NULL;
     }
-    n->nbShares = nbShares;
-    n->shareNum = shareNum;
-    n->origSecret = origSecret;
-    n->pseudoShareEq = pseudoShareEq;
+    if (symbType == 'A') {
+        // Must be done before setVarsOccurrences(), which uses the secret of the share
+        Sharing::registerShare(*n, *origSecret, shareNum, *pseudoShareEq);
+    }
     n->setVarsOccurrences();
     n->simpEq = n;
     SHA256 sha;
@@ -689,7 +686,7 @@ void Node::setVarsOccurrences() {
             secretVarOcc.insert(this);
         }
         else if (symbType == 'A') {
-            shareOcc[origSecret].emplace(this, 1);
+            shareOcc[&Sharing::getSecret(*this)].emplace(this, 1);
         }
         return;
     }
@@ -1265,7 +1262,7 @@ std::ostream & operator<<(std::ostream & strm, const Node & n) {
 }
 
 
-Node & Symb(const char * symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
+Node & Symb(const char * symb, char symbType, int32_t width, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
     std::string s(symb);
     for (char ch : Node::forbiddenChars) {
         if (s.find(ch) != std::string::npos) {
@@ -1277,18 +1274,18 @@ Node & Symb(const char * symb, char symbType, int32_t width, int32_t nbShares, i
         std::cerr << "*** Error: symbol " << s << " has already been defined" << std::endl;
         exit(EXIT_FAILURE);
     }
-    return SymbInternal(s, symbType, width, nbShares, shareNum, origSecret, pseudoShareEq);
+    return SymbInternal(s, symbType, width, shareNum, origSecret, pseudoShareEq);
 }
 
 
-Node & SymbInternal(std::string symb, char symbType, int32_t width, int32_t nbShares, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
+Node & SymbInternal(std::string symb, char symbType, int32_t width, int32_t shareNum, Node * origSecret, Node * pseudoShareEq) {
     // FIXME: check width ?
-    return Node::SymbNode(symb, symbType, width, nbShares, shareNum, origSecret, pseudoShareEq);
+    return Node::SymbNode(symb, symbType, width, shareNum, origSecret, pseudoShareEq);
 }
 
 
 Node & SymbInternal(std::string symb, char symbType, int32_t width) {
-    return SymbInternal(symb, symbType, width, 0, 0, NULL, NULL);
+    return SymbInternal(symb, symbType, width, 0, NULL, NULL);
 }
 
 

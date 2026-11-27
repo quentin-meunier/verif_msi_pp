@@ -16,6 +16,7 @@ Author(s): Quentin L. Meunier
 #include "utils.hpp"
 #include "concrev.hpp"
 #include "arrayexp.hpp"
+#include "sharing.hpp"
 #include "tps.hpp"
 #include "check_leakage.hpp"
 #include "hw.hpp"

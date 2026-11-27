@@ -22,6 +22,7 @@ Author(s): Quentin L. Meunier
 #include "arrayexp.hpp"
 #include "concrev.hpp"
 #include "node.hpp"
+#include "sharing.hpp"
 #include "simplify.hpp"
 #include "utils.hpp"
 #include "utils_private.hpp"
@@ -1220,26 +1221,26 @@ bool isNIWithExev(Node & e, int32_t maxShareOcc) {
         }
     }
     for (const auto & v : shareVarsOrig) {
-        secretVars.insert(v->origSecret);
+        secretVars.insert(&Sharing::getSecret(*v));
     }
 
     for (const auto & v : secretVars) {
         int32_t nbShares = 0;
         for (const auto & sh : shareVarsOrig) {
-            if (sh->origSecret == v) {
+            if (&Sharing::getSecret(*sh) == v) {
                 nbShares += 1;
             }
         }
         if (nbShares > maxShareOcc) {
             for (const auto & sh : shareVarsOrig) {
-                if (sh->origSecret == v) {
+                if (&Sharing::getSecret(*sh) == v) {
                     shareVars.push_back(sh);
                 }
             }
         }
         else {
             for (const auto & sh : shareVarsOrig) {
-                if (sh->origSecret == v) {
+                if (&Sharing::getSecret(*sh) == v) {
                     publicVars.push_back(sh);
                 }
             }
@@ -1269,7 +1270,7 @@ bool isNIWithExev(Node & e, int32_t maxShareOcc) {
     for (const auto & s : secretVars) {
         int32_t nbEffectiveShares = 0;
         for (const auto & sh : shareVars) {
-            if (sh->origSecret == s and effectiveShares.contains(sh)) {
+            if (&Sharing::getSecret(*sh) == s and effectiveShares.contains(sh)) {
                 nbEffectiveShares += 1;
             }
         }
@@ -1310,29 +1311,29 @@ bool isRNIWithExev(Node & e, int32_t diff) {
         }
     }
     for (const auto & v : shareVarsOrig) {
-        secretVars.insert(v->origSecret);
+        secretVars.insert(&Sharing::getSecret(*v));
     }
 
     for (const auto & v : secretVars) {
         int32_t nbUsedShares = 0;
-        int32_t nbTotalShares = v->nbShares;
+        int32_t nbTotalShares = Sharing::getNbShares(*v);
 
         for (const auto & sh : shareVarsOrig) {
-            if (sh->origSecret == v) {
+            if (&Sharing::getSecret(*sh) == v) {
                 nbUsedShares += 1;
             }
         }
         assert(nbUsedShares == (int32_t) e0.shareOcc[v].size());
         if (nbUsedShares + diff >= nbTotalShares) {
             for (const auto & sh : shareVarsOrig) {
-                if (sh->origSecret == v) {
+                if (&Sharing::getSecret(*sh) == v) {
                     shareVars.push_back(sh);
                 }
             }
         }
         else {
             for (const auto & sh : shareVarsOrig) {
-                if (sh->origSecret == v) {
+                if (&Sharing::getSecret(*sh) == v) {
                     publicVars.push_back(sh);
                 }
             }
@@ -1360,10 +1361,10 @@ bool isRNIWithExev(Node & e, int32_t diff) {
     fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, 0, regs.data(), e0.width, effectiveShares);
 
     for (const auto & s : secretVars) {
-        int32_t nbTotalShares = s->nbShares;
+        int32_t nbTotalShares = Sharing::getNbShares(*s);
         int32_t nbEffectiveShares = 0;
         for (const auto & sh : shareVars) {
-            if (sh->origSecret == s and effectiveShares.contains(sh)) {
+            if (&Sharing::getSecret(*sh) == s and effectiveShares.contains(sh)) {
                 nbEffectiveShares += 1;
             }
         }
@@ -1403,7 +1404,7 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
         }
     }
     for (const auto & v : shareVars) {
-        secretVars.insert(v->origSecret);
+        secretVars.insert(&Sharing::getSecret(*v));
     }
 
     FastCircuit fc;
@@ -1428,8 +1429,8 @@ bool isPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexes
 
     std::set<int> effectiveShareIndexesNotInOutputIndexes;
     for (const auto & sh : effectiveShares) {
-        if (!outputIndexes.contains(sh->shareNum)) {
-            effectiveShareIndexesNotInOutputIndexes.insert(sh->shareNum);
+        if (!outputIndexes.contains(Sharing::getShareNum(*sh))) {
+            effectiveShareIndexesNotInOutputIndexes.insert(Sharing::getShareNum(*sh));
         }
     }
 
@@ -1465,7 +1466,7 @@ bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexe
         }
     }
     for (const auto & v : shareVars) {
-        secretVars.insert(v->origSecret);
+        secretVars.insert(&Sharing::getSecret(*v));
     }
 
     FastCircuit fc;
@@ -1489,8 +1490,8 @@ bool isOPINIWithExev(Node & e, int32_t maxShareOcc, std::set<int> & outputIndexe
     fastGetEffectiveShares(fc, publicRegs, shareVars, maskRegs, 0, regs.data(), e0.width, effectiveShares);
 
     for (const auto & sh : effectiveShares) {
-        if (!outputIndexes.contains(sh->shareNum)) {
-            additionalInputIndexes.insert(sh->shareNum);
+        if (!outputIndexes.contains(Sharing::getShareNum(*sh))) {
+            additionalInputIndexes.insert(Sharing::getShareNum(*sh));
         }
     }
 

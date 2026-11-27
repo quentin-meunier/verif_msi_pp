@@ -18,6 +18,7 @@ Author(s): Quentin L. Meunier
 #include "hw.hpp"
 #include "config.hpp"
 #include "node.hpp"
+#include "sharing.hpp"
 #include "simplify.hpp"
 #include "check_leakage.hpp"
 #include "tps.hpp"
@@ -810,7 +811,7 @@ static bool allInputSharesAreAccessible(std::set<HWElement *> & gatesToVerify, b
 
     std::set<Node *> reachableInputSharesSecrets;
     for (const auto & n : reachableInputShares) {
-        reachableInputSharesSecrets.insert(n->origSecret);
+        reachableInputSharesSecrets.insert(&Sharing::getSecret(*n));
     }
     //print(' '.join(map(lambda x: '%s' % x[0].symb, reachableInputSharesSecrets)))
     if (verbose) {
@@ -825,11 +826,11 @@ static bool allInputSharesAreAccessible(std::set<HWElement *> & gatesToVerify, b
     for (const auto & s : reachableInputSharesSecrets) {
         int32_t numShares = 0; // Number of accessible different input shares corresponding to the secret
         for (const auto & n : reachableInputShares) {
-            if (n->origSecret == s) {
+            if (&Sharing::getSecret(*n) == s) {
                 numShares += 1;
             }
         }
-        if (numShares != s->nbShares) {
+        if (numShares != Sharing::getNbShares(*s)) {
             allInputShares = false;
             break;
         }
@@ -911,9 +912,9 @@ static void removeAiBiProbes(std::set<HWElement *> & gatesToVerify, std::set<HWE
             }
             else {
                 if (index == -1) {
-                    index = val.begin()->first->shareNum;
+                    index = Sharing::getShareNum(*val.begin()->first);
                 }
-                else if (index != val.begin()->first->shareNum) {
+                else if (index != Sharing::getShareNum(*val.begin()->first)) {
                     singleIndex = false;
                     break;
                 }
