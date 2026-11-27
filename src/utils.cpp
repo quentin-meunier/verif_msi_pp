@@ -20,6 +20,7 @@ Author(s): Quentin L. Meunier
 #include "config.hpp"
 #include "hw.hpp"
 #include "simp_rules.hpp"
+#include "tps.hpp"
 
 
 namespace vmsi {
@@ -510,6 +511,7 @@ void verifMSICleanup() {
     HWElement::cleanup();
     ArrayExp::cleanup();
     clearSimpRules();
+    tpsCleanup();
     Node::cleanup();
 }
 

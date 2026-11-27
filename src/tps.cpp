@@ -8,6 +8,7 @@ Author(s): Quentin L. Meunier
 
 #include <algorithm>
 #include <cassert>
+#include <unordered_map>
 
 #include "tps.hpp"
 #include "node.hpp"
@@ -15,6 +16,7 @@ Author(s): Quentin L. Meunier
 #include "simplify.hpp"
 #include "concrev.hpp"
 #include "utils_private.hpp"
+#include "config.hpp"
 
 
 namespace vmsi {
@@ -146,16 +148,47 @@ static Node & getMaskInverse(Node & ctr, Node & mask) {
 }
 
 
-static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToReplace, Node & maskInverse, std::map<Node *, Node *> & m) {
+struct ReplKey {
+    Node * node;
+    Node * selMask;
+    Node * childToReplace;
+    Node * maskInverse;
+    bool operator==(const ReplKey &) const = default;
+};
+
+
+struct ReplKeyHash {
+    size_t operator()(const ReplKey & k) const {
+        size_t h = std::hash<Node *>()(k.node);
+        h = h * 31 + std::hash<Node *>()(k.selMask);
+        h = h * 31 + std::hash<Node *>()(k.childToReplace);
+        h = h * 31 + std::hash<Node *>()(k.maskInverse);
+        return h;
+    }
+};
+
+
+using ReplMemo = std::unordered_map<ReplKey, Node *, ReplKeyHash>;
+
+#if MEMORY_STRATEGY == KEEP_NODES
+// Memo of the replacements, kept between calls: the same replacement is often
+// performed for several tuples (e.g. when checking a gadget).
+// Only valid when nodes are never deleted; cleared by tpsCleanup()
+static ReplMemo replMemo;
+#endif
+
+
+static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToReplace, Node & maskInverse, ReplMemo & memo) {
     if (node.nature != OP) {
         return node;
     }
+    ReplKey key{&node, &selMask, &childToReplace, &maskInverse};
+    auto it = memo.find(key);
+    if (it != memo.end()) {
+        return *it->second;
+    }
     std::vector<Node *> children;
     for (const auto & child : *node.children) {
-        if (m.contains(child)) {
-            children.push_back(m[child]);
-            continue;
-        }
         if (child == &selMask) {
             children.push_back(&maskInverse);
             continue;
@@ -165,7 +198,7 @@ static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToRep
             continue;
         }
         if (child->maskingMaskOcc.contains(&selMask) || child->otherMaskOcc.contains(&selMask)) {
-            Node & newChild = getReplacedGraphRec(*child, selMask, childToReplace, maskInverse, m);
+            Node & newChild = getReplacedGraphRec(*child, selMask, childToReplace, maskInverse, memo);
             children.push_back(&newChild);
         }
         else {
@@ -173,15 +206,27 @@ static Node & getReplacedGraphRec(Node & node, Node & selMask, Node & childToRep
         }
     }
     Node & n = Node::OpNode(node.op, children);
-    m[&node] = &n;
+    memo.emplace(key, &n);
     return n;
 }
 
 
 // Replaces childToReplace by selMask, and the other occurrences of selMask by maskInverse
 static Node & getReplacedGraph(Node & node, Node & selMask, Node & childToReplace, Node & maskInverse) {
-    std::map<Node *, Node *> m;
-    return getReplacedGraphRec(node, selMask, childToReplace, maskInverse, m);
+    #if MEMORY_STRATEGY == KEEP_NODES
+    return getReplacedGraphRec(node, selMask, childToReplace, maskInverse, replMemo);
+    #else
+    ReplMemo memo;
+    return getReplacedGraphRec(node, selMask, childToReplace, maskInverse, memo);
+    #endif
+}
+
+
+void tpsCleanup() {
+    #if MEMORY_STRATEGY == KEEP_NODES
+    replMemo.clear();
+    #endif
+    inverseArraysContent.clear();
 }
 
 

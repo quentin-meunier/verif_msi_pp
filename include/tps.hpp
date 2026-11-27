@@ -39,6 +39,9 @@ typedef struct _PropParams {
 
 std::string secProp2str(SecurityProperty secProp);
 
+// Frees the internal state of the verification (to be called before Node::cleanup())
+void tpsCleanup();
+
 bool tps(Node & nodeIn, bool bitDecompose = false, bool verbose = false);
 bool tps(std::vector<Node *> & nodes, bool bitDecompose = false, bool verbose = false);
 bool tpsNoFalsePositive(Node & nodeIn, bool bitDecompose = false, bool verbose = false);
